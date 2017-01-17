@@ -15,6 +15,7 @@ import android.webkit.WebViewClient;
 
 public class PdfViewer extends Activity {
     private static final int ACTION_OPEN_DOCUMENT_REQUEST_CODE = 1;
+    private static final String STATE_URI = "uri";
 
     private WebView mWebView;
     private Uri mUri;
@@ -70,6 +71,10 @@ public class PdfViewer extends Activity {
             mUri = (Uri) intent.getData();
         }
 
+        if (savedInstanceState != null) {
+            mUri = savedInstanceState.getParcelable("uri");
+        }
+
         mWebView.loadUrl("file:///android_asset/viewer.html");
     }
 
@@ -83,6 +88,12 @@ public class PdfViewer extends Activity {
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("application/pdf");
         startActivityForResult(intent, ACTION_OPEN_DOCUMENT_REQUEST_CODE);
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState) {
+        super.onSaveInstanceState(savedInstanceState);
+        savedInstanceState.putParcelable(STATE_URI, mUri);
     }
 
     @Override
