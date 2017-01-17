@@ -17,8 +17,12 @@ function renderPage(num) {
     // Using promise to fetch the page
     pdfDoc.getPage(num).then(function(page) {
         var viewport = page.getViewport(scale);
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
+        var ratio = window.devicePixelRatio;
+        canvas.height = viewport.height * ratio;
+        canvas.width = viewport.width * ratio;
+        canvas.style.height = viewport.height + "px";
+        canvas.style.width = viewport.width + "px";
+        ctx.scale(ratio, ratio);
 
         // Render PDF page into canvas context
         var renderContext = {
