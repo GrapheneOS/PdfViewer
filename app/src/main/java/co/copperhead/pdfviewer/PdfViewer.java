@@ -130,6 +130,14 @@ public class PdfViewer extends Activity {
                 openDocument();
                 return super.onOptionsItemSelected(item);
 
+            case R.id.action_zoom_out:
+                mWebView.evaluateJavascript("onZoomOut()", null);
+                return super.onOptionsItemSelected(item);
+
+            case R.id.action_zoom_in:
+                mWebView.evaluateJavascript("onZoomIn()", null);
+                return super.onOptionsItemSelected(item);
+
             default:
                 return super.onOptionsItemSelected(item);
         }

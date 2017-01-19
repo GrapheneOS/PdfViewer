@@ -8,6 +8,9 @@ var pdfDoc = null,
     canvas = document.getElementById('content'),
     ctx = canvas.getContext('2d');
 
+var zoomLevels = [50, 75, 100, 125, 150];
+var zoomLevel = 2;
+
 /**
  * Get page info from document, resize canvas accordingly, and render page.
  * @param num Page number.
@@ -77,6 +80,24 @@ function onNextPage() {
         return;
     }
     pageNum++;
+    queueRenderPage(pageNum);
+}
+
+function onZoomOut() {
+    if (zoomLevel == 0) {
+        return;
+    }
+    zoomLevel--;
+    scale = zoomLevels[zoomLevel] / 100;
+    queueRenderPage(pageNum);
+}
+
+function onZoomIn() {
+    if (zoomLevel == zoomLevels.length - 1) {
+        return;
+    }
+    zoomLevel++;
+    scale = zoomLevels[zoomLevel] / 100;
     queueRenderPage(pageNum);
 }
 
