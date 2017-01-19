@@ -7,4 +7,5 @@
     <string name="action_zoom_out">Zoom out</string>
     <string name="action_zoom_in">Zoom in</string>
     <string name="action_open">Open document</string>
+    <string name="quit_toast">Press back once more to close application</string>
 </resources>
