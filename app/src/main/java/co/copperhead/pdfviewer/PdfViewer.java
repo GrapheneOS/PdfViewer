@@ -12,11 +12,15 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Toast;
 
 public class PdfViewer extends Activity {
     private static final int ACTION_OPEN_DOCUMENT_REQUEST_CODE = 1;
     private static final String STATE_URI = "uri";
+    private static final int TIME_LIMIT = 2000;
 
+    private long mQuit;
+    private Toast mToast;
     private WebView mWebView;
     private Uri mUri;
     private Channel mChannel;
@@ -140,6 +144,18 @@ public class PdfViewer extends Activity {
 
             default:
                 return super.onOptionsItemSelected(item);
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (mQuit + TIME_LIMIT > System.currentTimeMillis()) {
+            super.onBackPressed();
+            mToast.cancel();
+        } else {
+            mQuit = System.currentTimeMillis();
+            mToast = Toast.makeText(getApplicationContext(), R.string.quit_toast, Toast.LENGTH_SHORT);
+            mToast.show();
         }
     }
 }
