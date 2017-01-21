@@ -16,6 +16,7 @@ import android.webkit.WebViewClient;
 public class PdfViewer extends Activity {
     private static final int ACTION_OPEN_DOCUMENT_REQUEST_CODE = 1;
     private static final String STATE_URI = "uri";
+    private static final String STATE_PAGE = "page";
 
     private WebView mWebView;
     private Uri mUri;
@@ -23,14 +24,26 @@ public class PdfViewer extends Activity {
 
     private class Channel {
         public String mUrl;
+        public int mPage;
 
-        Channel(String url) {
+        Channel(String url, int page) {
             mUrl = url;
+            mPage = page;
         }
 
         @JavascriptInterface
         public String getUrl() {
             return mUrl;
+        }
+
+        @JavascriptInterface
+        public int getPage() {
+            return mPage;
+        }
+
+        @JavascriptInterface
+        public void setPage(int page) {
+            mPage = page;
         }
     }
 
@@ -48,7 +61,7 @@ public class PdfViewer extends Activity {
         settings.setAllowFileAccess(false);
         settings.setAllowUniversalAccessFromFileURLs(true);
 
-        mChannel = new Channel(null);
+        mChannel = new Channel(null, 1);
         mWebView.addJavascriptInterface(mChannel, "channel");
 
         mWebView.setWebViewClient(new WebViewClient() {
@@ -72,7 +85,8 @@ public class PdfViewer extends Activity {
         }
 
         if (savedInstanceState != null) {
-            mUri = savedInstanceState.getParcelable("uri");
+            mUri = savedInstanceState.getParcelable(STATE_URI);
+            mChannel.mPage = savedInstanceState.getInt(STATE_PAGE);
         }
 
         mWebView.loadUrl("file:///android_asset/viewer.html");
@@ -94,6 +108,7 @@ public class PdfViewer extends Activity {
     public void onSaveInstanceState(Bundle savedInstanceState) {
         super.onSaveInstanceState(savedInstanceState);
         savedInstanceState.putParcelable(STATE_URI, mUri);
+        savedInstanceState.putInt(STATE_PAGE, mChannel.mPage);
     }
 
     @Override
