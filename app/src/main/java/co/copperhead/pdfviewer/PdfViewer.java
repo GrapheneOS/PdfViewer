@@ -1,10 +1,13 @@
 package co.copperhead.pdfviewer;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.annotation.SuppressLint;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -12,6 +15,8 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+import android.widget.NumberPicker;
 
 public class PdfViewer extends Activity {
     private static final int ACTION_OPEN_DOCUMENT_REQUEST_CODE = 1;
@@ -25,6 +30,7 @@ public class PdfViewer extends Activity {
     private class Channel {
         public String mUrl;
         public int mPage;
+        public int mNumPages;
 
         Channel(String url, int page) {
             mUrl = url;
@@ -42,8 +48,8 @@ public class PdfViewer extends Activity {
         }
 
         @JavascriptInterface
-        public void setPage(int page) {
-            mPage = page;
+        public void setNumPages(int numPages) {
+            mNumPages = numPages;
         }
     }
 
@@ -68,7 +74,7 @@ public class PdfViewer extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 if (mUri != null) {
-                    PdfViewer.this.loadPdf();
+                    loadPdf();
                 }
             }
         });
@@ -134,11 +140,17 @@ public class PdfViewer extends Activity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_previous:
-                mWebView.evaluateJavascript("onPrevPage()", null);
+                if (mChannel.mPage > 1) {
+                    mChannel.mPage--;
+                    mWebView.evaluateJavascript("onRenderPage()", null);
+                }
                 return super.onOptionsItemSelected(item);
 
             case R.id.action_next:
-                mWebView.evaluateJavascript("onNextPage()", null);
+                if (mChannel.mPage < mChannel.mNumPages) {
+                    mChannel.mPage++;
+                    mWebView.evaluateJavascript("onRenderPage()", null);
+                }
                 return super.onOptionsItemSelected(item);
 
             case R.id.action_open:
@@ -153,6 +165,35 @@ public class PdfViewer extends Activity {
                 mWebView.evaluateJavascript("onZoomIn()", null);
                 return super.onOptionsItemSelected(item);
 
+            case R.id.action_jump_to_page: {
+                final NumberPicker picker = new NumberPicker(this);
+                picker.setMinValue(1);
+                picker.setMaxValue(mChannel.mNumPages);
+                picker.setValue(mChannel.mPage);
+
+                final FrameLayout layout = new FrameLayout(this);
+                layout.addView(picker, new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.CENTER));
+
+                new AlertDialog.Builder(this)
+                    .setView(layout)
+                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            int page = picker.getValue();
+                            if (page >= 1 && page <= mChannel.mNumPages) {
+                                mChannel.mPage = page;
+                                mWebView.evaluateJavascript("onRenderPage()", null);
+                            }
+                        }
+                    })
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+
+                return super.onOptionsItemSelected(item);
+            }
             default:
                 return super.onOptionsItemSelected(item);
         }

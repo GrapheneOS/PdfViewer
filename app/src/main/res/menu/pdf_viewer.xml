@@ -36,4 +36,10 @@
         android:title="@string/action_zoom_in"
         android:showAsAction="ifRoom" />
 
+    <item
+        android:id="@+id/action_jump_to_page"
+        android:icon="@drawable/ic_pageview_white_24dp"
+        android:title="@string/action_jump_to_page"
+        android:showAsAction="ifRoom" />
+
 </menu>
