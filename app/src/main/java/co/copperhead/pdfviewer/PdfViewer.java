@@ -36,7 +36,6 @@ public class PdfViewer extends Activity {
         public int mZoomLevel;
 
         Channel() {
-            mPage = 1;
             mZoomLevel = 2;
         }
 
@@ -108,6 +107,7 @@ public class PdfViewer extends Activity {
     }
 
     private void loadPdf() {
+        mChannel.mPage = 1;
         mChannel.mUrl = mUri.toString();
         mWebView.evaluateJavascript("onGetDocument()", null);
     }
