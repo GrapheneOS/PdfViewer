@@ -15,7 +15,6 @@ var zoomLevels = [50, 75, 100, 125, 150];
  */
 function renderPage(num) {
     pageRendering = true;
-    // Using promise to fetch the page
     pdfDoc.getPage(num).then(function(page) {
         var viewport = page.getViewport(scale);
         var ratio = window.devicePixelRatio;
@@ -25,26 +24,20 @@ function renderPage(num) {
         canvas.style.width = viewport.width + "px";
         ctx.scale(ratio, ratio);
 
-        // Render PDF page into canvas context
         var renderContext = {
             canvasContext: ctx,
             viewport: viewport
         };
         var renderTask = page.render(renderContext);
 
-        // Wait for rendering to finish
         renderTask.promise.then(function () {
             pageRendering = false;
             if (pageNumPending !== null) {
-                // New page rendering is pending
                 renderPage(pageNumPending);
                 pageNumPending = null;
             }
         });
     });
-
-    // Update page counters
-    //document.getElementById('page_num').textContent = pageNum;
 }
 
 /**
