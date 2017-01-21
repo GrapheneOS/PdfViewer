@@ -1,7 +1,6 @@
 "use strict";
 
 var pdfDoc = null,
-    pageNum = 1,
     pageRendering = false,
     pageNumPending = null,
     scale = 1.0,
@@ -61,28 +60,8 @@ function queueRenderPage(num) {
     }
 }
 
-/**
- * Displays previous page.
- */
-function onPrevPage() {
-    if (pageNum <= 1) {
-        return;
-    }
-    pageNum--;
-    channel.setPage(pageNum);
-    queueRenderPage(pageNum);
-}
-
-/**
- * Displays next page.
- */
-function onNextPage() {
-    if (pageNum >= pdfDoc.numPages) {
-        return;
-    }
-    pageNum++;
-    channel.setPage(pageNum);
-    queueRenderPage(pageNum);
+function onRenderPage() {
+    queueRenderPage(channel.getPage());
 }
 
 function onZoomOut() {
@@ -91,7 +70,7 @@ function onZoomOut() {
     }
     zoomLevel--;
     scale = zoomLevels[zoomLevel] / 100;
-    queueRenderPage(pageNum);
+    queueRenderPage(channel.getPage());
 }
 
 function onZoomIn() {
@@ -100,13 +79,13 @@ function onZoomIn() {
     }
     zoomLevel++;
     scale = zoomLevels[zoomLevel] / 100;
-    queueRenderPage(pageNum);
+    queueRenderPage(channel.getPage());
 }
 
 function onGetDocument() {
     PDFJS.getDocument(channel.getUrl()).then(function (newDoc) {
         pdfDoc = newDoc;
-        pageNum = channel.getPage();
-        renderPage(pageNum);
+        channel.setNumPages(pdfDoc.numPages);
+        renderPage(channel.getPage());
     });
 }
