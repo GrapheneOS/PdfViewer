@@ -69,6 +69,7 @@ function onPrevPage() {
         return;
     }
     pageNum--;
+    channel.setPage(pageNum);
     queueRenderPage(pageNum);
 }
 
@@ -80,6 +81,7 @@ function onNextPage() {
         return;
     }
     pageNum++;
+    channel.setPage(pageNum);
     queueRenderPage(pageNum);
 }
 
@@ -104,7 +106,7 @@ function onZoomIn() {
 function onGetDocument() {
     PDFJS.getDocument(channel.getUrl()).then(function (newDoc) {
         pdfDoc = newDoc;
-        pageNum = 1;
+        pageNum = channel.getPage();
         renderPage(pageNum);
     });
 }
