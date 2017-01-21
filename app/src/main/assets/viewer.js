@@ -8,7 +8,6 @@ var pdfDoc = null,
     ctx = canvas.getContext('2d');
 
 var zoomLevels = [50, 75, 100, 125, 150];
-var zoomLevel = 2;
 
 /**
  * Get page info from document, resize canvas accordingly, and render page.
@@ -61,24 +60,7 @@ function queueRenderPage(num) {
 }
 
 function onRenderPage() {
-    queueRenderPage(channel.getPage());
-}
-
-function onZoomOut() {
-    if (zoomLevel == 0) {
-        return;
-    }
-    zoomLevel--;
-    scale = zoomLevels[zoomLevel] / 100;
-    queueRenderPage(channel.getPage());
-}
-
-function onZoomIn() {
-    if (zoomLevel == zoomLevels.length - 1) {
-        return;
-    }
-    zoomLevel++;
-    scale = zoomLevels[zoomLevel] / 100;
+    scale = zoomLevels[channel.getZoomLevel()] / 100;
     queueRenderPage(channel.getPage());
 }
 
@@ -86,6 +68,7 @@ function onGetDocument() {
     PDFJS.getDocument(channel.getUrl()).then(function (newDoc) {
         pdfDoc = newDoc;
         channel.setNumPages(pdfDoc.numPages);
+        scale = zoomLevels[channel.getZoomLevel()] / 100;
         renderPage(channel.getPage());
     });
 }

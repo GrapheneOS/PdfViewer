@@ -19,9 +19,11 @@ import android.widget.FrameLayout;
 import android.widget.NumberPicker;
 
 public class PdfViewer extends Activity {
+    private static final int MAX_ZOOM_LEVEL = 4;
     private static final int ACTION_OPEN_DOCUMENT_REQUEST_CODE = 1;
     private static final String STATE_URI = "uri";
     private static final String STATE_PAGE = "page";
+    private static final String STATE_ZOOM_LEVEL = "zoomLevel";
 
     private WebView mWebView;
     private Uri mUri;
@@ -31,10 +33,11 @@ public class PdfViewer extends Activity {
         public String mUrl;
         public int mPage;
         public int mNumPages;
+        public int mZoomLevel;
 
-        Channel(String url, int page) {
-            mUrl = url;
-            mPage = page;
+        Channel() {
+            mPage = 1;
+            mZoomLevel = 2;
         }
 
         @JavascriptInterface
@@ -45,6 +48,11 @@ public class PdfViewer extends Activity {
         @JavascriptInterface
         public int getPage() {
             return mPage;
+        }
+
+        @JavascriptInterface
+        public int getZoomLevel() {
+            return mZoomLevel;
         }
 
         @JavascriptInterface
@@ -67,7 +75,7 @@ public class PdfViewer extends Activity {
         settings.setAllowFileAccess(false);
         settings.setAllowUniversalAccessFromFileURLs(true);
 
-        mChannel = new Channel(null, 1);
+        mChannel = new Channel();
         mWebView.addJavascriptInterface(mChannel, "channel");
 
         mWebView.setWebViewClient(new WebViewClient() {
@@ -93,6 +101,7 @@ public class PdfViewer extends Activity {
         if (savedInstanceState != null) {
             mUri = savedInstanceState.getParcelable(STATE_URI);
             mChannel.mPage = savedInstanceState.getInt(STATE_PAGE);
+            mChannel.mZoomLevel = savedInstanceState.getInt(STATE_ZOOM_LEVEL);
         }
 
         mWebView.loadUrl("file:///android_asset/viewer.html");
@@ -115,6 +124,7 @@ public class PdfViewer extends Activity {
         super.onSaveInstanceState(savedInstanceState);
         savedInstanceState.putParcelable(STATE_URI, mUri);
         savedInstanceState.putInt(STATE_PAGE, mChannel.mPage);
+        savedInstanceState.putInt(STATE_ZOOM_LEVEL, mChannel.mZoomLevel);
     }
 
     @Override
@@ -158,11 +168,17 @@ public class PdfViewer extends Activity {
                 return super.onOptionsItemSelected(item);
 
             case R.id.action_zoom_out:
-                mWebView.evaluateJavascript("onZoomOut()", null);
+                if (mChannel.mZoomLevel > 0) {
+                    mChannel.mZoomLevel--;
+                    mWebView.evaluateJavascript("onRenderPage()", null);
+                }
                 return super.onOptionsItemSelected(item);
 
             case R.id.action_zoom_in:
-                mWebView.evaluateJavascript("onZoomIn()", null);
+                if (mChannel.mZoomLevel < MAX_ZOOM_LEVEL) {
+                    mChannel.mZoomLevel++;
+                    mWebView.evaluateJavascript("onRenderPage()", null);
+                }
                 return super.onOptionsItemSelected(item);
 
             case R.id.action_jump_to_page: {
