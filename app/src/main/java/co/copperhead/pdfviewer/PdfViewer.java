@@ -30,12 +30,12 @@ public class PdfViewer extends Activity {
     private Channel mChannel;
 
     private class Channel {
-        public String mUrl;
-        public int mPage;
-        public int mNumPages;
-        public int mZoomLevel;
+        private String mUrl;
+        private int mPage;
+        private int mNumPages;
+        private int mZoomLevel;
 
-        Channel() {
+        private Channel() {
             mZoomLevel = 2;
         }
 
