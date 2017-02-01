@@ -95,6 +95,7 @@ public class PdfViewer extends Activity {
                 throw new RuntimeException();
             }
             mUri = (Uri) intent.getData();
+            mChannel.mPage = 1;
         }
 
         if (savedInstanceState != null) {
@@ -107,7 +108,6 @@ public class PdfViewer extends Activity {
     }
 
     private void loadPdf() {
-        mChannel.mPage = 1;
         mChannel.mUrl = mUri.toString();
         mWebView.evaluateJavascript("onGetDocument()", null);
     }
@@ -133,6 +133,7 @@ public class PdfViewer extends Activity {
             Uri uri = null;
             if (resultData != null) {
                 mUri = resultData.getData();
+                mChannel.mPage = 1;
                 loadPdf();
             }
         }
