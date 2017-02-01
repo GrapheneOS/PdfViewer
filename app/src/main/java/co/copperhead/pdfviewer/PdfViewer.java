@@ -30,7 +30,6 @@ public class PdfViewer extends Activity {
     private Channel mChannel;
 
     private class Channel {
-        private String mUrl;
         private int mPage;
         private int mNumPages;
         private int mZoomLevel;
@@ -41,7 +40,7 @@ public class PdfViewer extends Activity {
 
         @JavascriptInterface
         public String getUrl() {
-            return mUrl;
+            return mUri.toString();
         }
 
         @JavascriptInterface
@@ -108,7 +107,6 @@ public class PdfViewer extends Activity {
     }
 
     private void loadPdf() {
-        mChannel.mUrl = mUri.toString();
         mWebView.evaluateJavascript("onGetDocument()", null);
     }
 
