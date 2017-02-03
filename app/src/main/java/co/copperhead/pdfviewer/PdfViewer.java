@@ -124,7 +124,6 @@ public class PdfViewer extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent resultData) {
         if (requestCode == ACTION_OPEN_DOCUMENT_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
-            Uri uri = null;
             if (resultData != null) {
                 mUri = resultData.getData();
                 mPage = 1;
