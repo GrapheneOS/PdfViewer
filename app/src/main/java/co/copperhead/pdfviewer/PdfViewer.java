@@ -21,7 +21,10 @@ import android.widget.FrameLayout;
 import android.widget.NumberPicker;
 
 public class PdfViewer extends Activity {
+    private static final int MIN_ZOOM_LEVEL = 0;
     private static final int MAX_ZOOM_LEVEL = 4;
+    private static final int ALPHA_LOW = 130;
+    private static final int ALPHA_HIGH = 255;
     private static final int ACTION_OPEN_DOCUMENT_REQUEST_CODE = 1;
     private static final String STATE_URI = "uri";
     private static final String STATE_PAGE = "page";
@@ -33,6 +36,8 @@ public class PdfViewer extends Activity {
     private int mNumPages;
     private int mZoomLevel;
     private Channel mChannel;
+    private boolean mZoomInState = true;
+    private boolean mZoomOutState = true;
 
     private class Channel {
         @JavascriptInterface
@@ -122,6 +127,38 @@ public class PdfViewer extends Activity {
         startActivityForResult(intent, ACTION_OPEN_DOCUMENT_REQUEST_CODE);
     }
 
+    private void saveMenuItemState(MenuItem item, boolean state) {
+        if (item.getItemId() == R.id.action_zoom_in) {
+            mZoomInState = state;
+        } else {
+            mZoomOutState = state;
+        }
+    }
+
+    private void restoreMenuItemState(Menu menu) {
+        if (menu.findItem(R.id.action_zoom_in).isEnabled() != mZoomInState) {
+            menu.findItem(R.id.action_zoom_in).setEnabled(mZoomInState);
+        } else if (menu.findItem(R.id.action_zoom_out).isEnabled() != mZoomOutState) {
+            menu.findItem(R.id.action_zoom_out).setEnabled(mZoomOutState);
+        }
+    }
+
+    private void checkDisableMenuItem(MenuItem item) {
+        if (item.isEnabled()) {
+            item.setEnabled(false);
+            item.getIcon().setAlpha(ALPHA_LOW);
+            saveMenuItemState(item, false);
+        }
+    }
+
+    private void checkEnableMenuItem(MenuItem item) {
+        if (!item.isEnabled()) {
+            item.setEnabled(true);
+            item.getIcon().setAlpha(ALPHA_HIGH);
+            saveMenuItemState(item, true);
+        }
+    }
+
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
         super.onSaveInstanceState(savedInstanceState);
@@ -146,7 +183,24 @@ public class PdfViewer extends Activity {
         super.onCreateOptionsMenu(menu);
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.pdf_viewer, menu);
+        restoreMenuItemState(menu);
         return true;
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        switch (mZoomLevel) {
+            case MAX_ZOOM_LEVEL:
+                checkDisableMenuItem(menu.findItem(R.id.action_zoom_in));
+                return super.onPrepareOptionsMenu(menu);
+            case MIN_ZOOM_LEVEL:
+                checkDisableMenuItem(menu.findItem(R.id.action_zoom_out));
+                return super.onPrepareOptionsMenu(menu);
+            default:
+                checkEnableMenuItem(menu.findItem(R.id.action_zoom_in));
+                checkEnableMenuItem(menu.findItem(R.id.action_zoom_out));
+                return super.onPrepareOptionsMenu(menu);
+        }
     }
 
     @Override
@@ -174,6 +228,7 @@ public class PdfViewer extends Activity {
                 if (mZoomLevel > 0) {
                     mZoomLevel--;
                     renderPage();
+                    invalidateOptionsMenu();
                 }
                 return super.onOptionsItemSelected(item);
 
@@ -181,6 +236,7 @@ public class PdfViewer extends Activity {
                 if (mZoomLevel < MAX_ZOOM_LEVEL) {
                     mZoomLevel++;
                     renderPage();
+                    invalidateOptionsMenu();
                 }
                 return super.onOptionsItemSelected(item);
 
