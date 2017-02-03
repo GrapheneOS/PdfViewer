@@ -27,17 +27,12 @@ public class PdfViewer extends Activity {
 
     private WebView mWebView;
     private Uri mUri;
+    private int mPage;
+    private int mNumPages;
+    private int mZoomLevel;
     private Channel mChannel;
 
     private class Channel {
-        private int mPage;
-        private int mNumPages;
-        private int mZoomLevel;
-
-        private Channel() {
-            mZoomLevel = 2;
-        }
-
         @JavascriptInterface
         public String getUrl() {
             return mUri.toString();
@@ -73,6 +68,7 @@ public class PdfViewer extends Activity {
         settings.setAllowFileAccess(false);
         settings.setAllowUniversalAccessFromFileURLs(true);
 
+        mZoomLevel = 2;
         mChannel = new Channel();
         mWebView.addJavascriptInterface(mChannel, "channel");
 
@@ -94,13 +90,13 @@ public class PdfViewer extends Activity {
                 throw new RuntimeException();
             }
             mUri = (Uri) intent.getData();
-            mChannel.mPage = 1;
+            mPage = 1;
         }
 
         if (savedInstanceState != null) {
             mUri = savedInstanceState.getParcelable(STATE_URI);
-            mChannel.mPage = savedInstanceState.getInt(STATE_PAGE);
-            mChannel.mZoomLevel = savedInstanceState.getInt(STATE_ZOOM_LEVEL);
+            mPage = savedInstanceState.getInt(STATE_PAGE);
+            mZoomLevel = savedInstanceState.getInt(STATE_ZOOM_LEVEL);
         }
 
         mWebView.loadUrl("file:///android_asset/viewer.html");
@@ -121,8 +117,8 @@ public class PdfViewer extends Activity {
     public void onSaveInstanceState(Bundle savedInstanceState) {
         super.onSaveInstanceState(savedInstanceState);
         savedInstanceState.putParcelable(STATE_URI, mUri);
-        savedInstanceState.putInt(STATE_PAGE, mChannel.mPage);
-        savedInstanceState.putInt(STATE_ZOOM_LEVEL, mChannel.mZoomLevel);
+        savedInstanceState.putInt(STATE_PAGE, mPage);
+        savedInstanceState.putInt(STATE_ZOOM_LEVEL, mZoomLevel);
     }
 
     @Override
@@ -131,7 +127,7 @@ public class PdfViewer extends Activity {
             Uri uri = null;
             if (resultData != null) {
                 mUri = resultData.getData();
-                mChannel.mPage = 1;
+                mPage = 1;
                 loadPdf();
             }
         }
@@ -149,15 +145,15 @@ public class PdfViewer extends Activity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_previous:
-                if (mChannel.mPage > 1) {
-                    mChannel.mPage--;
+                if (mPage > 1) {
+                    mPage--;
                     mWebView.evaluateJavascript("onRenderPage()", null);
                 }
                 return super.onOptionsItemSelected(item);
 
             case R.id.action_next:
-                if (mChannel.mPage < mChannel.mNumPages) {
-                    mChannel.mPage++;
+                if (mPage < mNumPages) {
+                    mPage++;
                     mWebView.evaluateJavascript("onRenderPage()", null);
                 }
                 return super.onOptionsItemSelected(item);
@@ -167,15 +163,15 @@ public class PdfViewer extends Activity {
                 return super.onOptionsItemSelected(item);
 
             case R.id.action_zoom_out:
-                if (mChannel.mZoomLevel > 0) {
-                    mChannel.mZoomLevel--;
+                if (mZoomLevel > 0) {
+                    mZoomLevel--;
                     mWebView.evaluateJavascript("onRenderPage()", null);
                 }
                 return super.onOptionsItemSelected(item);
 
             case R.id.action_zoom_in:
-                if (mChannel.mZoomLevel < MAX_ZOOM_LEVEL) {
-                    mChannel.mZoomLevel++;
+                if (mZoomLevel < MAX_ZOOM_LEVEL) {
+                    mZoomLevel++;
                     mWebView.evaluateJavascript("onRenderPage()", null);
                 }
                 return super.onOptionsItemSelected(item);
@@ -183,8 +179,8 @@ public class PdfViewer extends Activity {
             case R.id.action_jump_to_page: {
                 final NumberPicker picker = new NumberPicker(this);
                 picker.setMinValue(1);
-                picker.setMaxValue(mChannel.mNumPages);
-                picker.setValue(mChannel.mPage);
+                picker.setMaxValue(mNumPages);
+                picker.setValue(mPage);
 
                 final FrameLayout layout = new FrameLayout(this);
                 layout.addView(picker, new FrameLayout.LayoutParams(
@@ -198,8 +194,8 @@ public class PdfViewer extends Activity {
                         @Override
                         public void onClick(DialogInterface dialogInterface, int i) {
                             int page = picker.getValue();
-                            if (page >= 1 && page <= mChannel.mNumPages) {
-                                mChannel.mPage = page;
+                            if (page >= 1 && page <= mNumPages) {
+                                mPage = page;
                                 mWebView.evaluateJavascript("onRenderPage()", null);
                             }
                         }
