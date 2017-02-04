@@ -7,7 +7,18 @@ var pdfDoc = null,
     canvas = document.getElementById('content'),
     ctx = canvas.getContext('2d');
 
+var textLayerDiv = document.getElementById("text");
 var zoomLevels = [50, 75, 100, 125, 150];
+
+function maybeRenderNextPage() {
+    if (pageNumPending !== null) {
+        pageRendering = false;
+        renderPage(pageNumPending);
+        pageNumPending = null;
+        return true;
+    }
+    return false;
+}
 
 /**
  * Get page info from document, resize canvas accordingly, and render page.
@@ -16,6 +27,11 @@ var zoomLevels = [50, 75, 100, 125, 150];
 function renderPage(num) {
     pageRendering = true;
     pdfDoc.getPage(num).then(function(page) {
+        var last;
+        while (last = textLayerDiv.lastChild) {
+            textLayerDiv.removeChild(last);
+        }
+
         var viewport = page.getViewport(scale);
         var ratio = window.devicePixelRatio;
         canvas.height = viewport.height * ratio;
@@ -24,18 +40,37 @@ function renderPage(num) {
         canvas.style.width = viewport.width + "px";
         ctx.scale(ratio, ratio);
 
+        textLayerDiv.style.height = canvas.style.height;
+        textLayerDiv.style.width = canvas.style.width;
+
         var renderContext = {
             canvasContext: ctx,
             viewport: viewport
         };
         var renderTask = page.render(renderContext);
 
-        renderTask.promise.then(function () {
-            pageRendering = false;
-            if (pageNumPending !== null) {
-                renderPage(pageNumPending);
-                pageNumPending = null;
+        renderTask.then(function() {
+            if (maybeRenderNextPage()) {
+                return;
             }
+
+            page.getTextContent().then(function(textContent) {
+                if (maybeRenderNextPage()) {
+                    return;
+                }
+
+                var textLayerFrag = document.createDocumentFragment();
+                var textLayerRenderTask = PDFJS.renderTextLayer({
+                    textContent: textContent,
+                    container: textLayerFrag,
+                    viewport: viewport
+                });
+                textLayerRenderTask.promise.then(function() {
+                    textLayerDiv.appendChild(textLayerFrag);
+                    pageRendering = false;
+                    maybeRenderNextPage();
+                });
+            })
         });
     });
 }
@@ -58,7 +93,7 @@ function onRenderPage() {
 }
 
 function onGetDocument() {
-    PDFJS.getDocument(channel.getUrl()).then(function (newDoc) {
+    PDFJS.getDocument(channel.getUrl()).then(function(newDoc) {
         pdfDoc = newDoc;
         channel.setNumPages(pdfDoc.numPages);
         scale = zoomLevels[channel.getZoomLevel()] / 100;
