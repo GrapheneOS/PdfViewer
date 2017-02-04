@@ -30,6 +30,10 @@ public class PdfViewer extends Activity {
     private static final int ALPHA_LOW = 130;
     private static final int ALPHA_HIGH = 255;
     private static final int ACTION_OPEN_DOCUMENT_REQUEST_CODE = 1;
+    private static final int STATE_INIT = 0;
+    private static final int STATE_LOADING = 1;
+    private static final int STATE_LOADED = 2;
+    private static final int STATE_END = 3;
     private static final String STATE_URI = "uri";
     private static final String STATE_PAGE = "page";
     private static final String STATE_ZOOM_LEVEL = "zoomLevel";
@@ -39,6 +43,7 @@ public class PdfViewer extends Activity {
     private int mPage;
     private int mNumPages;
     private int mZoomLevel = 2;
+    private int mDocumentState;
     private Channel mChannel;
     private boolean mZoomInState = true;
     private boolean mZoomOutState = true;
@@ -95,6 +100,12 @@ public class PdfViewer extends Activity {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return true;
             }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                mDocumentState = STATE_LOADED;
+                invalidateOptionsMenu();
+            }
         });
 
         final Intent intent = getIntent();
@@ -114,6 +125,8 @@ public class PdfViewer extends Activity {
 
         if (mUri != null) {
             loadPdf();
+        } else {
+            mDocumentState = STATE_INIT;
         }
     }
 
@@ -156,19 +169,43 @@ public class PdfViewer extends Activity {
         }
     }
 
+    private void disableItem(MenuItem item) {
+        item.setEnabled(false);
+        item.getIcon().setAlpha(ALPHA_LOW);
+    }
+
+    private void enableItem(MenuItem item) {
+        item.setEnabled(true);
+        item.getIcon().setAlpha(ALPHA_HIGH);
+    }
+
     private void checkDisableMenuItem(MenuItem item) {
         if (item.isEnabled()) {
-            item.setEnabled(false);
-            item.getIcon().setAlpha(ALPHA_LOW);
+            disableItem(item);
             saveMenuItemState(item, false);
         }
     }
 
     private void checkEnableMenuItem(MenuItem item) {
         if (!item.isEnabled()) {
-            item.setEnabled(true);
-            item.getIcon().setAlpha(ALPHA_HIGH);
+            enableItem(item);
             saveMenuItemState(item, true);
+        }
+    }
+
+    private void enableDisableItems(Menu menu, boolean disable) {
+        if (disable) {
+            disableItem(menu.findItem(R.id.action_zoom_in));
+            disableItem(menu.findItem(R.id.action_zoom_out));
+            disableItem(menu.findItem(R.id.action_jump_to_page));
+            disableItem(menu.findItem(R.id.action_next));
+            disableItem(menu.findItem(R.id.action_previous));
+        } else {
+            enableItem(menu.findItem(R.id.action_zoom_in));
+            enableItem(menu.findItem(R.id.action_zoom_out));
+            enableItem(menu.findItem(R.id.action_jump_to_page));
+            enableItem(menu.findItem(R.id.action_next));
+            enableItem(menu.findItem(R.id.action_previous));
         }
     }
 
@@ -187,6 +224,8 @@ public class PdfViewer extends Activity {
                 mUri = resultData.getData();
                 mPage = 1;
                 loadPdf();
+                mDocumentState = STATE_LOADING;
+                invalidateOptionsMenu();
             }
         }
     }
@@ -202,6 +241,18 @@ public class PdfViewer extends Activity {
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
+        switch (mDocumentState) {
+            case STATE_INIT:
+            case STATE_LOADING:
+                enableDisableItems(menu, true);
+                return super.onPrepareOptionsMenu(menu);
+            case STATE_LOADED:
+                enableDisableItems(menu, false);
+                mDocumentState = STATE_END;
+                return super.onPrepareOptionsMenu(menu);
+            default:
+                break;
+        }
         switch (mZoomLevel) {
             case MAX_ZOOM_LEVEL:
                 checkDisableMenuItem(menu.findItem(R.id.action_zoom_in));
