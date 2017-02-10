@@ -12,6 +12,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -79,6 +80,11 @@ public class PdfViewer extends Activity {
                 if (mUri != null) {
                     loadPdf();
                 }
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                return true;
             }
         });
 
