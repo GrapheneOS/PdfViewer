@@ -63,7 +63,7 @@ public class PdfViewer extends Activity {
 
         setContentView(R.layout.webview);
 
-        mWebView = (WebView) findViewById(R.id.webView1);
+        mWebView = (WebView) findViewById(R.id.webview);
         WebSettings settings = mWebView.getSettings();
         settings.setAllowFileAccess(false);
         settings.setAllowUniversalAccessFromFileURLs(true);
