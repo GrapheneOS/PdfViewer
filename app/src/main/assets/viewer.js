@@ -90,10 +90,8 @@ function onRenderPage() {
     }
 }
 
-function onGetDocument() {
-    PDFJS.getDocument(channel.getUrl()).then(function(newDoc) {
-        pdfDoc = newDoc;
-        channel.setNumPages(pdfDoc.numPages);
-        onRenderPage();
-    });
-}
+PDFJS.getDocument(channel.getUrl()).then(function(newDoc) {
+    pdfDoc = newDoc;
+    channel.setNumPages(pdfDoc.numPages);
+    renderPage();
+});
