@@ -65,6 +65,7 @@ public class PdfViewer extends Activity {
         WebSettings settings = mWebView.getSettings();
         settings.setAllowFileAccess(false);
         settings.setAllowUniversalAccessFromFileURLs(true);
+        settings.setCacheMode(settings.LOAD_NO_CACHE);
         settings.setJavaScriptEnabled(true);
         settings.setSaveFormData(false);
 
