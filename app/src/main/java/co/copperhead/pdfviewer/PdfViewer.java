@@ -79,13 +79,6 @@ public class PdfViewer extends Activity {
 
         mWebView.setWebViewClient(new WebViewClient() {
             @Override
-            public void onPageFinished(WebView view, String url) {
-                if (mUri != null) {
-                    loadPdf();
-                }
-            }
-
-            @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return true;
             }
@@ -109,11 +102,13 @@ public class PdfViewer extends Activity {
             mZoomLevel = savedInstanceState.getInt(STATE_ZOOM_LEVEL);
         }
 
-        mWebView.loadUrl("file:///android_asset/viewer.html");
+        if (mUri != null) {
+            loadPdf();
+        }
     }
 
     private void loadPdf() {
-        mWebView.evaluateJavascript("onGetDocument()", null);
+        mWebView.loadUrl("file:///android_asset/viewer.html");
     }
 
     private void openDocument() {
