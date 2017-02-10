@@ -7,6 +7,8 @@ var canvas = document.getElementById('content');
 var ctx = canvas.getContext('2d');
 var textLayerDiv = document.getElementById("text");
 var zoomLevels = [50, 75, 100, 125, 150];
+var renderTask = null;
+var textLayerRenderTask = null;
 
 function maybeRenderNextPage() {
     if (renderPending) {
@@ -37,10 +39,15 @@ function renderPage() {
         textLayerDiv.style.height = canvas.style.height;
         textLayerDiv.style.width = canvas.style.width;
 
-        var renderTask = page.render({
+        renderTask = page.render({
             canvasContext: ctx,
             viewport: viewport
         });
+
+        function finishRendering() {
+            pageRendering = false;
+            maybeRenderNextPage();
+        }
 
         renderTask.then(function() {
             if (maybeRenderNextPage()) {
@@ -53,24 +60,31 @@ function renderPage() {
                 }
 
                 var textLayerFrag = document.createDocumentFragment();
-                var textLayerRenderTask = PDFJS.renderTextLayer({
+                textLayerRenderTask = PDFJS.renderTextLayer({
                     textContent: textContent,
                     container: textLayerFrag,
                     viewport: viewport
                 });
                 textLayerRenderTask.promise.then(function() {
                     textLayerDiv.appendChild(textLayerFrag);
-                    pageRendering = false;
-                    maybeRenderNextPage();
-                });
-            })
-        });
+                    finishRendering();
+                }).catch(finishRendering);
+            }).catch(finishRendering);
+        }).catch(finishRendering);
     });
 }
 
 function queueRenderPage() {
     if (pageRendering) {
         renderPending = true;
+        if (renderTask !== null) {
+            renderTask.cancel();
+            renderTask = null;
+        }
+        if (textLayerRenderTask !== null) {
+            textLayerRenderTask.cancel();
+            textLayerRenderTask = null;
+        }
     } else {
         renderPage();
     }
