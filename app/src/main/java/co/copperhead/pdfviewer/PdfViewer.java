@@ -14,11 +14,15 @@ import android.view.MenuItem;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.NumberPicker;
+
+import java.io.InputStream;
+import java.io.IOException;
 
 public class PdfViewer extends Activity {
     private static final int MAX_ZOOM_LEVEL = 4;
@@ -33,13 +37,9 @@ public class PdfViewer extends Activity {
     private int mNumPages;
     private int mZoomLevel;
     private Channel mChannel;
+    private InputStream mInputStream;
 
     private class Channel {
-        @JavascriptInterface
-        public String getUrl() {
-            return mUri.toString();
-        }
-
         @JavascriptInterface
         public int getPage() {
             return mPage;
@@ -65,6 +65,7 @@ public class PdfViewer extends Activity {
 
         mWebView = (WebView) findViewById(R.id.webview);
         WebSettings settings = mWebView.getSettings();
+        settings.setAllowContentAccess(false);
         settings.setAllowFileAccess(false);
         settings.setAllowUniversalAccessFromFileURLs(true);
         settings.setCacheMode(settings.LOAD_NO_CACHE);
@@ -78,6 +79,14 @@ public class PdfViewer extends Activity {
         mWebView.addJavascriptInterface(mChannel, "channel");
 
         mWebView.setWebViewClient(new WebViewClient() {
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                if ("GET".equals(request.getMethod()) && "https://localhost/placeholder.pdf".equals(request.getUrl().toString())) {
+                    return new WebResourceResponse("application/pdf", null, mInputStream);
+                }
+                return null;
+            }
+
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return true;
@@ -108,6 +117,14 @@ public class PdfViewer extends Activity {
     }
 
     private void loadPdf() {
+        try {
+            if (mInputStream != null) {
+                mInputStream.close();
+            }
+            mInputStream = getContentResolver().openInputStream(mUri);
+        } catch (IOException e) {
+            return;
+        }
         mWebView.loadUrl("file:///android_asset/viewer.html");
     }
 

@@ -90,7 +90,7 @@ function onRenderPage() {
     }
 }
 
-PDFJS.getDocument(channel.getUrl()).then(function(newDoc) {
+PDFJS.getDocument("https://localhost/placeholder.pdf").then(function(newDoc) {
     pdfDoc = newDoc;
     channel.setNumPages(pdfDoc.numPages);
     renderPage();
