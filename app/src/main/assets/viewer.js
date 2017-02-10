@@ -74,7 +74,7 @@ function renderPage() {
     });
 }
 
-function queueRenderPage() {
+function onRenderPage() {
     if (pageRendering) {
         renderPending = true;
         if (renderTask !== null) {
@@ -90,14 +90,10 @@ function queueRenderPage() {
     }
 }
 
-function onRenderPage() {
-    queueRenderPage();
-}
-
 function onGetDocument() {
     PDFJS.getDocument(channel.getUrl()).then(function(newDoc) {
         pdfDoc = newDoc;
         channel.setNumPages(pdfDoc.numPages);
-        queueRenderPage();
+        onRenderPage();
     });
 }
