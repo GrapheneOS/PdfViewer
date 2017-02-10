@@ -63,10 +63,10 @@ public class PdfViewer extends Activity {
 
         mWebView = (WebView) findViewById(R.id.webView1);
         WebSettings settings = mWebView.getSettings();
-        settings.setJavaScriptEnabled(true);
-
         settings.setAllowFileAccess(false);
         settings.setAllowUniversalAccessFromFileURLs(true);
+        settings.setJavaScriptEnabled(true);
+        settings.setSaveFormData(false);
 
         mZoomLevel = 2;
         mChannel = new Channel();
