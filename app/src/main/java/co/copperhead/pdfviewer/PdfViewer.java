@@ -111,6 +111,10 @@ public class PdfViewer extends Activity {
         mWebView.loadUrl("file:///android_asset/viewer.html");
     }
 
+    private void renderPage() {
+        mWebView.evaluateJavascript("onRenderPage()", null);
+    }
+
     private void openDocument() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -151,14 +155,14 @@ public class PdfViewer extends Activity {
             case R.id.action_previous:
                 if (mPage > 1) {
                     mPage--;
-                    mWebView.evaluateJavascript("onRenderPage()", null);
+                    renderPage();
                 }
                 return super.onOptionsItemSelected(item);
 
             case R.id.action_next:
                 if (mPage < mNumPages) {
                     mPage++;
-                    mWebView.evaluateJavascript("onRenderPage()", null);
+                    renderPage();
                 }
                 return super.onOptionsItemSelected(item);
 
@@ -169,14 +173,14 @@ public class PdfViewer extends Activity {
             case R.id.action_zoom_out:
                 if (mZoomLevel > 0) {
                     mZoomLevel--;
-                    mWebView.evaluateJavascript("onRenderPage()", null);
+                    renderPage();
                 }
                 return super.onOptionsItemSelected(item);
 
             case R.id.action_zoom_in:
                 if (mZoomLevel < MAX_ZOOM_LEVEL) {
                     mZoomLevel++;
-                    mWebView.evaluateJavascript("onRenderPage()", null);
+                    renderPage();
                 }
                 return super.onOptionsItemSelected(item);
 
@@ -200,7 +204,7 @@ public class PdfViewer extends Activity {
                             int page = picker.getValue();
                             if (page >= 1 && page <= mNumPages) {
                                 mPage = page;
-                                mWebView.evaluateJavascript("onRenderPage()", null);
+                                renderPage();
                             }
                         }
                     })
