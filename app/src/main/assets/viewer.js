@@ -1,12 +1,11 @@
 "use strict";
 
-var pdfDoc = null,
-    pageRendering = false,
-    pageNumPending = null,
-    scale = 1.0,
-    canvas = document.getElementById('content'),
-    ctx = canvas.getContext('2d');
-
+var pdfDoc = null;
+var pageRendering = false;
+var pageNumPending = null;
+var scale = 1.0;
+var canvas = document.getElementById('content');
+var ctx = canvas.getContext('2d');
 var textLayerDiv = document.getElementById("text");
 var zoomLevels = [50, 75, 100, 125, 150];
 
@@ -43,11 +42,10 @@ function renderPage(num) {
         textLayerDiv.style.height = canvas.style.height;
         textLayerDiv.style.width = canvas.style.width;
 
-        var renderContext = {
+        var renderTask = page.render({
             canvasContext: ctx,
             viewport: viewport
-        };
-        var renderTask = page.render(renderContext);
+        });
 
         renderTask.then(function() {
             if (maybeRenderNextPage()) {
