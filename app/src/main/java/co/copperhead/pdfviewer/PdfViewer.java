@@ -11,6 +11,7 @@ import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -69,6 +70,8 @@ public class PdfViewer extends Activity {
         settings.setCacheMode(settings.LOAD_NO_CACHE);
         settings.setJavaScriptEnabled(true);
         settings.setSaveFormData(false);
+
+        CookieManager.getInstance().setAcceptCookie(false);
 
         mZoomLevel = 2;
         mChannel = new Channel();
