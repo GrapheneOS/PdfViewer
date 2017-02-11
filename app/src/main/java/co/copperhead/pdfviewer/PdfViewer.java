@@ -35,7 +35,7 @@ public class PdfViewer extends Activity {
     private Uri mUri;
     private int mPage;
     private int mNumPages;
-    private int mZoomLevel;
+    private int mZoomLevel = 2;
     private Channel mChannel;
     private InputStream mInputStream;
 
@@ -74,7 +74,6 @@ public class PdfViewer extends Activity {
 
         CookieManager.getInstance().setAcceptCookie(false);
 
-        mZoomLevel = 2;
         mChannel = new Channel();
         mWebView.addJavascriptInterface(mChannel, "channel");
 
