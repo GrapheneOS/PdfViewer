@@ -93,12 +93,9 @@ public class PdfViewer extends Activity {
             }
         });
 
-        Intent intent = getIntent();
-        String action = intent.getAction();
-        String type = intent.getType();
-
-        if (Intent.ACTION_VIEW.equals(action)) {
-            if (!type.equals("application/pdf")) {
+        final Intent intent = getIntent();
+        if (Intent.ACTION_VIEW.equals(intent.getAction())) {
+            if (!"application/pdf".equals(intent.getType())) {
                 throw new RuntimeException();
             }
             mUri = (Uri) intent.getData();
