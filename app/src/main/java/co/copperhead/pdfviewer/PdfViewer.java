@@ -14,11 +14,15 @@ import android.view.MenuItem;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.NumberPicker;
+
+import java.io.InputStream;
+import java.io.IOException;
 
 public class PdfViewer extends Activity {
     private static final int MIN_ZOOM_LEVEL = 0;
@@ -34,17 +38,13 @@ public class PdfViewer extends Activity {
     private Uri mUri;
     private int mPage;
     private int mNumPages;
-    private int mZoomLevel;
+    private int mZoomLevel = 2;
     private Channel mChannel;
     private boolean mZoomInState = true;
     private boolean mZoomOutState = true;
+    private InputStream mInputStream;
 
     private class Channel {
-        @JavascriptInterface
-        public String getUrl() {
-            return mUri.toString();
-        }
-
         @JavascriptInterface
         public int getPage() {
             return mPage;
@@ -70,6 +70,7 @@ public class PdfViewer extends Activity {
 
         mWebView = (WebView) findViewById(R.id.webview);
         WebSettings settings = mWebView.getSettings();
+        settings.setAllowContentAccess(false);
         settings.setAllowFileAccess(false);
         settings.setAllowUniversalAccessFromFileURLs(true);
         settings.setCacheMode(settings.LOAD_NO_CACHE);
@@ -78,23 +79,27 @@ public class PdfViewer extends Activity {
 
         CookieManager.getInstance().setAcceptCookie(false);
 
-        mZoomLevel = 2;
         mChannel = new Channel();
         mWebView.addJavascriptInterface(mChannel, "channel");
 
         mWebView.setWebViewClient(new WebViewClient() {
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                if ("GET".equals(request.getMethod()) && "https://localhost/placeholder.pdf".equals(request.getUrl().toString())) {
+                    return new WebResourceResponse("application/pdf", null, mInputStream);
+                }
+                return null;
+            }
+
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return true;
             }
         });
 
-        Intent intent = getIntent();
-        String action = intent.getAction();
-        String type = intent.getType();
-
-        if (Intent.ACTION_VIEW.equals(action)) {
-            if (!type.equals("application/pdf")) {
+        final Intent intent = getIntent();
+        if (Intent.ACTION_VIEW.equals(intent.getAction())) {
+            if (!"application/pdf".equals(intent.getType())) {
                 throw new RuntimeException();
             }
             mUri = (Uri) intent.getData();
@@ -113,6 +118,14 @@ public class PdfViewer extends Activity {
     }
 
     private void loadPdf() {
+        try {
+            if (mInputStream != null) {
+                mInputStream.close();
+            }
+            mInputStream = getContentResolver().openInputStream(mUri);
+        } catch (IOException e) {
+            return;
+        }
         mWebView.loadUrl("file:///android_asset/viewer.html");
     }
 
