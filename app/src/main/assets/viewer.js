@@ -1,14 +1,14 @@
 "use strict";
 
-var pdfDoc = null;
-var pageRendering = false;
-var renderPending = false;
-var canvas = document.getElementById('content');
-var ctx = canvas.getContext('2d');
-var textLayerDiv = document.getElementById("text");
-var zoomLevels = [50, 75, 100, 125, 150];
-var renderTask = null;
-var textLayerRenderTask = null;
+let pdfDoc = null;
+let pageRendering = false;
+let renderPending = false;
+const canvas = document.getElementById('content');
+const ctx = canvas.getContext('2d');
+const textLayerDiv = document.getElementById("text");
+const zoomLevels = [50, 75, 100, 125, 150];
+let renderTask = null;
+let textLayerRenderTask = null;
 
 function maybeRenderNextPage() {
     if (renderPending) {
@@ -23,13 +23,13 @@ function maybeRenderNextPage() {
 function renderPage() {
     pageRendering = true;
     pdfDoc.getPage(channel.getPage()).then(function(page) {
-        var last;
+        let last;
         while (last = textLayerDiv.lastChild) {
             textLayerDiv.removeChild(last);
         }
 
-        var viewport = page.getViewport(zoomLevels[channel.getZoomLevel()] / 100)
-        var ratio = window.devicePixelRatio;
+        const viewport = page.getViewport(zoomLevels[channel.getZoomLevel()] / 100)
+        const ratio = window.devicePixelRatio;
         canvas.height = viewport.height * ratio;
         canvas.width = viewport.width * ratio;
         canvas.style.height = viewport.height + "px";
@@ -59,7 +59,7 @@ function renderPage() {
                     return;
                 }
 
-                var textLayerFrag = document.createDocumentFragment();
+                const textLayerFrag = document.createDocumentFragment();
                 textLayerRenderTask = PDFJS.renderTextLayer({
                     textContent: textContent,
                     container: textLayerFrag,
