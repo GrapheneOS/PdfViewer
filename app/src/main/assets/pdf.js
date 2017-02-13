@@ -28,8 +28,8 @@ factory((root.pdfjsDistBuildPdf = {}));
   // Use strict in our context only - users might not want it
   'use strict';
 
-var pdfjsVersion = '1.6.210';
-var pdfjsBuild = '4ce2356';
+var pdfjsVersion = '1.6.211';
+var pdfjsBuild = 'e89417c0';
 
   var pdfjsFilePath =
     typeof document !== 'undefined' && document.currentScript ?
@@ -5343,20 +5343,14 @@ var renderTextLayer = (function renderTextLayerClosure() {
     return !NonWhitespaceRegexp.test(str);
   }
 
-  // Text layers may contain many thousand div's, and using `styleBuf` avoids
-  // creating many intermediate strings when building their 'style' properties.
-  var styleBuf = ['left: ', 0, 'px; top: ', 0, 'px; font-size: ', 0,
-                  'px; font-family: ', '', ';'];
-
   function appendText(task, geom, styles) {
     // Initialize all used properties to keep the caches monomorphic.
     var textDiv = document.createElement('div');
     var textDivProperties = {
-      style: null,
       angle: 0,
       canvasWidth: 0,
       isWhitespace: false,
-      originalTransform: null,
+      originalTransform: '',
       paddingBottom: 0,
       paddingLeft: 0,
       paddingRight: 0,
@@ -5394,12 +5388,10 @@ var renderTextLayer = (function renderTextLayerClosure() {
       left = tx[4] + (fontAscent * Math.sin(angle));
       top = tx[5] - (fontAscent * Math.cos(angle));
     }
-    styleBuf[1] = left;
-    styleBuf[3] = top;
-    styleBuf[5] = fontHeight;
-    styleBuf[7] = style.fontFamily;
-    textDivProperties.style = styleBuf.join('');
-    textDiv.setAttribute('style', textDivProperties.style);
+    textDiv.style.left = left + 'px';
+    textDiv.style.top = top + 'px';
+    textDiv.style.fontSize = fontHeight + 'px';
+    textDiv.style.fontFamily = style.fontFamily;
 
     textDiv.textContent = geom.str;
     // |fontName| is only used by the Font Inspector. This test will succeed
@@ -5807,6 +5799,7 @@ var renderTextLayer = (function renderTextLayerClosure() {
     this._renderTimer = null;
     this._bounds = [];
     this._enhanceTextSelection = !!enhanceTextSelection;
+    this._expanded = false;
   }
   TextLayerRenderTask.prototype = {
     get promise() {
@@ -5844,20 +5837,18 @@ var renderTextLayer = (function renderTextLayerClosure() {
       if (!this._enhanceTextSelection || !this._renderingDone) {
         return;
       }
-      if (this._bounds !== null) {
+      if (!this._expanded) {
         expand(this);
-        this._bounds = null;
+        this._expanded = true;
+        this._bounds.length = 0;
       }
 
       for (var i = 0, ii = this._textDivs.length; i < ii; i++) {
         var div = this._textDivs[i];
         var divProperties = this._textDivProperties.get(div);
 
-        if (divProperties.isWhitespace) {
-          continue;
-        }
         if (expandDivs) {
-          var transform = '', padding = '';
+          var transform = '';
 
           if (divProperties.scale !== 1) {
             transform = 'scaleX(' + divProperties.scale + ')';
@@ -5866,26 +5857,21 @@ var renderTextLayer = (function renderTextLayerClosure() {
             transform = 'rotate(' + divProperties.angle + 'deg) ' + transform;
           }
           if (divProperties.paddingLeft !== 0) {
-            padding += ' padding-left: ' +
-              (divProperties.paddingLeft / divProperties.scale) + 'px;';
+            div.style.paddingLeft =
+              (divProperties.paddingLeft / divProperties.scale) + 'px';
             transform += ' translateX(' +
               (-divProperties.paddingLeft / divProperties.scale) + 'px)';
           }
           if (divProperties.paddingTop !== 0) {
-            padding += ' padding-top: ' + divProperties.paddingTop + 'px;';
+            div.style.paddingTop = divProperties.paddingTop + 'px';
             transform += ' translateY(' + (-divProperties.paddingTop) + 'px)';
           }
           if (divProperties.paddingRight !== 0) {
-            padding += ' padding-right: ' +
-              (divProperties.paddingRight / divProperties.scale) + 'px;';
+            div.style.paddingRight =
+              (divProperties.paddingRight / divProperties.scale) + 'px';
           }
           if (divProperties.paddingBottom !== 0) {
-            padding += ' padding-bottom: ' +
-              divProperties.paddingBottom + 'px;';
-          }
-
-          if (padding !== '') {
-            div.setAttribute('style', divProperties.style + padding);
+            div.style.paddingBottom = divProperties.paddingBottom + 'px';
           }
           if (transform !== '') {
             CustomStyle.setProp('transform', div, transform);
@@ -5893,7 +5879,7 @@ var renderTextLayer = (function renderTextLayerClosure() {
         } else {
           div.style.padding = 0;
           CustomStyle.setProp('transform', div,
-                              divProperties.originalTransform || '');
+                              divProperties.originalTransform);
         }
       }
     },
