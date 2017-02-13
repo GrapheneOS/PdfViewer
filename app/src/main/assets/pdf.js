@@ -28,8 +28,8 @@ factory((root.pdfjsDistBuildPdf = {}));
   // Use strict in our context only - users might not want it
   'use strict';
 
-var pdfjsVersion = '1.5.188';
-var pdfjsBuild = '0e2d50f';
+var pdfjsVersion = '1.6.210';
+var pdfjsBuild = '4ce2356';
 
   var pdfjsFilePath =
     typeof document !== 'undefined' && document.currentScript ?
@@ -112,6 +112,28 @@ var AnnotationFlag = {
   LOCKED: 0x80,
   TOGGLENOVIEW: 0x100,
   LOCKEDCONTENTS: 0x200
+};
+
+var AnnotationFieldFlag = {
+  READONLY: 0x0000001,
+  REQUIRED: 0x0000002,
+  NOEXPORT: 0x0000004,
+  MULTILINE: 0x0001000,
+  PASSWORD: 0x0002000,
+  NOTOGGLETOOFF: 0x0004000,
+  RADIO: 0x0008000,
+  PUSHBUTTON: 0x0010000,
+  COMBO: 0x0020000,
+  EDIT: 0x0040000,
+  SORT: 0x0080000,
+  FILESELECT: 0x0100000,
+  MULTISELECT: 0x0200000,
+  DONOTSPELLCHECK: 0x0400000,
+  DONOTSCROLL: 0x0800000,
+  COMB: 0x1000000,
+  RICHTEXT: 0x2000000,
+  RADIOSINUNISON: 0x2000000,
+  COMMITONSELCHANGE: 0x4000000,
 };
 
 var AnnotationBorderStyleType = {
@@ -1111,12 +1133,17 @@ function isArrayBuffer(v) {
   return typeof v === 'object' && v !== null && v.byteLength !== undefined;
 }
 
+// Checks if ch is one of the following characters: SPACE, TAB, CR or LF.
+function isSpace(ch) {
+  return (ch === 0x20 || ch === 0x09 || ch === 0x0D || ch === 0x0A);
+}
+
 /**
  * Promise Capability object.
  *
  * @typedef {Object} PromiseCapability
  * @property {Promise} promise - A promise object.
- * @property {function} resolve - Fullfills the promise.
+ * @property {function} resolve - Fulfills the promise.
  * @property {function} reject - Rejects the promise.
  */
 
@@ -1139,8 +1166,8 @@ function createPromiseCapability() {
 /**
  * Polyfill for Promises:
  * The following promise implementation tries to generally implement the
- * Promise/A+ spec. Some notable differences from other promise libaries are:
- * - There currently isn't a seperate deferred and promise object.
+ * Promise/A+ spec. Some notable differences from other promise libraries are:
+ * - There currently isn't a separate deferred and promise object.
  * - Unhandled rejections eventually show an error if they aren't handled.
  *
  * Based off of the work in:
@@ -1320,8 +1347,8 @@ function createPromiseCapability() {
   /**
    * Builds a promise that is resolved when all the passed in promises are
    * resolved.
-   * @param {array} array of data and/or promises to wait for.
-   * @return {Promise} New dependant promise.
+   * @param {array} promises array of data and/or promises to wait for.
+   * @return {Promise} New dependent promise.
    */
   Promise.all = function Promise_all(promises) {
     var resolveAll, rejectAll;
@@ -1452,6 +1479,37 @@ function createPromiseCapability() {
   globalScope.Promise = Promise;
 })();
 
+(function WeakMapClosure() {
+  if (globalScope.WeakMap) {
+    return;
+  }
+
+  var id = 0;
+  function WeakMap() {
+    this.id = '$weakmap' + (id++);
+  }
+  WeakMap.prototype = {
+    has: function(obj) {
+      return !!Object.getOwnPropertyDescriptor(obj, this.id);
+    },
+    get: function(obj, defaultValue) {
+      return this.has(obj) ? obj[this.id] : defaultValue;
+    },
+    set: function(obj, value) {
+      Object.defineProperty(obj, this.id, {
+        value: value,
+        enumerable: false,
+        configurable: true
+      });
+    },
+    delete: function(obj) {
+      delete obj[this.id];
+    }
+  };
+
+  globalScope.WeakMap = WeakMap;
+})();
+
 var StatTimer = (function StatTimerClosure() {
   function rpad(str, pad, length) {
     while (str.length < length) {
@@ -1516,10 +1574,7 @@ var createBlob = function createBlob(data, contentType) {
   if (typeof Blob !== 'undefined') {
     return new Blob([data], { type: contentType });
   }
-  // Blob builder is deprecated in FF14 and removed in FF18.
-  var bb = new MozBlobBuilder();
-  bb.append(data);
-  return bb.getBlob(contentType);
+  warn('The "Blob" constructor is not supported.');
 };
 
 var createObjectURL = (function createObjectURLClosure() {
@@ -1698,8 +1753,6 @@ function loadJpegStream(id, imageUrl, objs) {
 /* Any copyright is dedicated to the Public Domain.
  * http://creativecommons.org/publicdomain/zero/1.0/ */
 (function checkURLConstructor(scope) {
-  /* jshint ignore:start */
-
   // feature detect for URL constructor
   var hasWorkingUrl = false;
   try {
@@ -1712,8 +1765,9 @@ function loadJpegStream(id, imageUrl, objs) {
     }
   } catch(e) { }
 
-  if (hasWorkingUrl)
+  if (hasWorkingUrl) {
     return;
+  }
 
   var relative = Object.create(null);
   relative['ftp'] = 21;
@@ -1740,11 +1794,11 @@ function loadJpegStream(id, imageUrl, objs) {
   }
 
   function IDNAToASCII(h) {
-    if ('' == h) {
-      invalid.call(this)
+    if ('' === h) {
+      invalid.call(this);
     }
     // XXX
-    return h.toLowerCase()
+    return h.toLowerCase();
   }
 
   function percentEscape(c) {
@@ -1752,7 +1806,7 @@ function loadJpegStream(id, imageUrl, objs) {
     if (unicode > 0x20 &&
        unicode < 0x7F &&
        // " # < > ? `
-       [0x22, 0x23, 0x3C, 0x3E, 0x3F, 0x60].indexOf(unicode) == -1
+       [0x22, 0x23, 0x3C, 0x3E, 0x3F, 0x60].indexOf(unicode) === -1
       ) {
       return c;
     }
@@ -1767,20 +1821,19 @@ function loadJpegStream(id, imageUrl, objs) {
     if (unicode > 0x20 &&
        unicode < 0x7F &&
        // " # < > ` (do not escape '?')
-       [0x22, 0x23, 0x3C, 0x3E, 0x60].indexOf(unicode) == -1
+       [0x22, 0x23, 0x3C, 0x3E, 0x60].indexOf(unicode) === -1
       ) {
       return c;
     }
     return encodeURIComponent(c);
   }
 
-  var EOF = undefined,
-      ALPHA = /[a-zA-Z]/,
+  var EOF, ALPHA = /[a-zA-Z]/,
       ALPHANUMERIC = /[a-zA-Z0-9\+\-\.]/;
 
   function parse(input, stateOverride, base) {
     function err(message) {
-      errors.push(message)
+      errors.push(message);
     }
 
     var state = stateOverride || 'scheme start',
@@ -1790,7 +1843,8 @@ function loadJpegStream(id, imageUrl, objs) {
         seenBracket = false,
         errors = [];
 
-    loop: while ((input[cursor - 1] != EOF || cursor == 0) && !this._isInvalid) {
+    loop: while ((input[cursor - 1] !== EOF || cursor === 0) &&
+                 !this._isInvalid) {
       var c = input[cursor];
       switch (state) {
         case 'scheme start':
@@ -1810,7 +1864,7 @@ function loadJpegStream(id, imageUrl, objs) {
         case 'scheme':
           if (c && ALPHANUMERIC.test(c)) {
             buffer += c.toLowerCase(); // ASCII-safe
-          } else if (':' == c) {
+          } else if (':' === c) {
             this._scheme = buffer;
             buffer = '';
             if (stateOverride) {
@@ -1819,9 +1873,10 @@ function loadJpegStream(id, imageUrl, objs) {
             if (isRelativeScheme(this._scheme)) {
               this._isRelative = true;
             }
-            if ('file' == this._scheme) {
+            if ('file' === this._scheme) {
               state = 'relative';
-            } else if (this._isRelative && base && base._scheme == this._scheme) {
+            } else if (this._isRelative && base &&
+                       base._scheme === this._scheme) {
               state = 'relative or authority';
             } else if (this._isRelative) {
               state = 'authority first slash';
@@ -1833,24 +1888,24 @@ function loadJpegStream(id, imageUrl, objs) {
             cursor = 0;
             state = 'no scheme';
             continue;
-          } else if (EOF == c) {
+          } else if (EOF === c) {
             break loop;
           } else {
-            err('Code point not allowed in scheme: ' + c)
+            err('Code point not allowed in scheme: ' + c);
             break loop;
           }
           break;
 
         case 'scheme data':
-          if ('?' == c) {
+          if ('?' === c) {
             this._query = '?';
             state = 'query';
-          } else if ('#' == c) {
+          } else if ('#' === c) {
             this._fragment = '#';
             state = 'fragment';
           } else {
             // XXX error handling
-            if (EOF != c && '\t' != c && '\n' != c && '\r' != c) {
+            if (EOF !== c && '\t' !== c && '\n' !== c && '\r' !== c) {
               this._schemeData += percentEscape(c);
             }
           }
@@ -1867,20 +1922,21 @@ function loadJpegStream(id, imageUrl, objs) {
           break;
 
         case 'relative or authority':
-          if ('/' == c && '/' == input[cursor+1]) {
+          if ('/' === c && '/' === input[cursor+1]) {
             state = 'authority ignore slashes';
           } else {
             err('Expected /, got: ' + c);
             state = 'relative';
-            continue
+            continue;
           }
           break;
 
         case 'relative':
           this._isRelative = true;
-          if ('file' != this._scheme)
+          if ('file' !== this._scheme) {
             this._scheme = base._scheme;
-          if (EOF == c) {
+          }
+          if (EOF === c) {
             this._host = base._host;
             this._port = base._port;
             this._path = base._path.slice();
@@ -1888,11 +1944,12 @@ function loadJpegStream(id, imageUrl, objs) {
             this._username = base._username;
             this._password = base._password;
             break loop;
-          } else if ('/' == c || '\\' == c) {
-            if ('\\' == c)
+          } else if ('/' === c || '\\' === c) {
+            if ('\\' === c) {
               err('\\ is an invalid code point.');
+            }
             state = 'relative slash';
-          } else if ('?' == c) {
+          } else if ('?' === c) {
             this._host = base._host;
             this._port = base._port;
             this._path = base._path.slice();
@@ -1900,7 +1957,7 @@ function loadJpegStream(id, imageUrl, objs) {
             this._username = base._username;
             this._password = base._password;
             state = 'query';
-          } else if ('#' == c) {
+          } else if ('#' === c) {
             this._host = base._host;
             this._port = base._port;
             this._path = base._path.slice();
@@ -1910,12 +1967,12 @@ function loadJpegStream(id, imageUrl, objs) {
             this._password = base._password;
             state = 'fragment';
           } else {
-            var nextC = input[cursor+1]
-            var nextNextC = input[cursor+2]
-            if (
-              'file' != this._scheme || !ALPHA.test(c) ||
-              (nextC != ':' && nextC != '|') ||
-              (EOF != nextNextC && '/' != nextNextC && '\\' != nextNextC && '?' != nextNextC && '#' != nextNextC)) {
+            var nextC = input[cursor+1];
+            var nextNextC = input[cursor+2];
+            if ('file' !== this._scheme || !ALPHA.test(c) ||
+                (nextC !== ':' && nextC !== '|') ||
+                (EOF !== nextNextC && '/' !== nextNextC && '\\' !== nextNextC &&
+                '?' !== nextNextC && '#' !== nextNextC)) {
               this._host = base._host;
               this._port = base._port;
               this._username = base._username;
@@ -1929,17 +1986,17 @@ function loadJpegStream(id, imageUrl, objs) {
           break;
 
         case 'relative slash':
-          if ('/' == c || '\\' == c) {
-            if ('\\' == c) {
+          if ('/' === c || '\\' === c) {
+            if ('\\' === c) {
               err('\\ is an invalid code point.');
             }
-            if ('file' == this._scheme) {
+            if ('file' === this._scheme) {
               state = 'file host';
             } else {
               state = 'authority ignore slashes';
             }
           } else {
-            if ('file' != this._scheme) {
+            if ('file' !== this._scheme) {
               this._host = base._host;
               this._port = base._port;
               this._username = base._username;
@@ -1951,10 +2008,10 @@ function loadJpegStream(id, imageUrl, objs) {
           break;
 
         case 'authority first slash':
-          if ('/' == c) {
+          if ('/' === c) {
             state = 'authority second slash';
           } else {
-            err("Expected '/', got: " + c);
+            err('Expected \'/\', got: ' + c);
             state = 'authority ignore slashes';
             continue;
           }
@@ -1962,14 +2019,14 @@ function loadJpegStream(id, imageUrl, objs) {
 
         case 'authority second slash':
           state = 'authority ignore slashes';
-          if ('/' != c) {
-            err("Expected '/', got: " + c);
+          if ('/' !== c) {
+            err('Expected \'/\', got: ' + c);
             continue;
           }
           break;
 
         case 'authority ignore slashes':
-          if ('/' != c && '\\' != c) {
+          if ('/' !== c && '\\' !== c) {
             state = 'authority';
             continue;
           } else {
@@ -1978,7 +2035,7 @@ function loadJpegStream(id, imageUrl, objs) {
           break;
 
         case 'authority':
-          if ('@' == c) {
+          if ('@' === c) {
             if (seenAt) {
               err('@ already seen.');
               buffer += '%40';
@@ -1986,20 +2043,25 @@ function loadJpegStream(id, imageUrl, objs) {
             seenAt = true;
             for (var i = 0; i < buffer.length; i++) {
               var cp = buffer[i];
-              if ('\t' == cp || '\n' == cp || '\r' == cp) {
+              if ('\t' === cp || '\n' === cp || '\r' === cp) {
                 err('Invalid whitespace in authority.');
                 continue;
               }
               // XXX check URL code points
-              if (':' == cp && null === this._password) {
+              if (':' === cp && null === this._password) {
                 this._password = '';
                 continue;
               }
               var tempC = percentEscape(cp);
-              (null !== this._password) ? this._password += tempC : this._username += tempC;
+              if (null !== this._password) {
+                this._password += tempC;
+              } else {
+                this._username += tempC;
+              }
             }
             buffer = '';
-          } else if (EOF == c || '/' == c || '\\' == c || '?' == c || '#' == c) {
+          } else if (EOF === c || '/' === c || '\\' === c ||
+                     '?' === c || '#' === c) {
             cursor -= buffer.length;
             buffer = '';
             state = 'host';
@@ -2010,10 +2072,11 @@ function loadJpegStream(id, imageUrl, objs) {
           break;
 
         case 'file host':
-          if (EOF == c || '/' == c || '\\' == c || '?' == c || '#' == c) {
-            if (buffer.length == 2 && ALPHA.test(buffer[0]) && (buffer[1] == ':' || buffer[1] == '|')) {
+          if (EOF === c || '/' === c || '\\' === c || '?' === c || '#' === c) {
+            if (buffer.length === 2 && ALPHA.test(buffer[0]) &&
+                (buffer[1] === ':' || buffer[1] === '|')) {
               state = 'relative path';
-            } else if (buffer.length == 0) {
+            } else if (buffer.length === 0) {
               state = 'relative path start';
             } else {
               this._host = IDNAToASCII.call(this, buffer);
@@ -2021,7 +2084,7 @@ function loadJpegStream(id, imageUrl, objs) {
               state = 'relative path start';
             }
             continue;
-          } else if ('\t' == c || '\n' == c || '\r' == c) {
+          } else if ('\t' === c || '\n' === c || '\r' === c) {
             err('Invalid whitespace in file host.');
           } else {
             buffer += c;
@@ -2030,15 +2093,16 @@ function loadJpegStream(id, imageUrl, objs) {
 
         case 'host':
         case 'hostname':
-          if (':' == c && !seenBracket) {
+          if (':' === c && !seenBracket) {
             // XXX host parsing
             this._host = IDNAToASCII.call(this, buffer);
             buffer = '';
             state = 'port';
-            if ('hostname' == stateOverride) {
+            if ('hostname' === stateOverride) {
               break loop;
             }
-          } else if (EOF == c || '/' == c || '\\' == c || '?' == c || '#' == c) {
+          } else if (EOF === c || '/' === c ||
+                     '\\' === c || '?' === c || '#' === c) {
             this._host = IDNAToASCII.call(this, buffer);
             buffer = '';
             state = 'relative path start';
@@ -2046,10 +2110,10 @@ function loadJpegStream(id, imageUrl, objs) {
               break loop;
             }
             continue;
-          } else if ('\t' != c && '\n' != c && '\r' != c) {
-            if ('[' == c) {
+          } else if ('\t' !== c && '\n' !== c && '\r' !== c) {
+            if ('[' === c) {
               seenBracket = true;
-            } else if (']' == c) {
+            } else if (']' === c) {
               seenBracket = false;
             }
             buffer += c;
@@ -2061,10 +2125,11 @@ function loadJpegStream(id, imageUrl, objs) {
         case 'port':
           if (/[0-9]/.test(c)) {
             buffer += c;
-          } else if (EOF == c || '/' == c || '\\' == c || '?' == c || '#' == c || stateOverride) {
-            if ('' != buffer) {
+          } else if (EOF === c || '/' === c || '\\' === c ||
+                     '?' === c || '#' === c || stateOverride) {
+            if ('' !== buffer) {
               var temp = parseInt(buffer, 10);
-              if (temp != relative[this._scheme]) {
+              if (temp !== relative[this._scheme]) {
                 this._port = temp + '';
               }
               buffer = '';
@@ -2074,7 +2139,7 @@ function loadJpegStream(id, imageUrl, objs) {
             }
             state = 'relative path start';
             continue;
-          } else if ('\t' == c || '\n' == c || '\r' == c) {
+          } else if ('\t' === c || '\n' === c || '\r' === c) {
             err('Invalid code point in port: ' + c);
           } else {
             invalid.call(this);
@@ -2082,60 +2147,64 @@ function loadJpegStream(id, imageUrl, objs) {
           break;
 
         case 'relative path start':
-          if ('\\' == c)
-            err("'\\' not allowed in path.");
+          if ('\\' === c) {
+            err('\'\\\' not allowed in path.');
+          }
           state = 'relative path';
-          if ('/' != c && '\\' != c) {
+          if ('/' !== c && '\\' !== c) {
             continue;
           }
           break;
 
         case 'relative path':
-          if (EOF == c || '/' == c || '\\' == c || (!stateOverride && ('?' == c || '#' == c))) {
-            if ('\\' == c) {
+          if (EOF === c || '/' === c || '\\' === c ||
+              (!stateOverride && ('?' === c || '#' === c))) {
+            if ('\\' === c) {
               err('\\ not allowed in relative path.');
             }
             var tmp;
             if (tmp = relativePathDotMapping[buffer.toLowerCase()]) {
               buffer = tmp;
             }
-            if ('..' == buffer) {
+            if ('..' === buffer) {
               this._path.pop();
-              if ('/' != c && '\\' != c) {
+              if ('/' !== c && '\\' !== c) {
                 this._path.push('');
               }
-            } else if ('.' == buffer && '/' != c && '\\' != c) {
+            } else if ('.' === buffer && '/' !== c && '\\' !== c) {
               this._path.push('');
-            } else if ('.' != buffer) {
-              if ('file' == this._scheme && this._path.length == 0 && buffer.length == 2 && ALPHA.test(buffer[0]) && buffer[1] == '|') {
+            } else if ('.' !== buffer) {
+              if ('file' === this._scheme && this._path.length === 0 &&
+                  buffer.length === 2 && ALPHA.test(buffer[0]) &&
+                  buffer[1] === '|') {
                 buffer = buffer[0] + ':';
               }
               this._path.push(buffer);
             }
             buffer = '';
-            if ('?' == c) {
+            if ('?' === c) {
               this._query = '?';
               state = 'query';
-            } else if ('#' == c) {
+            } else if ('#' === c) {
               this._fragment = '#';
               state = 'fragment';
             }
-          } else if ('\t' != c && '\n' != c && '\r' != c) {
+          } else if ('\t' !== c && '\n' !== c && '\r' !== c) {
             buffer += percentEscape(c);
           }
           break;
 
         case 'query':
-          if (!stateOverride && '#' == c) {
+          if (!stateOverride && '#' === c) {
             this._fragment = '#';
             state = 'fragment';
-          } else if (EOF != c && '\t' != c && '\n' != c && '\r' != c) {
+          } else if (EOF !== c && '\t' !== c && '\n' !== c && '\r' !== c) {
             this._query += percentEscapeQuery(c);
           }
           break;
 
         case 'fragment':
-          if (EOF != c && '\t' != c && '\n' != c && '\r' != c) {
+          if (EOF !== c && '\t' !== c && '\n' !== c && '\r' !== c) {
             this._fragment += c;
           }
           break;
@@ -2161,9 +2230,10 @@ function loadJpegStream(id, imageUrl, objs) {
 
   // Does not process domain names or IP addresses.
   // Does not handle encoding for the query parameter.
-  function jURL(url, base /* , encoding */) {
-    if (base !== undefined && !(base instanceof jURL))
-      base = new jURL(String(base));
+  function JURL(url, base /* , encoding */) {
+    if (base !== undefined && !(base instanceof JURL)) {
+      base = new JURL(String(base));
+    }
 
     this._url = url;
     clear.call(this);
@@ -2174,18 +2244,18 @@ function loadJpegStream(id, imageUrl, objs) {
     parse.call(this, input, null, base);
   }
 
-  jURL.prototype = {
+  JURL.prototype = {
     toString: function() {
       return this.href;
     },
     get href() {
-      if (this._isInvalid)
+      if (this._isInvalid) {
         return this._url;
-
+      }
       var authority = '';
-      if ('' != this._username || null != this._password) {
+      if ('' !== this._username || null !== this._password) {
         authority = this._username +
-            (null != this._password ? ':' + this._password : '') + '@';
+            (null !== this._password ? ':' + this._password : '') + '@';
       }
 
       return this.protocol +
@@ -2201,8 +2271,9 @@ function loadJpegStream(id, imageUrl, objs) {
       return this._scheme + ':';
     },
     set protocol(protocol) {
-      if (this._isInvalid)
+      if (this._isInvalid) {
         return;
+      }
       parse.call(this, protocol + ':', 'scheme start');
     },
 
@@ -2211,8 +2282,9 @@ function loadJpegStream(id, imageUrl, objs) {
           this._host + ':' + this._port : this._host;
     },
     set host(host) {
-      if (this._isInvalid || !this._isRelative)
+      if (this._isInvalid || !this._isRelative) {
         return;
+      }
       parse.call(this, host, 'host');
     },
 
@@ -2220,8 +2292,9 @@ function loadJpegStream(id, imageUrl, objs) {
       return this._host;
     },
     set hostname(hostname) {
-      if (this._isInvalid || !this._isRelative)
+      if (this._isInvalid || !this._isRelative) {
         return;
+      }
       parse.call(this, hostname, 'hostname');
     },
 
@@ -2229,8 +2302,9 @@ function loadJpegStream(id, imageUrl, objs) {
       return this._port;
     },
     set port(port) {
-      if (this._isInvalid || !this._isRelative)
+      if (this._isInvalid || !this._isRelative) {
         return;
+      }
       parse.call(this, port, 'port');
     },
 
@@ -2239,35 +2313,40 @@ function loadJpegStream(id, imageUrl, objs) {
           '/' + this._path.join('/') : this._schemeData;
     },
     set pathname(pathname) {
-      if (this._isInvalid || !this._isRelative)
+      if (this._isInvalid || !this._isRelative) {
         return;
+      }
       this._path = [];
       parse.call(this, pathname, 'relative path start');
     },
 
     get search() {
-      return this._isInvalid || !this._query || '?' == this._query ?
+      return this._isInvalid || !this._query || '?' === this._query ?
           '' : this._query;
     },
     set search(search) {
-      if (this._isInvalid || !this._isRelative)
+      if (this._isInvalid || !this._isRelative) {
         return;
+      }
       this._query = '?';
-      if ('?' == search[0])
+      if ('?' === search[0]) {
         search = search.slice(1);
+      }
       parse.call(this, search, 'query');
     },
 
     get hash() {
-      return this._isInvalid || !this._fragment || '#' == this._fragment ?
+      return this._isInvalid || !this._fragment || '#' === this._fragment ?
           '' : this._fragment;
     },
     set hash(hash) {
-      if (this._isInvalid)
+      if (this._isInvalid) {
         return;
+      }
       this._fragment = '#';
-      if ('#' == hash[0])
+      if ('#' === hash[0]) {
         hash = hash.slice(1);
+      }
       parse.call(this, hash, 'fragment');
     },
 
@@ -2299,18 +2378,17 @@ function loadJpegStream(id, imageUrl, objs) {
   // Copy over the static methods
   var OriginalURL = scope.URL;
   if (OriginalURL) {
-    jURL.createObjectURL = function(blob) {
+    JURL.createObjectURL = function(blob) {
       // IE extension allows a second optional options argument.
       // http://msdn.microsoft.com/en-us/library/ie/hh772302(v=vs.85).aspx
       return OriginalURL.createObjectURL.apply(OriginalURL, arguments);
     };
-    jURL.revokeObjectURL = function(url) {
+    JURL.revokeObjectURL = function(url) {
       OriginalURL.revokeObjectURL(url);
     };
   }
 
-  scope.URL = jURL;
-  /* jshint ignore:end */
+  scope.URL = JURL;
 })(globalScope);
 
 exports.FONT_IDENTITY_MATRIX = FONT_IDENTITY_MATRIX;
@@ -2319,6 +2397,7 @@ exports.OPS = OPS;
 exports.VERBOSITY_LEVELS = VERBOSITY_LEVELS;
 exports.UNSUPPORTED_FEATURES = UNSUPPORTED_FEATURES;
 exports.AnnotationBorderStyleType = AnnotationBorderStyleType;
+exports.AnnotationFieldFlag = AnnotationFieldFlag;
 exports.AnnotationFlag = AnnotationFlag;
 exports.AnnotationType = AnnotationType;
 exports.FontType = FontType;
@@ -2358,6 +2437,7 @@ exports.isEmptyObj = isEmptyObj;
 exports.isInt = isInt;
 exports.isNum = isNum;
 exports.isString = isString;
+exports.isSpace = isSpace;
 exports.isSameOrigin = isSameOrigin;
 exports.isValidUrl = isValidUrl;
 exports.isLittleEndian = isLittleEndian;
@@ -4284,6 +4364,8 @@ var getDefaultSetting = displayDOMUtils.getDefaultSetting;
  * @property {PageViewport} viewport
  * @property {IPDFLinkService} linkService
  * @property {DownloadManager} downloadManager
+ * @property {string} imageResourcesPath
+ * @property {boolean} renderInteractiveForms
  */
 
 /**
@@ -4308,6 +4390,12 @@ AnnotationElementFactory.prototype =
         return new TextAnnotationElement(parameters);
 
       case AnnotationType.WIDGET:
+        var fieldType = parameters.data.fieldType;
+
+        switch (fieldType) {
+          case 'Tx':
+            return new TextWidgetAnnotationElement(parameters);
+        }
         return new WidgetAnnotationElement(parameters);
 
       case AnnotationType.POPUP:
@@ -4348,6 +4436,7 @@ var AnnotationElement = (function AnnotationElementClosure() {
     this.linkService = parameters.linkService;
     this.downloadManager = parameters.downloadManager;
     this.imageResourcesPath = parameters.imageResourcesPath;
+    this.renderInteractiveForms = parameters.renderInteractiveForms;
 
     if (isRenderable) {
       this.container = this._createContainer();
@@ -4631,8 +4720,8 @@ var TextAnnotationElement = (function TextAnnotationElementClosure() {
  */
 var WidgetAnnotationElement = (function WidgetAnnotationElementClosure() {
   function WidgetAnnotationElement(parameters) {
-    var isRenderable = !parameters.data.hasAppearance &&
-                       !!parameters.data.fieldValue;
+    var isRenderable = parameters.renderInteractiveForms ||
+      (!parameters.data.hasAppearance && !!parameters.data.fieldValue);
     AnnotationElement.call(this, parameters, isRenderable);
   }
 
@@ -4645,18 +4734,82 @@ var WidgetAnnotationElement = (function WidgetAnnotationElementClosure() {
      * @returns {HTMLSectionElement}
      */
     render: function WidgetAnnotationElement_render() {
-      var content = document.createElement('div');
-      content.textContent = this.data.fieldValue;
-      var textAlignment = this.data.textAlignment;
-      content.style.textAlign = ['left', 'center', 'right'][textAlignment];
-      content.style.verticalAlign = 'middle';
-      content.style.display = 'table-cell';
+      // Show only the container for unsupported field types.
+      return this.container;
+    }
+  });
 
-      var font = (this.data.fontRefName ?
-        this.page.commonObjs.getData(this.data.fontRefName) : null);
-      this._setTextStyle(content, font);
+  return WidgetAnnotationElement;
+})();
 
-      this.container.appendChild(content);
+/**
+ * @class
+ * @alias TextWidgetAnnotationElement
+ */
+var TextWidgetAnnotationElement = (
+    function TextWidgetAnnotationElementClosure() {
+  var TEXT_ALIGNMENT = ['left', 'center', 'right'];
+
+  function TextWidgetAnnotationElement(parameters) {
+    WidgetAnnotationElement.call(this, parameters);
+  }
+
+  Util.inherit(TextWidgetAnnotationElement, WidgetAnnotationElement, {
+    /**
+     * Render the text widget annotation's HTML element in the empty container.
+     *
+     * @public
+     * @memberof TextWidgetAnnotationElement
+     * @returns {HTMLSectionElement}
+     */
+    render: function TextWidgetAnnotationElement_render() {
+      this.container.className = 'textWidgetAnnotation';
+
+      var element = null;
+      if (this.renderInteractiveForms) {
+        // NOTE: We cannot set the values using `element.value` below, since it
+        //       prevents the AnnotationLayer rasterizer in `test/driver.js`
+        //       from parsing the elements correctly for the reference tests.
+        if (this.data.multiLine) {
+          element = document.createElement('textarea');
+          element.textContent = this.data.fieldValue;
+        } else {
+          element = document.createElement('input');
+          element.type = 'text';
+          element.setAttribute('value', this.data.fieldValue);
+        }
+
+        element.disabled = this.data.readOnly;
+
+        if (this.data.maxLen !== null) {
+          element.maxLength = this.data.maxLen;
+        }
+
+        if (this.data.comb) {
+          var fieldWidth = this.data.rect[2] - this.data.rect[0];
+          var combWidth = fieldWidth / this.data.maxLen;
+
+          element.classList.add('comb');
+          element.style.letterSpacing = 'calc(' + combWidth + 'px - 1ch)';
+        }
+      } else {
+        element = document.createElement('div');
+        element.textContent = this.data.fieldValue;
+        element.style.verticalAlign = 'middle';
+        element.style.display = 'table-cell';
+
+        var font = null;
+        if (this.data.fontRefName) {
+          font = this.page.commonObjs.getData(this.data.fontRefName);
+        }
+        this._setTextStyle(element, font);
+      }
+
+      if (this.data.textAlignment !== null) {
+        element.style.textAlign = TEXT_ALIGNMENT[this.data.textAlignment];
+      }
+
+      this.container.appendChild(element);
       return this.container;
     },
 
@@ -4666,10 +4819,10 @@ var WidgetAnnotationElement = (function WidgetAnnotationElementClosure() {
      * @private
      * @param {HTMLDivElement} element
      * @param {Object} font
-     * @memberof WidgetAnnotationElement
+     * @memberof TextWidgetAnnotationElement
      */
     _setTextStyle:
-        function WidgetAnnotationElement_setTextStyle(element, font) {
+        function TextWidgetAnnotationElement_setTextStyle(element, font) {
       // TODO: This duplicates some of the logic in CanvasGraphics.setFont().
       var style = element.style;
       style.fontSize = this.data.fontSize + 'px';
@@ -4691,7 +4844,7 @@ var WidgetAnnotationElement = (function WidgetAnnotationElementClosure() {
     }
   });
 
-  return WidgetAnnotationElement;
+  return TextWidgetAnnotationElement;
 })();
 
 /**
@@ -5083,6 +5236,7 @@ var FileAttachmentAnnotationElement = (
  * @property {PDFPage} page
  * @property {IPDFLinkService} linkService
  * @property {string} imageResourcesPath
+ * @property {boolean} renderInteractiveForms
  */
 
 /**
@@ -5115,7 +5269,8 @@ var AnnotationLayer = (function AnnotationLayerClosure() {
           linkService: parameters.linkService,
           downloadManager: parameters.downloadManager,
           imageResourcesPath: parameters.imageResourcesPath ||
-                              getDefaultSetting('imageResourcesPath')
+                              getDefaultSetting('imageResourcesPath'),
+          renderInteractiveForms: parameters.renderInteractiveForms || false,
         };
         var element = annotationElementFactory.create(properties);
         if (element.isRenderable) {
@@ -5161,7 +5316,6 @@ var Util = sharedUtil.Util;
 var createPromiseCapability = sharedUtil.createPromiseCapability;
 var CustomStyle = displayDOMUtils.CustomStyle;
 var getDefaultSetting = displayDOMUtils.getDefaultSetting;
-var PageViewport = sharedUtil.PageViewport;
 
 /**
  * Text layer render parameters.
@@ -5177,6 +5331,8 @@ var PageViewport = sharedUtil.PageViewport;
  *   initially be set to empty array.
  * @property {number} timeout - (optional) Delay in milliseconds before
  *   rendering of the text  runs occurs.
+ * @property {boolean} enhanceTextSelection - (optional) Whether to turn on the
+ *   text selection enhancement.
  */
 var renderTextLayer = (function renderTextLayerClosure() {
   var MAX_TEXT_DIVS_TO_RENDER = 100000;
@@ -5187,16 +5343,37 @@ var renderTextLayer = (function renderTextLayerClosure() {
     return !NonWhitespaceRegexp.test(str);
   }
 
-  function appendText(textDivs, viewport, geom, styles) {
-    var style = styles[geom.fontName];
+  // Text layers may contain many thousand div's, and using `styleBuf` avoids
+  // creating many intermediate strings when building their 'style' properties.
+  var styleBuf = ['left: ', 0, 'px; top: ', 0, 'px; font-size: ', 0,
+                  'px; font-family: ', '', ';'];
+
+  function appendText(task, geom, styles) {
+    // Initialize all used properties to keep the caches monomorphic.
     var textDiv = document.createElement('div');
-    textDivs.push(textDiv);
+    var textDivProperties = {
+      style: null,
+      angle: 0,
+      canvasWidth: 0,
+      isWhitespace: false,
+      originalTransform: null,
+      paddingBottom: 0,
+      paddingLeft: 0,
+      paddingRight: 0,
+      paddingTop: 0,
+      scale: 1,
+    };
+
+    task._textDivs.push(textDiv);
     if (isAllWhitespace(geom.str)) {
-      textDiv.dataset.isWhitespace = true;
+      textDivProperties.isWhitespace = true;
+      task._textDivProperties.set(textDiv, textDivProperties);
       return;
     }
-    var tx = Util.transform(viewport.transform, geom.transform);
+
+    var tx = Util.transform(task._viewport.transform, geom.transform);
     var angle = Math.atan2(tx[1], tx[0]);
+    var style = styles[geom.fontName];
     if (style.vertical) {
       angle += Math.PI / 2;
     }
@@ -5217,31 +5394,63 @@ var renderTextLayer = (function renderTextLayerClosure() {
       left = tx[4] + (fontAscent * Math.sin(angle));
       top = tx[5] - (fontAscent * Math.cos(angle));
     }
-    textDiv.style.left = left + 'px';
-    textDiv.style.top = top + 'px';
-    textDiv.style.fontSize = fontHeight + 'px';
-    textDiv.style.fontFamily = style.fontFamily;
+    styleBuf[1] = left;
+    styleBuf[3] = top;
+    styleBuf[5] = fontHeight;
+    styleBuf[7] = style.fontFamily;
+    textDivProperties.style = styleBuf.join('');
+    textDiv.setAttribute('style', textDivProperties.style);
 
     textDiv.textContent = geom.str;
     // |fontName| is only used by the Font Inspector. This test will succeed
     // when e.g. the Font Inspector is off but the Stepper is on, but it's
-    // not worth the effort to do a more accurate test.
+    // not worth the effort to do a more accurate test. We only use `dataset`
+    // here to make the font name available for the debugger.
     if (getDefaultSetting('pdfBug')) {
       textDiv.dataset.fontName = geom.fontName;
     }
-    // Storing into dataset will convert number into string.
     if (angle !== 0) {
-      textDiv.dataset.angle = angle * (180 / Math.PI);
+      textDivProperties.angle = angle * (180 / Math.PI);
     }
     // We don't bother scaling single-char text divs, because it has very
     // little effect on text highlighting. This makes scrolling on docs with
     // lots of such divs a lot faster.
     if (geom.str.length > 1) {
       if (style.vertical) {
-        textDiv.dataset.canvasWidth = geom.height * viewport.scale;
+        textDivProperties.canvasWidth = geom.height * task._viewport.scale;
       } else {
-        textDiv.dataset.canvasWidth = geom.width * viewport.scale;
+        textDivProperties.canvasWidth = geom.width * task._viewport.scale;
       }
+    }
+    task._textDivProperties.set(textDiv, textDivProperties);
+
+    if (task._enhanceTextSelection) {
+      var angleCos = 1, angleSin = 0;
+      if (angle !== 0) {
+        angleCos = Math.cos(angle);
+        angleSin = Math.sin(angle);
+      }
+      var divWidth = (style.vertical ? geom.height : geom.width) *
+                     task._viewport.scale;
+      var divHeight = fontHeight;
+
+      var m, b;
+      if (angle !== 0) {
+        m = [angleCos, angleSin, -angleSin, angleCos, left, top];
+        b = Util.getAxialAlignedBoundingBox([0, 0, divWidth, divHeight], m);
+      } else {
+        b = [left, top, left + divWidth, top + divHeight];
+      }
+
+      task._bounds.push({
+        left: b[0],
+        top: b[1],
+        right: b[2],
+        bottom: b[3],
+        div: textDiv,
+        size: [divWidth, divHeight],
+        m: m
+      });
     }
   }
 
@@ -5257,6 +5466,7 @@ var renderTextLayer = (function renderTextLayerClosure() {
     // No point in rendering many divs as it would make the browser
     // unusable even after the divs are rendered.
     if (textDivsLength > MAX_TEXT_DIVS_TO_RENDER) {
+      task._renderingDone = true;
       capability.resolve();
       return;
     }
@@ -5269,7 +5479,8 @@ var renderTextLayer = (function renderTextLayerClosure() {
     var lastFontFamily;
     for (var i = 0; i < textDivsLength; i++) {
       var textDiv = textDivs[i];
-      if (textDiv.dataset.isWhitespace !== undefined) {
+      var textDivProperties = task._textDivProperties.get(textDiv);
+      if (textDivProperties.isWhitespace) {
         continue;
       }
 
@@ -5284,26 +5495,293 @@ var renderTextLayer = (function renderTextLayerClosure() {
       }
 
       var width = ctx.measureText(textDiv.textContent).width;
-      if (width > 0) {
-        textLayerFrag.appendChild(textDiv);
-        var transform;
-        if (textDiv.dataset.canvasWidth !== undefined) {
-          // Dataset values come of type string.
-          var textScale = textDiv.dataset.canvasWidth / width;
-          transform = 'scaleX(' + textScale + ')';
+      textLayerFrag.appendChild(textDiv);
+
+      var transform = '';
+      if (textDivProperties.canvasWidth !== 0 && width > 0) {
+        textDivProperties.scale = textDivProperties.canvasWidth / width;
+        transform = 'scaleX(' + textDivProperties.scale + ')';
+      }
+      if (textDivProperties.angle !== 0) {
+        transform = 'rotate(' + textDivProperties.angle + 'deg) ' + transform;
+      }
+      if (transform !== '') {
+        textDivProperties.originalTransform = transform;
+        CustomStyle.setProp('transform', textDiv, transform);
+      }
+      task._textDivProperties.set(textDiv, textDivProperties);
+    }
+    task._renderingDone = true;
+    capability.resolve();
+  }
+
+  function expand(task) {
+    var bounds = task._bounds;
+    var viewport = task._viewport;
+
+    var expanded = expandBounds(viewport.width, viewport.height, bounds);
+    for (var i = 0; i < expanded.length; i++) {
+      var div = bounds[i].div;
+      var divProperties = task._textDivProperties.get(div);
+      if (divProperties.angle === 0) {
+        divProperties.paddingLeft = bounds[i].left - expanded[i].left;
+        divProperties.paddingTop = bounds[i].top - expanded[i].top;
+        divProperties.paddingRight = expanded[i].right - bounds[i].right;
+        divProperties.paddingBottom = expanded[i].bottom - bounds[i].bottom;
+        task._textDivProperties.set(div, divProperties);
+        continue;
+      }
+      // Box is rotated -- trying to find padding so rotated div will not
+      // exceed its expanded bounds.
+      var e = expanded[i], b = bounds[i];
+      var m = b.m, c = m[0], s = m[1];
+      // Finding intersections with expanded box.
+      var points = [[0, 0], [0, b.size[1]], [b.size[0], 0], b.size];
+      var ts = new Float64Array(64);
+      points.forEach(function (p, i) {
+        var t = Util.applyTransform(p, m);
+        ts[i + 0] = c && (e.left - t[0]) / c;
+        ts[i + 4] = s && (e.top - t[1]) / s;
+        ts[i + 8] = c && (e.right - t[0]) / c;
+        ts[i + 12] = s && (e.bottom - t[1]) / s;
+
+        ts[i + 16] = s && (e.left - t[0]) / -s;
+        ts[i + 20] = c && (e.top - t[1]) / c;
+        ts[i + 24] = s && (e.right - t[0]) / -s;
+        ts[i + 28] = c && (e.bottom - t[1]) / c;
+
+        ts[i + 32] = c && (e.left - t[0]) / -c;
+        ts[i + 36] = s && (e.top - t[1]) / -s;
+        ts[i + 40] = c && (e.right - t[0]) / -c;
+        ts[i + 44] = s && (e.bottom - t[1]) / -s;
+
+        ts[i + 48] = s && (e.left - t[0]) / s;
+        ts[i + 52] = c && (e.top - t[1]) / -c;
+        ts[i + 56] = s && (e.right - t[0]) / s;
+        ts[i + 60] = c && (e.bottom - t[1]) / -c;
+      });
+      var findPositiveMin = function (ts, offset, count) {
+        var result = 0;
+        for (var i = 0; i < count; i++) {
+          var t = ts[offset++];
+          if (t > 0) {
+            result = result ? Math.min(t, result) : t;
+          }
+        }
+        return result;
+      };
+      // Not based on math, but to simplify calculations, using cos and sin
+      // absolute values to not exceed the box (it can but insignificantly).
+      var boxScale = 1 + Math.min(Math.abs(c), Math.abs(s));
+      divProperties.paddingLeft = findPositiveMin(ts, 32, 16) / boxScale;
+      divProperties.paddingTop = findPositiveMin(ts, 48, 16) / boxScale;
+      divProperties.paddingRight = findPositiveMin(ts, 0, 16) / boxScale;
+      divProperties.paddingBottom = findPositiveMin(ts, 16, 16) / boxScale;
+      task._textDivProperties.set(div, divProperties);
+    }
+  }
+
+  function expandBounds(width, height, boxes) {
+    var bounds = boxes.map(function (box, i) {
+      return {
+        x1: box.left,
+        y1: box.top,
+        x2: box.right,
+        y2: box.bottom,
+        index: i,
+        x1New: undefined,
+        x2New: undefined
+      };
+    });
+    expandBoundsLTR(width, bounds);
+    var expanded = new Array(boxes.length);
+    bounds.forEach(function (b) {
+      var i = b.index;
+      expanded[i] = {
+        left: b.x1New,
+        top: 0,
+        right: b.x2New,
+        bottom: 0
+      };
+    });
+
+    // Rotating on 90 degrees and extending extended boxes. Reusing the bounds
+    // array and objects.
+    boxes.map(function (box, i) {
+      var e = expanded[i], b = bounds[i];
+      b.x1 = box.top;
+      b.y1 = width - e.right;
+      b.x2 = box.bottom;
+      b.y2 = width - e.left;
+      b.index = i;
+      b.x1New = undefined;
+      b.x2New = undefined;
+    });
+    expandBoundsLTR(height, bounds);
+
+    bounds.forEach(function (b) {
+      var i = b.index;
+      expanded[i].top = b.x1New;
+      expanded[i].bottom = b.x2New;
+    });
+    return expanded;
+  }
+
+  function expandBoundsLTR(width, bounds) {
+    // Sorting by x1 coordinate and walk by the bounds in the same order.
+    bounds.sort(function (a, b) { return a.x1 - b.x1 || a.index - b.index; });
+
+    // First we see on the horizon is a fake boundary.
+    var fakeBoundary = {
+      x1: -Infinity,
+      y1: -Infinity,
+      x2: 0,
+      y2: Infinity,
+      index: -1,
+      x1New: 0,
+      x2New: 0
+    };
+    var horizon = [{
+      start: -Infinity,
+      end: Infinity,
+      boundary: fakeBoundary
+    }];
+
+    bounds.forEach(function (boundary) {
+      // Searching for the affected part of horizon.
+      // TODO red-black tree or simple binary search
+      var i = 0;
+      while (i < horizon.length && horizon[i].end <= boundary.y1) {
+        i++;
+      }
+      var j = horizon.length - 1;
+      while(j >= 0 && horizon[j].start >= boundary.y2) {
+        j--;
+      }
+
+      var horizonPart, affectedBoundary;
+      var q, k, maxXNew = -Infinity;
+      for (q = i; q <= j; q++) {
+        horizonPart = horizon[q];
+        affectedBoundary = horizonPart.boundary;
+        var xNew;
+        if (affectedBoundary.x2 > boundary.x1) {
+          // In the middle of the previous element, new x shall be at the
+          // boundary start. Extending if further if the affected bondary
+          // placed on top of the current one.
+          xNew = affectedBoundary.index > boundary.index ?
+            affectedBoundary.x1New : boundary.x1;
+        } else if (affectedBoundary.x2New === undefined) {
+          // We have some space in between, new x in middle will be a fair
+          // choice.
+          xNew = (affectedBoundary.x2 + boundary.x1) / 2;
         } else {
-          transform = '';
+          // Affected boundary has x2new set, using it as new x.
+          xNew = affectedBoundary.x2New;
         }
-        var rotation = textDiv.dataset.angle;
-        if (rotation) {
-          transform = 'rotate(' + rotation + 'deg) ' + transform;
-        }
-        if (transform) {
-          CustomStyle.setProp('transform' , textDiv, transform);
+        if (xNew > maxXNew) {
+          maxXNew = xNew;
         }
       }
-    }
-    capability.resolve();
+
+      // Set new x1 for current boundary.
+      boundary.x1New = maxXNew;
+
+      // Adjusts new x2 for the affected boundaries.
+      for (q = i; q <= j; q++) {
+        horizonPart = horizon[q];
+        affectedBoundary = horizonPart.boundary;
+        if (affectedBoundary.x2New === undefined) {
+          // Was not set yet, choosing new x if possible.
+          if (affectedBoundary.x2 > boundary.x1) {
+            // Current and affected boundaries intersect. If affected boundary
+            // is placed on top of the current, shrinking the affected.
+            if (affectedBoundary.index > boundary.index) {
+              affectedBoundary.x2New = affectedBoundary.x2;
+            }
+          } else {
+            affectedBoundary.x2New = maxXNew;
+          }
+        } else if (affectedBoundary.x2New > maxXNew) {
+          // Affected boundary is touching new x, pushing it back.
+          affectedBoundary.x2New = Math.max(maxXNew, affectedBoundary.x2);
+        }
+      }
+
+      // Fixing the horizon.
+      var changedHorizon = [], lastBoundary = null;
+      for (q = i; q <= j; q++) {
+        horizonPart = horizon[q];
+        affectedBoundary = horizonPart.boundary;
+        // Checking which boundary will be visible.
+        var useBoundary = affectedBoundary.x2 > boundary.x2 ?
+          affectedBoundary : boundary;
+        if (lastBoundary === useBoundary) {
+          // Merging with previous.
+          changedHorizon[changedHorizon.length - 1].end = horizonPart.end;
+        } else {
+          changedHorizon.push({
+            start: horizonPart.start,
+            end: horizonPart.end,
+            boundary: useBoundary
+          });
+          lastBoundary = useBoundary;
+        }
+      }
+      if (horizon[i].start < boundary.y1) {
+        changedHorizon[0].start = boundary.y1;
+        changedHorizon.unshift({
+          start: horizon[i].start,
+          end: boundary.y1,
+          boundary: horizon[i].boundary
+        });
+      }
+      if (boundary.y2 < horizon[j].end) {
+        changedHorizon[changedHorizon.length - 1].end = boundary.y2;
+        changedHorizon.push({
+          start: boundary.y2,
+          end: horizon[j].end,
+          boundary: horizon[j].boundary
+        });
+      }
+
+      // Set x2 new of boundary that is no longer visible (see overlapping case
+      // above).
+      // TODO more efficient, e.g. via reference counting.
+      for (q = i; q <= j; q++) {
+        horizonPart = horizon[q];
+        affectedBoundary = horizonPart.boundary;
+        if (affectedBoundary.x2New !== undefined) {
+          continue;
+        }
+        var used = false;
+        for (k = i - 1; !used && k >= 0 &&
+        horizon[k].start >= affectedBoundary.y1; k--) {
+          used = horizon[k].boundary === affectedBoundary;
+        }
+        for (k = j + 1; !used && k < horizon.length &&
+        horizon[k].end <= affectedBoundary.y2; k++) {
+          used = horizon[k].boundary === affectedBoundary;
+        }
+        for (k = 0; !used && k < changedHorizon.length; k++) {
+          used = changedHorizon[k].boundary === affectedBoundary;
+        }
+        if (!used) {
+          affectedBoundary.x2New = maxXNew;
+        }
+      }
+
+      Array.prototype.splice.apply(horizon,
+        [i, j - i + 1].concat(changedHorizon));
+    });
+
+    // Set new x2 for all unset boundaries.
+    horizon.forEach(function (horizonPart) {
+      var affectedBoundary = horizonPart.boundary;
+      if (affectedBoundary.x2New === undefined) {
+        affectedBoundary.x2New = Math.max(width, affectedBoundary.x2);
+      }
+    });
   }
 
   /**
@@ -5313,17 +5791,22 @@ var renderTextLayer = (function renderTextLayerClosure() {
    * @param {HTMLElement} container
    * @param {PageViewport} viewport
    * @param {Array} textDivs
+   * @param {boolean} enhanceTextSelection
    * @private
    */
-  function TextLayerRenderTask(textContent, container, viewport, textDivs) {
+  function TextLayerRenderTask(textContent, container, viewport, textDivs,
+                               enhanceTextSelection) {
     this._textContent = textContent;
     this._container = container;
     this._viewport = viewport;
-    textDivs = textDivs || [];
-    this._textDivs = textDivs;
+    this._textDivs = textDivs || [];
+    this._textDivProperties = new WeakMap();
+    this._renderingDone = false;
     this._canceled = false;
     this._capability = createPromiseCapability();
     this._renderTimer = null;
+    this._bounds = [];
+    this._enhanceTextSelection = !!enhanceTextSelection;
   }
   TextLayerRenderTask.prototype = {
     get promise() {
@@ -5341,11 +5824,9 @@ var renderTextLayer = (function renderTextLayerClosure() {
 
     _render: function TextLayer_render(timeout) {
       var textItems = this._textContent.items;
-      var styles = this._textContent.styles;
-      var textDivs = this._textDivs;
-      var viewport = this._viewport;
+      var textStyles = this._textContent.styles;
       for (var i = 0, len = textItems.length; i < len; i++) {
-        appendText(textDivs, viewport, textItems[i], styles);
+        appendText(this, textItems[i], textStyles);
       }
 
       if (!timeout) { // Render right away
@@ -5357,9 +5838,66 @@ var renderTextLayer = (function renderTextLayerClosure() {
           self._renderTimer = null;
         }, timeout);
       }
-    }
-  };
+    },
 
+    expandTextDivs: function TextLayer_expandTextDivs(expandDivs) {
+      if (!this._enhanceTextSelection || !this._renderingDone) {
+        return;
+      }
+      if (this._bounds !== null) {
+        expand(this);
+        this._bounds = null;
+      }
+
+      for (var i = 0, ii = this._textDivs.length; i < ii; i++) {
+        var div = this._textDivs[i];
+        var divProperties = this._textDivProperties.get(div);
+
+        if (divProperties.isWhitespace) {
+          continue;
+        }
+        if (expandDivs) {
+          var transform = '', padding = '';
+
+          if (divProperties.scale !== 1) {
+            transform = 'scaleX(' + divProperties.scale + ')';
+          }
+          if (divProperties.angle !== 0) {
+            transform = 'rotate(' + divProperties.angle + 'deg) ' + transform;
+          }
+          if (divProperties.paddingLeft !== 0) {
+            padding += ' padding-left: ' +
+              (divProperties.paddingLeft / divProperties.scale) + 'px;';
+            transform += ' translateX(' +
+              (-divProperties.paddingLeft / divProperties.scale) + 'px)';
+          }
+          if (divProperties.paddingTop !== 0) {
+            padding += ' padding-top: ' + divProperties.paddingTop + 'px;';
+            transform += ' translateY(' + (-divProperties.paddingTop) + 'px)';
+          }
+          if (divProperties.paddingRight !== 0) {
+            padding += ' padding-right: ' +
+              (divProperties.paddingRight / divProperties.scale) + 'px;';
+          }
+          if (divProperties.paddingBottom !== 0) {
+            padding += ' padding-bottom: ' +
+              divProperties.paddingBottom + 'px;';
+          }
+
+          if (padding !== '') {
+            div.setAttribute('style', divProperties.style + padding);
+          }
+          if (transform !== '') {
+            CustomStyle.setProp('transform', div, transform);
+          }
+        } else {
+          div.style.padding = 0;
+          CustomStyle.setProp('transform', div,
+                              divProperties.originalTransform || '');
+        }
+      }
+    },
+  };
 
   /**
    * Starts rendering of the text layer.
@@ -5371,7 +5909,8 @@ var renderTextLayer = (function renderTextLayerClosure() {
     var task = new TextLayerRenderTask(renderParameters.textContent,
                                        renderParameters.container,
                                        renderParameters.viewport,
-                                       renderParameters.textDivs);
+                                       renderParameters.textDivs,
+                                       renderParameters.enhanceTextSelection);
     task._render(renderParameters.timeout);
     return task;
   }
@@ -5964,7 +6503,7 @@ var createMeshCanvas = (function createMeshCanvasClosure() {
     // MAX_PATTERN_SIZE is used to avoid OOM situation.
     var MAX_PATTERN_SIZE = 3000; // 10in @ 300dpi shall be enough
     // We need to keep transparent border around our pattern for fill():
-    // createPattern with 'no-repeat' will bleed edges accross entire area.
+    // createPattern with 'no-repeat' will bleed edges across entire area.
     var BORDER_SIZE = 2;
 
     var offsetX = Math.floor(bounds[0]);
@@ -6879,9 +7418,6 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
     if (sourceCtx.setLineDash !== undefined) {
       destCtx.setLineDash(sourceCtx.getLineDash());
       destCtx.lineDashOffset =  sourceCtx.lineDashOffset;
-    } else if (sourceCtx.mozDashOffset !== undefined) {
-      destCtx.mozDash = sourceCtx.mozDash;
-      destCtx.mozDashOffset = sourceCtx.mozDashOffset;
     }
   }
 
@@ -7137,9 +7673,6 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
       if (ctx.setLineDash !== undefined) {
         ctx.setLineDash(dashArray);
         ctx.lineDashOffset = dashPhase;
-      } else {
-        ctx.mozDash = dashArray;
-        ctx.mozDashOffset = dashPhase;
       }
     },
     setRenderingIntent: function CanvasGraphics_setRenderingIntent(intent) {
@@ -8037,7 +8570,7 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
       var currentCtx = this.ctx;
       // TODO non-isolated groups - according to Rik at adobe non-isolated
       // group results aren't usually that different and they even have tools
-      // that ignore this setting. Notes from Rik on implmenting:
+      // that ignore this setting. Notes from Rik on implementing:
       // - When you encounter an transparency group, create a new canvas with
       // the dimensions of the bbox
       // - copy the content from the previous canvas to the new canvas
@@ -8522,7 +9055,13 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
     },
     getSinglePixelWidth: function CanvasGraphics_getSinglePixelWidth(scale) {
       if (this.cachedGetSinglePixelWidth === null) {
+        // NOTE: The `save` and `restore` commands used below is a workaround
+        // that is necessary in order to prevent `mozCurrentTransformInverse`
+        // from intermittently returning incorrect values in Firefox, see:
+        // https://github.com/mozilla/pdf.js/issues/7188.
+        this.ctx.save();
         var inverse = this.ctx.mozCurrentTransformInverse;
+        this.ctx.restore();
         // max of the current horizontal and vertical scale
         this.cachedGetSinglePixelWidth = Math.sqrt(Math.max(
           (inverse[0] * inverse[0] + inverse[1] * inverse[1]),
@@ -8575,6 +9114,8 @@ var error = sharedUtil.error;
 var deprecated = sharedUtil.deprecated;
 var getVerbosityLevel = sharedUtil.getVerbosityLevel;
 var info = sharedUtil.info;
+var isInt = sharedUtil.isInt;
+var isArray = sharedUtil.isArray;
 var isArrayBuffer = sharedUtil.isArrayBuffer;
 var isSameOrigin = sharedUtil.isSameOrigin;
 var loadJpegStream = sharedUtil.loadJpegStream;
@@ -9147,6 +9688,8 @@ var PDFDocumentProxy = (function PDFDocumentProxyClosure() {
  * @typedef {Object} getTextContentParameters
  * @param {boolean} normalizeWhitespace - replaces all occurrences of
  *   whitespace with standard spaces (0x20). The default value is `false`.
+ * @param {boolean} disableCombineTextItems - do not attempt to combine
+ *   same line {@link TextItem}'s. The default value is `false`.
  */
 
 /**
@@ -9199,6 +9742,9 @@ var PDFDocumentProxy = (function PDFDocumentProxyClosure() {
  *                                calling of PDFPage.getViewport method.
  * @property {string} intent - Rendering intent, can be 'display' or 'print'
  *                    (default value is 'display').
+ * @property {boolean} renderInteractiveForms - (optional) Whether or not
+ *                     interactive form elements are rendered in the display
+ *                     layer. If so, we do not render them on canvas as well.
  * @property {Array}  transform - (optional) Additional transform, applied
  *                    just before viewport transform.
  * @property {Object} imageLayer - (optional) An object that has beginLayout,
@@ -9307,6 +9853,8 @@ var PDFPageProxy = (function PDFPageProxyClosure() {
       this.pendingCleanup = false;
 
       var renderingIntent = (params.intent === 'print' ? 'print' : 'display');
+      var renderInteractiveForms = (params.renderInteractiveForms === true ?
+                                    true : /* Default */ false);
 
       if (!this.intentStates[renderingIntent]) {
         this.intentStates[renderingIntent] = Object.create(null);
@@ -9327,7 +9875,8 @@ var PDFPageProxy = (function PDFPageProxyClosure() {
         this.stats.time('Page Request');
         this.transport.messageHandler.send('RenderPageRequest', {
           pageIndex: this.pageNumber - 1,
-          intent: renderingIntent
+          intent: renderingIntent,
+          renderInteractiveForms: renderInteractiveForms,
         });
       }
 
@@ -9357,7 +9906,7 @@ var PDFPageProxy = (function PDFPageProxyClosure() {
             return;
           }
           stats.time('Rendering');
-          internalRenderTask.initalizeGraphics(transparency);
+          internalRenderTask.initializeGraphics(transparency);
           internalRenderTask.operatorListChanged();
         },
         function pageDisplayReadPromiseError(reason) {
@@ -9438,11 +9987,12 @@ var PDFPageProxy = (function PDFPageProxyClosure() {
      * object that represent the page text content.
      */
     getTextContent: function PDFPageProxy_getTextContent(params) {
-      var normalizeWhitespace = (params && params.normalizeWhitespace) || false;
-
       return this.transport.messageHandler.sendWithPromise('GetTextContent', {
         pageIndex: this.pageNumber - 1,
-        normalizeWhitespace: normalizeWhitespace,
+        normalizeWhitespace: (params && params.normalizeWhitespace === true ?
+                              true : /* Default */ false),
+        combineTextItems: (params && params.disableCombineTextItems === true ?
+                           false : /* Default */ true),
       });
     },
 
@@ -9594,6 +10144,84 @@ var PDFWorker = (function PDFWorkerClosure() {
     }
     return fakeWorkerFilesLoadedCapability.promise;
   }
+
+  function FakeWorkerPort(defer) {
+    this._listeners = [];
+    this._defer = defer;
+    this._deferred = Promise.resolve(undefined);
+  }
+  FakeWorkerPort.prototype = {
+    postMessage: function (obj, transfers) {
+      function cloneValue(value) {
+        // Trying to perform a structured clone close to the spec, including
+        // transfers.
+        if (typeof value !== 'object' || value === null) {
+          return value;
+        }
+        if (cloned.has(value)) { // already cloned the object
+          return cloned.get(value);
+        }
+        var result;
+        var buffer;
+        if ((buffer = value.buffer) && isArrayBuffer(buffer)) {
+          // We found object with ArrayBuffer (typed array).
+          var transferable = transfers && transfers.indexOf(buffer) >= 0;
+          if (value === buffer) {
+            // Special case when we are faking typed arrays in compatibility.js.
+            result = value;
+          } else if (transferable) {
+            result = new value.constructor(buffer, value.byteOffset,
+                                           value.byteLength);
+          } else {
+            result = new value.constructor(value);
+          }
+          cloned.set(value, result);
+          return result;
+        }
+        result = isArray(value) ? [] : {};
+        cloned.set(value, result); // adding to cache now for cyclic references
+        // Cloning all value and object properties, however ignoring properties
+        // defined via getter.
+        for (var i in value) {
+          var desc, p = value;
+          while (!(desc = Object.getOwnPropertyDescriptor(p, i))) {
+            p = Object.getPrototypeOf(p);
+          }
+          if (typeof desc.value === 'undefined' ||
+              typeof desc.value === 'function') {
+            continue;
+          }
+          result[i] = cloneValue(desc.value);
+        }
+        return result;
+      }
+
+      if (!this._defer) {
+        this._listeners.forEach(function (listener) {
+          listener.call(this, {data: obj});
+        }, this);
+        return;
+      }
+
+      var cloned = new WeakMap();
+      var e = {data: cloneValue(obj)};
+      this._deferred.then(function () {
+        this._listeners.forEach(function (listener) {
+          listener.call(this, e);
+        }, this);
+      }.bind(this));
+    },
+    addEventListener: function (name, listener) {
+      this._listeners.push(listener);
+    },
+    removeEventListener: function (name, listener) {
+      var i = this._listeners.indexOf(listener);
+      this._listeners.splice(i, 1);
+    },
+    terminate: function () {
+      this._listeners = [];
+    }
+  };
 
   function createCDNWrapper(url) {
     // We will rely on blob URL's property to specify origin.
@@ -9760,24 +10388,11 @@ var PDFWorker = (function PDFWorkerClosure() {
           return;
         }
 
-        // If we don't use a worker, just post/sendMessage to the main thread.
-        var port = {
-          _listeners: [],
-          postMessage: function (obj) {
-            var e = {data: obj};
-            this._listeners.forEach(function (listener) {
-              listener.call(this, e);
-            }, this);
-          },
-          addEventListener: function (name, listener) {
-            this._listeners.push(listener);
-          },
-          removeEventListener: function (name, listener) {
-            var i = this._listeners.indexOf(listener);
-            this._listeners.splice(i, 1);
-          },
-          terminate: function () {}
-        };
+        // We cannot turn on proper fake port simulation (this includes
+        // structured cloning) when typed arrays are not supported. Relying
+        // on a chance that messages will be sent in proper order.
+        var isTypedArraysPresent = Uint8Array !== Float32Array;
+        var port = new FakeWorkerPort(isTypedArraysPresent);
         this._port = port;
 
         // All fake workers use the same port, making id unique.
@@ -10006,28 +10621,26 @@ var WorkerTransport = (function WorkerTransportClosure() {
           case 'Font':
             var exportedData = data[2];
 
-            var font;
             if ('error' in exportedData) {
-              var error = exportedData.error;
-              warn('Error during font loading: ' + error);
-              this.commonObjs.resolve(id, error);
+              var exportedError = exportedData.error;
+              warn('Error during font loading: ' + exportedError);
+              this.commonObjs.resolve(id, exportedError);
               break;
-            } else {
-              var fontRegistry = null;
-              if (getDefaultSetting('pdfBug') && globalScope.FontInspector &&
-                  globalScope['FontInspector'].enabled) {
-                fontRegistry = {
-                  registerFont: function (font, url) {
-                    globalScope['FontInspector'].fontAdded(font, url);
-                  }
-                };
-              }
-              font = new FontFaceObject(exportedData, {
-                isEvalSuported: getDefaultSetting('isEvalSupported'),
-                disableFontFace: getDefaultSetting('disableFontFace'),
-                fontRegistry: fontRegistry
-              });
             }
+            var fontRegistry = null;
+            if (getDefaultSetting('pdfBug') && globalScope.FontInspector &&
+                globalScope['FontInspector'].enabled) {
+              fontRegistry = {
+                registerFont: function (font, url) {
+                  globalScope['FontInspector'].fontAdded(font, url);
+                }
+              };
+            }
+            var font = new FontFaceObject(exportedData, {
+              isEvalSuported: getDefaultSetting('isEvalSupported'),
+              disableFontFace: getDefaultSetting('disableFontFace'),
+              fontRegistry: fontRegistry
+            });
 
             this.fontLoader.bind(
               [font],
@@ -10131,7 +10744,7 @@ var WorkerTransport = (function WorkerTransportClosure() {
 
       messageHandler.on('JpegDecode', function(data) {
         if (this.destroyed) {
-          return Promise.reject('Worker was terminated');
+          return Promise.reject(new Error('Worker was destroyed'));
         }
 
         var imageUrl = data[0];
@@ -10181,8 +10794,7 @@ var WorkerTransport = (function WorkerTransportClosure() {
     },
 
     getPage: function WorkerTransport_getPage(pageNumber, capability) {
-      if (pageNumber <= 0 || pageNumber > this.numPages ||
-          (pageNumber|0) !== pageNumber) {
+      if (!isInt(pageNumber) || pageNumber <= 0 || pageNumber > this.numPages) {
         return Promise.reject(new Error('Invalid page request'));
       }
 
@@ -10205,7 +10817,11 @@ var WorkerTransport = (function WorkerTransportClosure() {
     },
 
     getPageIndex: function WorkerTransport_getPageIndexByRef(ref) {
-      return this.messageHandler.sendWithPromise('GetPageIndex', { ref: ref });
+      return this.messageHandler.sendWithPromise('GetPageIndex', {
+        ref: ref,
+      }).catch(function (reason) {
+        return Promise.reject(new Error(reason));
+      });
     },
 
     getAnnotations: function WorkerTransport_getAnnotations(pageIndex, intent) {
@@ -10459,8 +11075,8 @@ var InternalRenderTask = (function InternalRenderTaskClosure() {
 
   InternalRenderTask.prototype = {
 
-    initalizeGraphics:
-        function InternalRenderTask_initalizeGraphics(transparency) {
+    initializeGraphics:
+        function InternalRenderTask_initializeGraphics(transparency) {
 
       if (this.cancelled) {
         return;
@@ -10866,8 +11482,6 @@ exports._UnsupportedManager = _UnsupportedManager;
   exports.isWorker = isWorker;
   exports.PDFJS = globalScope.PDFJS;
 }));
-
-
   }).call(pdfjsLibs);
 
   exports.PDFJS = pdfjsLibs.pdfjsDisplayGlobal.PDFJS;
@@ -10898,5 +11512,4 @@ exports._UnsupportedManager = _UnsupportedManager;
     pdfjsLibs.pdfjsDisplayDOMUtils.getFilenameFromUrl;
   exports.addLinkAttributes = pdfjsLibs.pdfjsDisplayDOMUtils.addLinkAttributes;
 }));
-
 
