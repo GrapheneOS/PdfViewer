@@ -1,9 +1,7 @@
 package co.copperhead.pdfviewer;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.annotation.SuppressLint;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -20,8 +18,6 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.FrameLayout;
-import android.widget.NumberPicker;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -44,8 +40,8 @@ public class PdfViewer extends Activity {
 
     private WebView mWebView;
     private Uri mUri;
-    private int mPage;
-    private int mNumPages;
+    int mPage;
+    int mNumPages;
     private int mZoomLevel = 2;
     private int mDocumentState;
     private Channel mChannel;
@@ -215,6 +211,14 @@ public class PdfViewer extends Activity {
         }
     }
 
+    void positiveButtonRenderPage(int selected_page) {
+        if (selected_page >= 1 && selected_page <= mNumPages) {
+            mPage = selected_page;
+            renderPage();
+            showPageNumber();
+        }
+    }
+
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
         super.onSaveInstanceState(savedInstanceState);
@@ -323,36 +327,9 @@ public class PdfViewer extends Activity {
                 }
                 return super.onOptionsItemSelected(item);
 
-            case R.id.action_jump_to_page: {
-                final NumberPicker picker = new NumberPicker(this);
-                picker.setMinValue(1);
-                picker.setMaxValue(mNumPages);
-                picker.setValue(mPage);
-
-                final FrameLayout layout = new FrameLayout(this);
-                layout.addView(picker, new FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    Gravity.CENTER));
-
-                new AlertDialog.Builder(this)
-                    .setView(layout)
-                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int i) {
-                            int page = picker.getValue();
-                            if (page >= 1 && page <= mNumPages) {
-                                mPage = page;
-                                renderPage();
-                                showPageNumber();
-                            }
-                        }
-                    })
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .show();
-
+            case R.id.action_jump_to_page:
+                new JumpToPageFragment().show(getFragmentManager(), null);
                 return super.onOptionsItemSelected(item);
-            }
             default:
                 return super.onOptionsItemSelected(item);
         }
