@@ -5,6 +5,8 @@ import android.app.AlertDialog;
 import android.annotation.SuppressLint;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -20,6 +22,8 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.NumberPicker;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.InputStream;
 import java.io.IOException;
@@ -36,6 +40,7 @@ public class PdfViewer extends Activity {
     private static final String STATE_URI = "uri";
     private static final String STATE_PAGE = "page";
     private static final String STATE_ZOOM_LEVEL = "zoomLevel";
+    private static final int PADDING = 10;
 
     private WebView mWebView;
     private Uri mUri;
@@ -47,6 +52,8 @@ public class PdfViewer extends Activity {
     private boolean mZoomInState = true;
     private boolean mZoomOutState = true;
     private InputStream mInputStream;
+    private TextView mTextView;
+    private Toast mToast;
 
     private class Channel {
         @JavascriptInterface
@@ -106,6 +113,12 @@ public class PdfViewer extends Activity {
                 invalidateOptionsMenu();
             }
         });
+
+        mTextView = new TextView(this);
+        mTextView.setBackgroundColor(Color.DKGRAY);
+        mTextView.setTextColor(ColorStateList.valueOf(Color.WHITE));
+        mTextView.setTextSize(18);
+        mTextView.setPadding(PADDING, 0, PADDING, 0);
 
         final Intent intent = getIntent();
         if (Intent.ACTION_VIEW.equals(intent.getAction())) {
@@ -223,6 +236,18 @@ public class PdfViewer extends Activity {
         }
     }
 
+    private void showPageNumber() {
+        if (mToast != null) {
+            mToast.cancel();
+        }
+        mTextView.setText(String.format("%s/%s", mPage, mNumPages));
+        mToast = new Toast(getApplicationContext());
+        mToast.setGravity(Gravity.BOTTOM | Gravity.END, PADDING, PADDING);
+        mToast.setDuration(Toast.LENGTH_SHORT);
+        mToast.setView(mTextView);
+        mToast.show();
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         super.onCreateOptionsMenu(menu);
@@ -266,6 +291,7 @@ public class PdfViewer extends Activity {
                 if (mPage > 1) {
                     mPage--;
                     renderPage();
+                    showPageNumber();
                 }
                 return super.onOptionsItemSelected(item);
 
@@ -273,6 +299,7 @@ public class PdfViewer extends Activity {
                 if (mPage < mNumPages) {
                     mPage++;
                     renderPage();
+                    showPageNumber();
                 }
                 return super.onOptionsItemSelected(item);
 
@@ -317,6 +344,7 @@ public class PdfViewer extends Activity {
                             if (page >= 1 && page <= mNumPages) {
                                 mPage = page;
                                 renderPage();
+                                showPageNumber();
                             }
                         }
                     })
