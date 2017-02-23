@@ -194,18 +194,14 @@ public class PdfViewer extends Activity {
     }
 
     private void enableDisableItems(Menu menu, boolean disable) {
-        if (disable) {
-            disableItem(menu.findItem(R.id.action_zoom_in));
-            disableItem(menu.findItem(R.id.action_zoom_out));
-            disableItem(menu.findItem(R.id.action_jump_to_page));
-            disableItem(menu.findItem(R.id.action_next));
-            disableItem(menu.findItem(R.id.action_previous));
-        } else {
-            enableItem(menu.findItem(R.id.action_zoom_in));
-            enableItem(menu.findItem(R.id.action_zoom_out));
-            enableItem(menu.findItem(R.id.action_jump_to_page));
-            enableItem(menu.findItem(R.id.action_next));
-            enableItem(menu.findItem(R.id.action_previous));
+        final int ids[] = { R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
+            R.id.action_next, R.id.action_previous };
+        for (final int id : ids) {
+            if (disable) {
+                disableItem(menu.findItem(id));
+            } else {
+                enableItem(menu.findItem(id));
+            }
         }
     }
 
