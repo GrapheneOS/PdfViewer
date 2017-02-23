@@ -30,10 +30,9 @@ public class PdfViewer extends Activity {
     private static final int ALPHA_LOW = 130;
     private static final int ALPHA_HIGH = 255;
     private static final int ACTION_OPEN_DOCUMENT_REQUEST_CODE = 1;
-    private static final int STATE_INIT = 0;
-    private static final int STATE_LOADING = 1;
-    private static final int STATE_LOADED = 2;
-    private static final int STATE_END = 3;
+    private static final int STATE_DEFAULT = 0;
+    private static final int STATE_LOADED = 1;
+    private static final int STATE_END = 2;
     private static final String STATE_URI = "uri";
     private static final String STATE_PAGE = "page";
     private static final String STATE_ZOOM_LEVEL = "zoomLevel";
@@ -125,8 +124,6 @@ public class PdfViewer extends Activity {
 
         if (mUri != null) {
             loadPdf();
-        } else {
-            mDocumentState = STATE_INIT;
         }
     }
 
@@ -220,7 +217,7 @@ public class PdfViewer extends Activity {
                 mUri = resultData.getData();
                 mPage = 1;
                 loadPdf();
-                mDocumentState = STATE_LOADING;
+                mDocumentState = STATE_DEFAULT;
                 invalidateOptionsMenu();
             }
         }
@@ -238,8 +235,7 @@ public class PdfViewer extends Activity {
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         switch (mDocumentState) {
-            case STATE_INIT:
-            case STATE_LOADING:
+            case STATE_DEFAULT:
                 enableDisableItems(menu, true);
                 return super.onPrepareOptionsMenu(menu);
             case STATE_LOADED:
