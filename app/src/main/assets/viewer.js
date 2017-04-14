@@ -3,8 +3,7 @@
 let pdfDoc = null;
 let pageRendering = false;
 let renderPending = false;
-const canvas = document.getElementById('content');
-const ctx = canvas.getContext('2d');
+let canvas = document.getElementById('content');
 const textLayerDiv = document.getElementById("text");
 const zoomLevels = [50, 75, 100, 125, 150];
 let renderTask = null;
@@ -28,12 +27,17 @@ function renderPage() {
             textLayerDiv.removeChild(last);
         }
 
+        const newCanvas = document.createElement("canvas");
+        canvas.replaceWith(newCanvas);
+        canvas = newCanvas;
+
         const viewport = page.getViewport(zoomLevels[channel.getZoomLevel()] / 100)
         const ratio = window.devicePixelRatio;
         canvas.height = viewport.height * ratio;
         canvas.width = viewport.width * ratio;
         canvas.style.height = viewport.height + "px";
         canvas.style.width = viewport.width + "px";
+        const ctx = canvas.getContext("2d");
         ctx.scale(ratio, ratio);
 
         textLayerDiv.style.height = canvas.style.height;
