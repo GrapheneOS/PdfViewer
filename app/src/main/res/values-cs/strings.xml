@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PDF Viewer</string>
+    <!--<string name="action_settings">Settings</string>-->
+    <string name="action_previous">Následující strana</string>
+    <string name="action_next">Předchozí strana</string>
+    <string name="action_open">Otevřít dokument</string>
+    <string name="action_zoom_out">Oddálit</string>
+    <string name="action_zoom_in">Přiblížit</string>
+    <string name="action_jump_to_page">Přejít na stranu</string>
+</resources>
