@@ -8,4 +8,20 @@
     <string name="action_zoom_out">Zoom out</string>
     <string name="action_zoom_in">Zoom in</string>
     <string name="action_jump_to_page">Jump to page</string>
+    <string name="action_view_document_properties">Document properties</string>
+
+    <string name="document_properties_file_name">File Name</string>
+    <string name="document_properties_file_size">File Size</string>
+    <string name="document_properties_title">Title</string>
+    <string name="document_properties_author">Author</string>
+    <string name="document_properties_subject">Subject</string>
+    <string name="document_properties_keywords">Keywords</string>
+    <string name="document_properties_creation_date">Creation Date</string>
+    <string name="document_properties_modify_date">Modify Date</string>
+    <string name="document_properties_invalid_date">Invalid date</string>
+    <string name="document_properties_producer">Producer</string>
+    <string name="document_properties_creator">Creator</string>
+    <string name="document_properties_pdf_version">PDF Version</string>
+    <string name="document_properties_page_numbers">Page Numbers</string>
+    <string name="document_properties_retrieval_failed">Failed to obtain document metadata</string>
 </resources>
