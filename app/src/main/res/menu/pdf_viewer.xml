@@ -42,4 +42,9 @@
         android:title="@string/action_jump_to_page"
         android:showAsAction="ifRoom" />
 
+    <item
+        android:id="@+id/action_view_document_properties"
+        android:title="@string/action_view_document_properties"
+        android:showAsAction="never" />
+
 </menu>
