@@ -4,9 +4,14 @@ import android.app.Activity;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.res.ColorStateList;
+import android.database.Cursor;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.provider.OpenableColumns;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -21,10 +26,25 @@ import android.webkit.WebViewClient;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.InputStream;
 import java.io.IOException;
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
+
+import co.copperhead.pdfviewer.fragment.DocumentPropertiesFragment;
+import co.copperhead.pdfviewer.fragment.JumpToPageFragment;
 
 public class PdfViewer extends Activity {
+    private static final String TAG = "PdfViewer";
+
     private static final int MIN_ZOOM_LEVEL = 0;
     private static final int MAX_ZOOM_LEVEL = 4;
     private static final int ALPHA_LOW = 130;
@@ -40,13 +60,14 @@ public class PdfViewer extends Activity {
 
     private WebView mWebView;
     private Uri mUri;
-    int mPage;
-    int mNumPages;
+    public int mPage;
+    public int mNumPages;
     private int mZoomLevel = 2;
     private int mDocumentState;
     private Channel mChannel;
     private boolean mZoomInState = true;
     private boolean mZoomOutState = true;
+    private String mDocumentProperties;
     private InputStream mInputStream;
     private TextView mTextView;
     private Toast mToast;
@@ -65,6 +86,199 @@ public class PdfViewer extends Activity {
         @JavascriptInterface
         public void setNumPages(int numPages) {
             mNumPages = numPages;
+        }
+
+        @JavascriptInterface
+        public void setDocumentProperties(final String properties) {
+            new AsyncTask<Void, Void, Void>() {
+                private String formatProperty(int resId, String propertyValue) {
+                    return String.format("\n%s:\n%s\n", getString(resId), propertyValue);
+                }
+
+                private String parseFileSize(long fileSize) {
+                    final double kb = fileSize / 1000;
+                    if (((long) kb) == 0) {
+                        return String.format("%s Bytes", String.valueOf(fileSize));
+                    } else {
+                        final DecimalFormat format = new DecimalFormat("#.##");
+                        format.setRoundingMode(RoundingMode.CEILING);
+                        if (kb < 1000) {
+                            return String.format("%s kB (%s Bytes)", format.format(kb), String.valueOf(fileSize));
+                        }
+                        return String.format("%s MB (%s Bytes)", format.format(kb / 1000), String.valueOf(fileSize));
+                    }
+                }
+
+                private String parseDate(String dateToParse) {
+                    // No date property found
+                    if (dateToParse.equals("-")) {
+                        return "-";
+                    }
+
+                    // Date must at least contain a year
+                    final boolean dateHasPrefix = dateToParse.startsWith("D:");
+                    final int dateMinLength = dateHasPrefix ? 6 : 4;
+                    if (dateToParse.length() < dateMinLength || dateToParse.length() > 23) {
+                        Log.e(TAG, "Supplied date length mismatch");
+                        return getString(R.string.document_properties_invalid_date);
+                    }
+
+                    // Date can have a D: prefix
+                    if (dateHasPrefix) {
+                        dateToParse = dateToParse.substring(2);
+                    }
+
+                    // Calendar month starts at 0
+                    int year = 1970, month = 0, day = 1, hours = 0, minutes = 0;
+                    int seconds = 0, utRelOffset = 4;
+                    final Calendar calendar = Calendar.getInstance();
+
+                    // Year is mandatory
+                    try {
+                        final int parsedYear = Integer.valueOf(dateToParse.substring(0, 4));
+                        if (parsedYear <= calendar.get(Calendar.YEAR) && parsedYear > year) {
+                            year = parsedYear;
+                        }
+                    } catch (NumberFormatException e) {
+                        Log.e(TAG, e.getMessage());
+                        return getString(R.string.document_properties_invalid_date);
+                    }
+                    // Those fields are optional
+                    try {
+                        month = Integer.valueOf(dateToParse.substring(4, 6)) - 1;
+                        utRelOffset += 2;
+                        day = Integer.valueOf(dateToParse.substring(6, 8));
+                        utRelOffset += 2;
+                        hours = Integer.valueOf(dateToParse.substring(8, 10));
+                        utRelOffset += 2;
+                        minutes = Integer.valueOf(dateToParse.substring(10, 12));
+                        utRelOffset += 2;
+                        seconds = Integer.valueOf(dateToParse.substring(12, 14));
+                        utRelOffset += 2;
+                    } catch (IndexOutOfBoundsException ignored) {
+                        // It is allowed for all fields except year to be missing
+                    } catch (NumberFormatException e) {
+                        Log.e(TAG, "Invalid date supplied");
+                        return getString(R.string.document_properties_invalid_date);
+                    }
+
+                    // Perform basic date validation
+                    if ((month < 0 || month > 11) || (day < 1 || day > 31) ||
+                            (hours < 0 || hours > 23) || (minutes < 0 || minutes > 59) ||
+                            (seconds < 0 || seconds > 59)) {
+                        Log.e(TAG, "Date validation failed");
+                        return getString(R.string.document_properties_invalid_date);
+                    }
+
+                    int offsetHours = 0, offsetMinutes = 0, combinedOffset = 0;
+                    String utRel = "";
+
+                    try {
+                        utRel = String.valueOf(dateToParse.charAt(utRelOffset));
+                        if (utRel.equals("+") || utRel.equals("-") || utRel.equals("Z")) {
+                            offsetHours = Integer.parseInt(dateToParse.substring(15, 17));
+                            final String rawOffsetMinutes = dateToParse.substring(18, 20);
+                            offsetMinutes = Integer.parseInt(rawOffsetMinutes);
+                            combinedOffset = Integer.valueOf(String.format("%s%s%s", utRel, offsetHours, rawOffsetMinutes));
+                        } else {
+                            offsetHours = Integer.parseInt(dateToParse.substring(14, 16));
+                            final String rawOffsetMinutes = dateToParse.substring(17, 19);
+                            offsetMinutes = Integer.parseInt(rawOffsetMinutes);
+                            combinedOffset = Integer.valueOf(String.format("%s%s", offsetHours, rawOffsetMinutes));
+                        }
+                    } catch (IndexOutOfBoundsException ignored) {
+                        // It is allowed for all fields except year to be missing
+                    } catch (NumberFormatException e) {
+                        Log.e(TAG, "Invalid UTC offset supplied");
+                        return getString(R.string.document_properties_invalid_date);
+                    }
+
+                    // Validate UT offset
+                    if (combinedOffset < -1200 || combinedOffset > 1400) {
+                        Log.e(TAG, "UTC offset out of bounds");
+                        return getString(R.string.document_properties_invalid_date);
+                    }
+
+
+                    switch (utRel) {
+                        case "+":
+                            hours += offsetHours;
+                            minutes += offsetMinutes;
+                            break;
+                        case "-":
+                            hours -= offsetHours;
+                            minutes -= offsetMinutes;
+                            break;
+                        case "Z":
+                            // "Z" means local time equal to UT
+                            break;
+                        default:
+                            break;
+                    }
+
+                    calendar.set(year, month, day, hours, minutes, seconds);
+                    final Locale locale = getResources().getConfiguration().getLocales().get(0);
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy", locale);
+                    final TimeZone timeZone = TimeZone.getTimeZone("UTC");
+                    dateFormat.setTimeZone(timeZone);
+                    final Date date = calendar.getTime();
+                    final String dateString = dateFormat.format(date);
+                    dateFormat = new SimpleDateFormat("HH:mm:ss", locale);
+                    dateFormat.setTimeZone(timeZone);
+                    final String timeString = dateFormat.format(date);
+
+                    return String.format("%s %s", dateString, timeString);
+                }
+
+                @Override
+                protected Void doInBackground(Void... voids) {
+                    try {
+                        final Cursor cursor = getContentResolver().query(mUri, null, null, null, null);
+                        if (cursor == null || cursor.getCount() == 0) {
+                            return null;
+                        }
+
+                        final int fileNameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                        final int fileSizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE);
+
+                        cursor.moveToFirst();
+
+                        final String fileName = cursor.getString(fileNameIndex);
+                        final String fileSize = parseFileSize(Long.valueOf(cursor.getString(fileSizeIndex)));
+
+                        cursor.close();
+
+                        final JSONObject json = new JSONObject(properties);
+                        final String title = json.optString("Title", "-");
+                        final String author = json.optString("Author", "-");
+                        final String subject = json.optString("Subject", "-");
+                        final String keywords = json.optString("Keywords", "-");
+                        final String creationDate = parseDate(json.optString("CreationDate", "-"));
+                        final String modifyDate = parseDate(json.optString("ModDate", "-"));
+                        final String producer = json.optString("Producer", "-");
+                        final String creator = json.optString("Creator", "-");
+                        final String pdfVersion = json.optString("PDFFormatVersion", "-");
+                        final String pageNumbers = String.valueOf(mNumPages);
+
+                        mDocumentProperties = String.format("%s%s%s%s%s%s%s%s%s%s%s%s",
+                                formatProperty(R.string.document_properties_file_name ,fileName),
+                                formatProperty(R.string.document_properties_file_size, fileSize),
+                                formatProperty(R.string.document_properties_title, title),
+                                formatProperty(R.string.document_properties_author, author),
+                                formatProperty(R.string.document_properties_subject, subject),
+                                formatProperty(R.string.document_properties_keywords, keywords),
+                                formatProperty(R.string.document_properties_creation_date, creationDate),
+                                formatProperty(R.string.document_properties_modify_date, modifyDate),
+                                formatProperty(R.string.document_properties_producer, producer),
+                                formatProperty(R.string.document_properties_creator, creator),
+                                formatProperty(R.string.document_properties_pdf_version, pdfVersion),
+                                formatProperty(R.string.document_properties_page_numbers, pageNumbers));
+                    } catch (JSONException e) {
+                        Log.e(TAG, e.getMessage());
+                    }
+                    return null;
+                }
+            }.execute();
         }
     }
 
@@ -177,12 +391,18 @@ public class PdfViewer extends Activity {
 
     private void disableItem(MenuItem item) {
         item.setEnabled(false);
-        item.getIcon().setAlpha(ALPHA_LOW);
+        final Drawable icon = item.getIcon();
+        if (icon != null) {
+            icon.setAlpha(ALPHA_LOW);
+        }
     }
 
     private void enableItem(MenuItem item) {
         item.setEnabled(true);
-        item.getIcon().setAlpha(ALPHA_HIGH);
+        final Drawable icon = item.getIcon();
+        if (icon != null) {
+            icon.setAlpha(ALPHA_HIGH);
+        }
     }
 
     private void checkDisableMenuItem(MenuItem item) {
@@ -201,7 +421,7 @@ public class PdfViewer extends Activity {
 
     private void enableDisableItems(Menu menu, boolean disable) {
         final int ids[] = { R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
-            R.id.action_next, R.id.action_previous };
+            R.id.action_next, R.id.action_previous, R.id.action_view_document_properties };
         for (final int id : ids) {
             if (disable) {
                 disableItem(menu.findItem(id));
@@ -211,7 +431,7 @@ public class PdfViewer extends Activity {
         }
     }
 
-    void positiveButtonRenderPage(int selected_page) {
+    public void positiveButtonRenderPage(int selected_page) {
         if (selected_page >= 1 && selected_page <= mNumPages) {
             mPage = selected_page;
             renderPage();
@@ -233,6 +453,7 @@ public class PdfViewer extends Activity {
             if (resultData != null) {
                 mUri = resultData.getData();
                 mPage = 1;
+                mDocumentProperties = null;
                 loadPdf();
                 mDocumentState = STATE_DEFAULT;
                 invalidateOptionsMenu();
@@ -266,25 +487,25 @@ public class PdfViewer extends Activity {
         switch (mDocumentState) {
             case STATE_DEFAULT:
                 enableDisableItems(menu, true);
-                return super.onPrepareOptionsMenu(menu);
+                return true;
             case STATE_LOADED:
                 enableDisableItems(menu, false);
                 mDocumentState = STATE_END;
-                return super.onPrepareOptionsMenu(menu);
+                return true;
             default:
                 break;
         }
         switch (mZoomLevel) {
             case MAX_ZOOM_LEVEL:
                 checkDisableMenuItem(menu.findItem(R.id.action_zoom_in));
-                return super.onPrepareOptionsMenu(menu);
+                return true;
             case MIN_ZOOM_LEVEL:
                 checkDisableMenuItem(menu.findItem(R.id.action_zoom_out));
-                return super.onPrepareOptionsMenu(menu);
+                return true;
             default:
                 checkEnableMenuItem(menu.findItem(R.id.action_zoom_in));
                 checkEnableMenuItem(menu.findItem(R.id.action_zoom_out));
-                return super.onPrepareOptionsMenu(menu);
+                return true;
         }
     }
 
@@ -297,7 +518,7 @@ public class PdfViewer extends Activity {
                     renderPage();
                     showPageNumber();
                 }
-                return super.onOptionsItemSelected(item);
+                return true;
 
             case R.id.action_next:
                 if (mPage < mNumPages) {
@@ -305,7 +526,7 @@ public class PdfViewer extends Activity {
                     renderPage();
                     showPageNumber();
                 }
-                return super.onOptionsItemSelected(item);
+                return true;
 
             case R.id.action_open:
                 openDocument();
@@ -317,7 +538,7 @@ public class PdfViewer extends Activity {
                     renderPage();
                     invalidateOptionsMenu();
                 }
-                return super.onOptionsItemSelected(item);
+                return true;
 
             case R.id.action_zoom_in:
                 if (mZoomLevel < MAX_ZOOM_LEVEL) {
@@ -325,13 +546,21 @@ public class PdfViewer extends Activity {
                     renderPage();
                     invalidateOptionsMenu();
                 }
-                return super.onOptionsItemSelected(item);
+                return true;
+
+            case R.id.action_view_document_properties:
+                if (mDocumentProperties == null) {
+                    mDocumentProperties = getString(R.string.document_properties_retrieval_failed);
+                }
+                DocumentPropertiesFragment.getInstance(mDocumentProperties).show(getFragmentManager(), null);
+                return true;
 
             case R.id.action_jump_to_page:
                 new JumpToPageFragment().show(getFragmentManager(), null);
-                return super.onOptionsItemSelected(item);
+                return true;
+
             default:
-                return super.onOptionsItemSelected(item);
+                return true;
         }
     }
 }

@@ -1,4 +1,4 @@
-package co.copperhead.pdfviewer;
+package co.copperhead.pdfviewer.fragment;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -8,6 +8,8 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.widget.FrameLayout;
 import android.widget.NumberPicker;
+
+import co.copperhead.pdfviewer.PdfViewer;
 
 public class JumpToPageFragment extends DialogFragment {
     private final static String STATE_PICKER_CUR = "picker_cur";
