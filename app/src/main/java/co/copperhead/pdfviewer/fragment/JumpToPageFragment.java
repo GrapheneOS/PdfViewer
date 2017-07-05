@@ -12,11 +12,34 @@ import android.widget.NumberPicker;
 import co.copperhead.pdfviewer.PdfViewer;
 
 public class JumpToPageFragment extends DialogFragment {
+    public static final String TAG = "jump_to_page_fragment";
+
+    private static final String STATE_PAGE = "page";
+    private static final String STATE_NUM_PAGES = "num_pages";
+
     private final static String STATE_PICKER_CUR = "picker_cur";
     private final static String STATE_PICKER_MIN = "picker_min";
     private final static String STATE_PICKER_MAX = "picker_max";
 
     private NumberPicker mPicker;
+    private int mPage;
+    private int mNumPages;
+
+    public static JumpToPageFragment newInstance(int page, int numPages) {
+        final Bundle args = new Bundle();
+        args.putInt(STATE_PAGE, page);
+        args.putInt(STATE_NUM_PAGES, numPages);
+        final JumpToPageFragment jumpToPageFragment = new JumpToPageFragment();
+        jumpToPageFragment.setArguments(args);
+        return jumpToPageFragment;
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        mPage = getArguments().getInt(STATE_PAGE);
+        mNumPages = getArguments().getInt(STATE_NUM_PAGES);
+    }
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
@@ -32,8 +55,8 @@ public class JumpToPageFragment extends DialogFragment {
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         mPicker = new NumberPicker(getActivity());
         mPicker.setMinValue(1);
-        mPicker.setMaxValue(((PdfViewer)getActivity()).mNumPages);
-        mPicker.setValue(((PdfViewer)getActivity()).mPage);
+        mPicker.setMaxValue(mNumPages);
+        mPicker.setValue(mPage);
 
         final FrameLayout layout = new FrameLayout(getActivity());
         layout.addView(mPicker, new FrameLayout.LayoutParams(

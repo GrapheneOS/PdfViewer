@@ -8,6 +8,8 @@ import android.os.Bundle;
 import co.copperhead.pdfviewer.R;
 
 public class DocumentPropertiesFragment extends DialogFragment {
+    public static final String TAG = "document_properties_fragment";
+
     private static final String KEY_DOCUMENT_PROPERTIES = "key_document_properties";
 
     private static DocumentPropertiesFragment sDocumentPropertiesFragment;
