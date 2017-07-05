@@ -53,7 +53,6 @@ public class PdfViewer extends Activity {
     private static final int ALPHA_LOW = 130;
     private static final int ALPHA_HIGH = 255;
     private static final int ACTION_OPEN_DOCUMENT_REQUEST_CODE = 1;
-    private static final int STATE_DEFAULT = 0;
     private static final int STATE_LOADED = 1;
     private static final int STATE_END = 2;
     private static final String STATE_URI = "uri";
@@ -68,8 +67,6 @@ public class PdfViewer extends Activity {
     private int mZoomLevel = 2;
     private int mDocumentState;
     private Channel mChannel;
-    private boolean mZoomInState = true;
-    private boolean mZoomOutState = true;
     private String mDocumentProperties;
     private InputStream mInputStream;
     private TextView mTextView;
@@ -382,61 +379,15 @@ public class PdfViewer extends Activity {
         startActivityForResult(intent, ACTION_OPEN_DOCUMENT_REQUEST_CODE);
     }
 
-    private void saveMenuItemState(MenuItem item, boolean state) {
-        if (item.getItemId() == R.id.action_zoom_in) {
-            mZoomInState = state;
-        } else {
-            mZoomOutState = state;
-        }
-    }
-
-    private void restoreMenuItemState(Menu menu) {
-        if (menu.findItem(R.id.action_zoom_in).isEnabled() != mZoomInState) {
-            menu.findItem(R.id.action_zoom_in).setEnabled(mZoomInState);
-        } else if (menu.findItem(R.id.action_zoom_out).isEnabled() != mZoomOutState) {
-            menu.findItem(R.id.action_zoom_out).setEnabled(mZoomOutState);
-        }
-    }
-
-    private void disableItem(MenuItem item) {
-        item.setEnabled(false);
-        final Drawable icon = item.getIcon();
-        if (icon != null) {
-            icon.setAlpha(ALPHA_LOW);
-        }
-    }
-
-    private void enableItem(MenuItem item) {
-        item.setEnabled(true);
-        final Drawable icon = item.getIcon();
-        if (icon != null) {
-            icon.setAlpha(ALPHA_HIGH);
-        }
-    }
-
-    private void checkDisableMenuItem(MenuItem item) {
-        if (item.isEnabled()) {
-            disableItem(item);
-            saveMenuItemState(item, false);
-        }
-    }
-
-    private void checkEnableMenuItem(MenuItem item) {
-        if (!item.isEnabled()) {
-            enableItem(item);
-            saveMenuItemState(item, true);
-        }
-    }
-
-    private void enableDisableItems(Menu menu, boolean disable) {
-        final int ids[] = { R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
-            R.id.action_next, R.id.action_previous, R.id.action_view_document_properties };
-        for (final int id : ids) {
-            if (disable) {
-                disableItem(menu.findItem(id));
-            } else {
-                enableItem(menu.findItem(id));
+    private static void enableDisableMenuItem(MenuItem item, boolean enable) {
+        if (enable) {
+            if (!item.isEnabled()) {
+                item.setEnabled(true);
+                item.getIcon().setAlpha(ALPHA_HIGH);
             }
+        } else if (item.isEnabled()) {
+            item.setEnabled(false);
+            item.getIcon().setAlpha(ALPHA_LOW);
         }
     }
 
@@ -464,7 +415,6 @@ public class PdfViewer extends Activity {
                 mPage = 1;
                 mDocumentProperties = null;
                 loadPdf();
-                mDocumentState = STATE_DEFAULT;
                 invalidateOptionsMenu();
             }
         }
@@ -487,33 +437,40 @@ public class PdfViewer extends Activity {
         super.onCreateOptionsMenu(menu);
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.pdf_viewer, menu);
-        restoreMenuItemState(menu);
         return true;
     }
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
-        switch (mDocumentState) {
-            case STATE_DEFAULT:
-                enableDisableItems(menu, true);
-                return true;
-            case STATE_LOADED:
-                enableDisableItems(menu, false);
-                mDocumentState = STATE_END;
-                return true;
-            default:
-                break;
+        final int ids[] = { R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
+                R.id.action_next, R.id.action_previous, R.id.action_view_document_properties };
+        if (mDocumentState == 0) {
+            for (final int id : ids) {
+                final MenuItem item = menu.findItem(id);
+                if (item.isVisible()) {
+                    item.setVisible(false);
+                }
+            }
+        } else if (mDocumentState == STATE_LOADED) {
+            for (final int id : ids) {
+                final MenuItem item = menu.findItem(id);
+                if (!item.isVisible()) {
+                    item.setVisible(true);
+                }
+            }
+            mDocumentState = STATE_END;
         }
+
         switch (mZoomLevel) {
             case MAX_ZOOM_LEVEL:
-                checkDisableMenuItem(menu.findItem(R.id.action_zoom_in));
+                enableDisableMenuItem(menu.findItem(R.id.action_zoom_in), false);
                 return true;
             case MIN_ZOOM_LEVEL:
-                checkDisableMenuItem(menu.findItem(R.id.action_zoom_out));
+                enableDisableMenuItem(menu.findItem(R.id.action_zoom_out), false);
                 return true;
             default:
-                checkEnableMenuItem(menu.findItem(R.id.action_zoom_in));
-                checkEnableMenuItem(menu.findItem(R.id.action_zoom_out));
+                enableDisableMenuItem(menu.findItem(R.id.action_zoom_in), true);
+                enableDisableMenuItem(menu.findItem(R.id.action_zoom_out), true);
                 return true;
         }
     }
