@@ -24,4 +24,8 @@
     <string name="document_properties_pdf_version">PDF version</string>
     <string name="document_properties_pages">Pages</string>
     <string name="document_properties_retrieval_failed">Failed to obtain document metadata</string>
+
+    <string name="password_prompt_hint">Password</string>
+    <string name="password_prompt_description">Enter the password to open this PDF file</string>
+    <string name="password_prompt_invalid_password">Invalid password</string>
 </resources>

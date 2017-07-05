@@ -1,4 +1,5 @@
-<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <!--<item-->
         <!--android:id="@+id/action_settings"-->
@@ -10,37 +11,37 @@
         android:id="@+id/action_previous"
         android:icon="@drawable/ic_navigate_before_white_24dp"
         android:title="@string/action_previous"
-        android:showAsAction="ifRoom" />
+        app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_next"
         android:icon="@drawable/ic_navigate_next_white_24dp"
         android:title="@string/action_next"
-        android:showAsAction="ifRoom" />
+        app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_open"
         android:icon="@drawable/ic_insert_drive_file_white_24dp"
         android:title="@string/action_open"
-        android:showAsAction="ifRoom" />
+        app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_zoom_out"
         android:icon="@drawable/ic_zoom_out_white_24dp"
         android:title="@string/action_zoom_out"
-        android:showAsAction="ifRoom" />
+        app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_zoom_in"
         android:icon="@drawable/ic_zoom_in_white_24dp"
         android:title="@string/action_zoom_in"
-        android:showAsAction="ifRoom" />
+        app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_jump_to_page"
         android:icon="@drawable/ic_pageview_white_24dp"
         android:title="@string/action_jump_to_page"
-        android:showAsAction="ifRoom" />
+        app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_view_document_properties"

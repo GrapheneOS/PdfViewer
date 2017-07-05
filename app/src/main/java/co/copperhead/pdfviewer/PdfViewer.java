@@ -2,6 +2,7 @@ package co.copperhead.pdfviewer;
 
 import android.app.Activity;
 import android.annotation.SuppressLint;
+import android.app.FragmentManager;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.database.Cursor;
@@ -12,6 +13,8 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.OpenableColumns;
 import android.util.Log;
+import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -42,26 +45,29 @@ import java.util.TimeZone;
 import co.copperhead.pdfviewer.fragment.DocumentPropertiesFragment;
 import co.copperhead.pdfviewer.fragment.JumpToPageFragment;
 
-public class PdfViewer extends Activity {
+public class PdfViewer extends AppCompatActivity {
     private static final String TAG = "PdfViewer";
 
     private static final int MIN_ZOOM_LEVEL = 0;
     private static final int MAX_ZOOM_LEVEL = 4;
     private static final int ALPHA_LOW = 130;
     private static final int ALPHA_HIGH = 255;
-    private static final int ACTION_OPEN_DOCUMENT_REQUEST_CODE = 1;
+    private static final int ACTION_OPEN_DOCUMENT_REQUEST_CODE_1 = 1;
+    public static final int ACTION_OPEN_DOCUMENT_REQUEST_CODE_2 = 2;
     private static final int STATE_DEFAULT = 0;
     private static final int STATE_LOADED = 1;
     private static final int STATE_END = 2;
     private static final String STATE_URI = "uri";
     private static final String STATE_PAGE = "page";
     private static final String STATE_ZOOM_LEVEL = "zoomLevel";
+    private static final String STATE_ENCRYPTED_DOCUMENT_PASSWORD = "encrypted_document_password";
     private static final int PADDING = 10;
+    private static final String TAG_PASSWORD_PROMPT = "tag_password_prompt";
 
     private WebView mWebView;
     private Uri mUri;
-    public int mPage;
-    public int mNumPages;
+    private int mPage;
+    private int mNumPages;
     private int mZoomLevel = 2;
     private int mDocumentState;
     private Channel mChannel;
@@ -71,6 +77,10 @@ public class PdfViewer extends Activity {
     private InputStream mInputStream;
     private TextView mTextView;
     private Toast mToast;
+    private JumpToPageFragment mJumpToPageFragment;
+    private PasswordPromptFragment mPasswordPromptFragment;
+    private FragmentManager mFragmentManager;
+    private String mEncryptedDocumentPassword;
 
     private class Channel {
         @JavascriptInterface
@@ -261,7 +271,7 @@ public class PdfViewer extends Activity {
                         final String pages = String.valueOf(mNumPages);
 
                         mDocumentProperties = String.format("%s%s%s%s%s%s%s%s%s%s%s%s",
-                                formatProperty(R.string.document_properties_file_name ,fileName),
+                                formatProperty(R.string.document_properties_file_name, fileName),
                                 formatProperty(R.string.document_properties_file_size, fileSize),
                                 formatProperty(R.string.document_properties_title, title),
                                 formatProperty(R.string.document_properties_author, author),
@@ -279,6 +289,42 @@ public class PdfViewer extends Activity {
                     return null;
                 }
             }.execute();
+        }
+
+        @JavascriptInterface
+        public void showPasswordPrompt() {
+            if (mPasswordPromptFragment == null) {
+                // Don't prompt for password again if document previously got decrypted
+                // and device orientation changed
+                if (mEncryptedDocumentPassword != null) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            loadPdfWithPassword(mEncryptedDocumentPassword);
+                        }
+                    });
+                } else {
+                    // First time showing password prompt
+                    mPasswordPromptFragment = new PasswordPromptFragment();
+                    mPasswordPromptFragment.show(mFragmentManager, TAG_PASSWORD_PROMPT);
+                }
+            } else if (!mPasswordPromptFragment.isAdded()) {
+                // User entered invalid password
+                Toast.makeText(getApplicationContext(),
+                        R.string.password_prompt_invalid_password, Toast.LENGTH_SHORT).show();
+                mPasswordPromptFragment.show(mFragmentManager, TAG_PASSWORD_PROMPT);
+            }
+        }
+
+        @JavascriptInterface
+        public void notifyDocumentLoaded(String password) {
+            // Store password once document is loaded, to avoid prompting for
+            // it again on orientation change
+            if (!TextUtils.isEmpty(password)) {
+                mEncryptedDocumentPassword = password;
+            }
+            mDocumentState = STATE_LOADED;
+            invalidateOptionsMenu();
         }
     }
 
@@ -307,6 +353,14 @@ public class PdfViewer extends Activity {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 if ("GET".equals(request.getMethod()) && "https://localhost/placeholder.pdf".equals(request.getUrl().toString())) {
+                    try {
+                        if (mInputStream != null) {
+                            mInputStream.close();
+                        }
+                        mInputStream = getContentResolver().openInputStream(mUri);
+                    } catch (IOException e) {
+                        return null;
+                    }
                     return new WebResourceResponse("application/pdf", null, mInputStream);
                 }
                 return null;
@@ -315,12 +369,6 @@ public class PdfViewer extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return true;
-            }
-
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                mDocumentState = STATE_LOADED;
-                invalidateOptionsMenu();
             }
         });
 
@@ -339,10 +387,17 @@ public class PdfViewer extends Activity {
             mPage = 1;
         }
 
+        mFragmentManager = getFragmentManager();
+
         if (savedInstanceState != null) {
             mUri = savedInstanceState.getParcelable(STATE_URI);
             mPage = savedInstanceState.getInt(STATE_PAGE);
             mZoomLevel = savedInstanceState.getInt(STATE_ZOOM_LEVEL);
+            mEncryptedDocumentPassword = savedInstanceState.getString(STATE_ENCRYPTED_DOCUMENT_PASSWORD);
+            if (isFragmentAddedOrOnBackStack(TAG_PASSWORD_PROMPT)) {
+                mPasswordPromptFragment = (PasswordPromptFragment) mFragmentManager
+                        .getFragment(savedInstanceState, TAG_PASSWORD_PROMPT);
+            }
         }
 
         if (mUri != null) {
@@ -350,27 +405,37 @@ public class PdfViewer extends Activity {
         }
     }
 
+    private boolean isFragmentAddedOrOnBackStack(String tag) {
+        return mFragmentManager != null && mFragmentManager.findFragmentByTag(tag) != null;
+    }
+
+    private void loadPdf(Uri data) {
+        mJumpToPageFragment = null;
+        mPasswordPromptFragment = null;
+        mEncryptedDocumentPassword = null;
+        mUri = data;
+        mPage = 1;
+        loadPdf();
+        invalidateOptionsMenu();
+    }
+    
     private void loadPdf() {
-        try {
-            if (mInputStream != null) {
-                mInputStream.close();
-            }
-            mInputStream = getContentResolver().openInputStream(mUri);
-        } catch (IOException e) {
-            return;
-        }
         mWebView.loadUrl("file:///android_asset/viewer.html");
+    }
+
+    public void loadPdfWithPassword(String password) {
+        mWebView.evaluateJavascript(String.format("loadDocument(\"%s\")", password), null);
     }
 
     private void renderPage() {
         mWebView.evaluateJavascript("onRenderPage()", null);
     }
 
-    private void openDocument() {
+    public void openDocument(int requestCode) {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("application/pdf");
-        startActivityForResult(intent, ACTION_OPEN_DOCUMENT_REQUEST_CODE);
+        startActivityForResult(intent, requestCode);
     }
 
     private void saveMenuItemState(MenuItem item, boolean state) {
@@ -445,18 +510,25 @@ public class PdfViewer extends Activity {
         savedInstanceState.putParcelable(STATE_URI, mUri);
         savedInstanceState.putInt(STATE_PAGE, mPage);
         savedInstanceState.putInt(STATE_ZOOM_LEVEL, mZoomLevel);
+        if (mEncryptedDocumentPassword != null) {
+            savedInstanceState.putString(STATE_ENCRYPTED_DOCUMENT_PASSWORD, mEncryptedDocumentPassword);
+        } else if (isFragmentAddedOrOnBackStack(TAG_PASSWORD_PROMPT)) {
+            mFragmentManager.putFragment(savedInstanceState, TAG_PASSWORD_PROMPT, mPasswordPromptFragment);
+        }
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent resultData) {
-        if (requestCode == ACTION_OPEN_DOCUMENT_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
-            if (resultData != null) {
-                mUri = resultData.getData();
-                mPage = 1;
-                mDocumentProperties = null;
-                loadPdf();
-                mDocumentState = STATE_DEFAULT;
-                invalidateOptionsMenu();
+        if (requestCode == ACTION_OPEN_DOCUMENT_REQUEST_CODE_1 ||
+                requestCode == ACTION_OPEN_DOCUMENT_REQUEST_CODE_2) {
+            if (resultCode == Activity.RESULT_OK) {
+                if (resultData != null) {
+                    loadPdf(resultData.getData());
+                }
+            } else {
+                if (requestCode == ACTION_OPEN_DOCUMENT_REQUEST_CODE_2) {
+                    finish();
+                }
             }
         }
     }
@@ -529,8 +601,8 @@ public class PdfViewer extends Activity {
                 return true;
 
             case R.id.action_open:
-                openDocument();
-                return super.onOptionsItemSelected(item);
+                openDocument(ACTION_OPEN_DOCUMENT_REQUEST_CODE_1);
+                return true;
 
             case R.id.action_zoom_out:
                 if (mZoomLevel > 0) {
@@ -556,7 +628,10 @@ public class PdfViewer extends Activity {
                 return true;
 
             case R.id.action_jump_to_page:
-                new JumpToPageFragment().show(getFragmentManager(), null);
+                if (mJumpToPageFragment == null) {
+                    mJumpToPageFragment = JumpToPageFragment.newInstance(mPage, mNumPages);
+                }
+                mJumpToPageFragment.show(mFragmentManager, null);
                 return true;
 
             default:

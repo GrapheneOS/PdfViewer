@@ -94,11 +94,22 @@ function onRenderPage() {
     }
 }
 
-PDFJS.getDocument("https://localhost/placeholder.pdf").then(function(newDoc) {
-    pdfDoc = newDoc;
-    channel.setNumPages(pdfDoc.numPages);
-    pdfDoc.getMetadata().then(function(data) {
-        channel.setDocumentProperties(JSON.stringify(data.info, null, 2));
+function loadDocument(pdfPassword) {
+    let loadingTask = PDFJS.getDocument({ url: "https://localhost/placeholder.pdf", password: pdfPassword });
+    loadingTask.onPassword = function() {
+       channel.showPasswordPrompt();
+    }
+    loadingTask.then(function(newDoc) {
+        pdfDoc = newDoc;
+        channel.setNumPages(pdfDoc.numPages);
+        pdfDoc.getMetadata().then(function(data) {
+            channel.setDocumentProperties(JSON.stringify(data.info, null, 2));
+        });
+        renderPage();
+        channel.notifyDocumentLoaded(pdfPassword);
+    }, function(reason) {
+        console.error(reason.name + ": " + reason.message);
     });
-    renderPage();
-});
+}
+
+loadDocument("");
