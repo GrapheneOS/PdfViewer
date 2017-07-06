@@ -94,8 +94,13 @@ function onRenderPage() {
     }
 }
 
+function getTextSelection() {
+    return window.getSelection().toString();
+}
+
 PDFJS.getDocument("https://localhost/placeholder.pdf").then(function(newDoc) {
     pdfDoc = newDoc;
     channel.setNumPages(pdfDoc.numPages);
     renderPage();
+    channel.setupImmersiveMode();
 });

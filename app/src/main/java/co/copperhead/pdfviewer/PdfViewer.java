@@ -7,12 +7,19 @@ import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewConfiguration;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -37,6 +44,7 @@ public class PdfViewer extends Activity {
     private static final String STATE_PAGE = "page";
     private static final String STATE_ZOOM_LEVEL = "zoomLevel";
     private static final int PADDING = 10;
+    private static final int SYSTEM_UI_AUTO_HIDE_DELAY_MS = 2000;
 
     private WebView mWebView;
     private Uri mUri;
@@ -50,6 +58,10 @@ public class PdfViewer extends Activity {
     private InputStream mInputStream;
     private TextView mTextView;
     private Toast mToast;
+    private View mDecorView;
+    private GestureDetector mGestureDetector;
+    private Handler mHandler;
+    private Runnable mRunnable;
 
     private class Channel {
         @JavascriptInterface
@@ -65,6 +77,60 @@ public class PdfViewer extends Activity {
         @JavascriptInterface
         public void setNumPages(int numPages) {
             mNumPages = numPages;
+        }
+
+        @SuppressWarnings("unused")
+        @JavascriptInterface
+        public void setupImmersiveMode() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (mDecorView == null) {
+                        mDecorView = getWindow().getDecorView();
+                    }
+
+                    if (mGestureDetector == null) {
+                        mWebView.setOnTouchListener(new View.OnTouchListener() {
+                            @Override
+                            public boolean onTouch(View view, MotionEvent motionEvent) {
+                                mGestureDetector.onTouchEvent(motionEvent);
+                                // Short press to toggle system ui visibility, long press to select text
+                                return motionEvent.getDownTime() <= ViewConfiguration.getLongPressTimeout();
+                            }
+                        });
+                        mGestureDetector = new GestureDetector(getApplicationContext(),
+                                new GestureDetector.SimpleOnGestureListener() {
+                                    @Override
+                                    public boolean onSingleTapUp(MotionEvent motionEvent) {
+                                        mWebView.evaluateJavascript("getTextSelection()", new ValueCallback<String>() {
+                                            @Override
+                                            public void onReceiveValue(String selection) {
+                                                if (selection == null || selection.equals("\"\"")) {
+                                                    if (mHandler != null) {
+                                                        if (mHandler.hasMessages(0)) {
+                                                            mHandler.removeCallbacks(mRunnable);
+                                                        }
+                                                    }
+                                                    if ((mDecorView.getSystemUiVisibility() &
+                                                            View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
+                                                        hideSystemUi();
+                                                    } else {
+                                                        mDecorView.setSystemUiVisibility(
+                                                                View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+                                                                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                                                                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+                                                    }
+                                                }
+                                            }
+                                        });
+                                        return true;
+                                    }
+                        });
+                    }
+
+                    hideSystemUi();
+                }
+            });
         }
     }
 
@@ -216,6 +282,38 @@ public class PdfViewer extends Activity {
             mPage = selected_page;
             renderPage();
             showPageNumber();
+        }
+    }
+
+    private void hideSystemUi() {
+        mDecorView.setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                View.SYSTEM_UI_FLAG_FULLSCREEN |
+                View.SYSTEM_UI_FLAG_IMMERSIVE);
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (mDecorView != null) {
+            if (mHandler == null) {
+                mHandler = new Handler(Looper.getMainLooper());
+                mRunnable = new Runnable() {
+                    @Override
+                    public void run() {
+                        hideSystemUi();
+                    }
+                };
+            }
+            if (hasFocus) {
+                // Automatically hide system ui after SYSTEM_UI_AUTO_HIDE_DELAY_MS
+                mHandler.postDelayed(mRunnable, SYSTEM_UI_AUTO_HIDE_DELAY_MS);
+            } else if (mHandler.hasMessages(0)) {
+                mHandler.removeCallbacks(mRunnable);
+            }
         }
     }
 
