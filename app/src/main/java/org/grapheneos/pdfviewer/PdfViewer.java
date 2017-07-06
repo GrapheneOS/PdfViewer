@@ -8,10 +8,13 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
@@ -28,7 +31,6 @@ import androidx.loader.content.Loader;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -138,7 +140,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     @Override
-    @SuppressLint("SetJavaScriptEnabled")
+    @SuppressLint({"SetJavaScriptEnabled", "ClickableViewAccessibility"})
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
@@ -215,6 +217,31 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 mDocumentState = STATE_LOADED;
                 invalidateOptionsMenu();
             }
+        });
+
+        final GestureDetector detector = new GestureDetector(PdfViewer.this,
+                new GestureDetector.SimpleOnGestureListener() {
+                    @Override
+                    public boolean onSingleTapUp(MotionEvent motionEvent) {
+                        if (mUri != null) {
+                            mWebView.evaluateJavascript("isTextSelected()", selection -> {
+                                if (!Boolean.valueOf(selection)) {
+                                    if ((getWindow().getDecorView().getSystemUiVisibility() &
+                                            View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
+                                        hideSystemUi();
+                                    } else {
+                                        showSystemUi();
+                                    }
+                                }
+                            });
+                            return true;
+                        }
+                        return false;
+                    }
+                });
+        mWebView.setOnTouchListener((view, motionEvent) -> {
+            detector.onTouchEvent(motionEvent);
+            return false;
         });
 
         mTextView = new TextView(this);
@@ -316,6 +343,23 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             renderPage(false);
             showPageNumber();
         }
+    }
+
+    private void showSystemUi() {
+        getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+    }
+
+    private void hideSystemUi() {
+        getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                View.SYSTEM_UI_FLAG_FULLSCREEN |
+                View.SYSTEM_UI_FLAG_IMMERSIVE);
     }
 
     @Override

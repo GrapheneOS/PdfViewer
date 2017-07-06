@@ -185,6 +185,10 @@ function onRenderPage(lazy) {
     }
 }
 
+function isTextSelected() {
+    return window.getSelection().toString() !== "";
+}
+
 pdfjsLib.getDocument("https://localhost/placeholder.pdf").promise.then(function(newDoc) {
     pdfDoc = newDoc;
     channel.setNumPages(pdfDoc.numPages);
