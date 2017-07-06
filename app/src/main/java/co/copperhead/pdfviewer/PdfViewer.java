@@ -10,10 +10,16 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewConfiguration;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
@@ -50,6 +56,7 @@ public class PdfViewer extends Activity implements LoaderManager.LoaderCallbacks
     private static final int STATE_LOADED = 1;
     private static final int STATE_END = 2;
     private static final int PADDING = 10;
+    private static final int SYSTEM_UI_AUTO_HIDE_DELAY_MS = 2000;
 
     private WebView mWebView;
     private Uri mUri;
@@ -62,6 +69,9 @@ public class PdfViewer extends Activity implements LoaderManager.LoaderCallbacks
     private InputStream mInputStream;
     private TextView mTextView;
     private Toast mToast;
+    private GestureDetector mGestureDetector;
+    private Handler mHandler;
+    private Runnable mRunnable;
 
     private class Channel {
         @JavascriptInterface
@@ -89,6 +99,14 @@ public class PdfViewer extends Activity implements LoaderManager.LoaderCallbacks
             args.putString(STATE_JSON_PROPERTIES, properties);
             getLoaderManager().restartLoader(DocumentPropertiesLoader.ID, args, PdfViewer.this);
         }
+
+        @SuppressWarnings("unused")
+        @JavascriptInterface
+        public void onFirstPageRendered() {
+            mHandler.postDelayed(mRunnable, SYSTEM_UI_AUTO_HIDE_DELAY_MS);
+            mDocumentState = STATE_LOADED;
+            invalidateOptionsMenu();
+        }
     }
 
     // Can be removed once minSdkVersion >= 26
@@ -105,6 +123,10 @@ public class PdfViewer extends Activity implements LoaderManager.LoaderCallbacks
         setContentView(R.layout.webview);
 
         mWebView = findViewById(R.id.webview);
+        mWebView.setOnTouchListener((view, ev) ->
+                mDocumentState >= STATE_LOADED && mGestureDetector.onTouchEvent(ev) &&
+                ev.getDownTime() < ViewConfiguration.getLongPressTimeout());
+
         final WebSettings settings = mWebView.getSettings();
         settings.setAllowContentAccess(false);
         settings.setAllowFileAccess(false);
@@ -131,11 +153,23 @@ public class PdfViewer extends Activity implements LoaderManager.LoaderCallbacks
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return true;
             }
+        });
 
+        mHandler = new Handler(Looper.getMainLooper());
+        mRunnable = this::toggleImmersiveMode;
+
+        mGestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
             @Override
-            public void onPageFinished(WebView view, String url) {
-                mDocumentState = STATE_LOADED;
-                invalidateOptionsMenu();
+            public boolean onSingleTapUp(MotionEvent ev) {
+                mWebView.evaluateJavascript("isDocumentTextSelected()", isTextSelected -> {
+                    if (mHandler != null) {
+                        mHandler.removeCallbacksAndMessages(null);
+                    }
+                    if (!Boolean.valueOf(isTextSelected)) {
+                        toggleImmersiveMode();
+                    }
+                });
+                return true;
             }
         });
 
@@ -166,6 +200,12 @@ public class PdfViewer extends Activity implements LoaderManager.LoaderCallbacks
         if (mUri != null) {
             loadPdf();
         }
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        mHandler.removeCallbacksAndMessages(null);
     }
 
     @Override
@@ -224,6 +264,32 @@ public class PdfViewer extends Activity implements LoaderManager.LoaderCallbacks
             mPage = selected_page;
             renderPage(false);
             showPageNumber();
+        }
+    }
+
+    private void toggleImmersiveMode() {
+        final View decor = getWindow().getDecorView();
+        int visibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
+
+        if ((decor.getSystemUiVisibility() & View.SYSTEM_UI_FLAG_IMMERSIVE) == 0) {
+            visibility |= View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                          View.SYSTEM_UI_FLAG_FULLSCREEN |
+                          View.SYSTEM_UI_FLAG_IMMERSIVE;
+        }
+
+        getWindow().getDecorView().setSystemUiVisibility(visibility);
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+
+        if (mDocumentState >= STATE_LOADED) {
+            if (hasFocus) {
+                mHandler.postDelayed(mRunnable, SYSTEM_UI_AUTO_HIDE_DELAY_MS);
+            } else {
+                mHandler.removeCallbacksAndMessages(null);
+            }
         }
     }
 

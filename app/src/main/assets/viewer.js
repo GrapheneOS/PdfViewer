@@ -178,6 +178,10 @@ function onRenderPage(lazy) {
     }
 }
 
+function isDocumentTextSelected() {
+    return window.getSelection().toString().length > 0;
+}
+
 PDFJS.getDocument("https://localhost/placeholder.pdf").then(function(newDoc) {
     pdfDoc = newDoc;
     channel.setNumPages(pdfDoc.numPages);
@@ -187,6 +191,7 @@ PDFJS.getDocument("https://localhost/placeholder.pdf").then(function(newDoc) {
         console.log("getMetadata error: " + error);
     });
     renderPage(channel.getPage(), false, false);
+    channel.onFirstPageRendered();
 }).catch(function(error) {
     console.log("getDocument error: " + error);
 });
