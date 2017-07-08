@@ -46,6 +46,7 @@ public class JumpToPageFragment extends DialogFragment {
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
+                        mPicker.clearFocus();
                         ((PdfViewer)getActivity()).positiveButtonRenderPage(mPicker.getValue());
                     }
                 })
