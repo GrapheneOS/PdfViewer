@@ -258,7 +258,7 @@ public class PdfViewer extends Activity {
                         final String producer = json.optString("Producer", "-");
                         final String creator = json.optString("Creator", "-");
                         final String pdfVersion = json.optString("PDFFormatVersion", "-");
-                        final String pageNumbers = String.valueOf(mNumPages);
+                        final String pages = String.valueOf(mNumPages);
 
                         mDocumentProperties = String.format("%s%s%s%s%s%s%s%s%s%s%s%s",
                                 formatProperty(R.string.document_properties_file_name ,fileName),
@@ -272,7 +272,7 @@ public class PdfViewer extends Activity {
                                 formatProperty(R.string.document_properties_producer, producer),
                                 formatProperty(R.string.document_properties_creator, creator),
                                 formatProperty(R.string.document_properties_pdf_version, pdfVersion),
-                                formatProperty(R.string.document_properties_page_numbers, pageNumbers));
+                                formatProperty(R.string.document_properties_pages, pages));
                     } catch (JSONException e) {
                         Log.e(TAG, e.getMessage());
                     }
