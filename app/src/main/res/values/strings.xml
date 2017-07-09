@@ -2,8 +2,8 @@
 <resources>
     <string name="app_name">PDF Viewer</string>
     <!--<string name="action_settings">Settings</string>-->
-    <string name="action_previous">Next page</string>
-    <string name="action_next">Previous page</string>
+    <string name="action_previous">Previous page</string>
+    <string name="action_next">Next page</string>
     <string name="action_open">Open document</string>
     <string name="action_zoom_out">Zoom out</string>
     <string name="action_zoom_in">Zoom in</string>
