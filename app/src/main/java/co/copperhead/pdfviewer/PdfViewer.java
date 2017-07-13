@@ -90,6 +90,9 @@ public class PdfViewer extends Activity {
 
         @JavascriptInterface
         public void setDocumentProperties(final String properties) {
+            if (mDocumentProperties != null) {
+                throw new SecurityException("mDocumentProperties not null");
+            }
             new AsyncTask<Void, Void, Void>() {
                 private String formatProperty(int resId, String propertyValue) {
                     return String.format("\n%s:\n%s\n", getString(resId), propertyValue);
