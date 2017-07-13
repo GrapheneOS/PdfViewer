@@ -264,7 +264,7 @@ public class PdfViewer extends Activity {
                         final String pages = String.valueOf(mNumPages);
 
                         mDocumentProperties = String.format("%s%s%s%s%s%s%s%s%s%s%s%s",
-                                formatProperty(R.string.document_properties_file_name ,fileName),
+                                formatProperty(R.string.document_properties_file_name, fileName),
                                 formatProperty(R.string.document_properties_file_size, fileSize),
                                 formatProperty(R.string.document_properties_title, title),
                                 formatProperty(R.string.document_properties_author, author),
