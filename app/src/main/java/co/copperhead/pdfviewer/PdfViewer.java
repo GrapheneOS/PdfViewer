@@ -101,14 +101,14 @@ public class PdfViewer extends Activity {
                 private String parseFileSize(long fileSize) {
                     final double kb = fileSize / 1000;
                     if (((long) kb) == 0) {
-                        return String.format("%s Bytes", String.valueOf(fileSize));
+                        return String.format("%s bytes", String.valueOf(fileSize));
                     } else {
                         final DecimalFormat format = new DecimalFormat("#.##");
                         format.setRoundingMode(RoundingMode.CEILING);
                         if (kb < 1000) {
-                            return String.format("%s kB (%s Bytes)", format.format(kb), String.valueOf(fileSize));
+                            return String.format("%s kB (%s bytes)", format.format(kb), String.valueOf(fileSize));
                         }
-                        return String.format("%s MB (%s Bytes)", format.format(kb / 1000), String.valueOf(fileSize));
+                        return String.format("%s MB (%s bytes)", format.format(kb / 1000), String.valueOf(fileSize));
                     }
                 }
 
