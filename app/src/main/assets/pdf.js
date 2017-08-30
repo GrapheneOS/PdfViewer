@@ -1512,6 +1512,8 @@ AnnotationElementFactory.prototype = {
         return new WidgetAnnotationElement(parameters);
       case AnnotationType.POPUP:
         return new PopupAnnotationElement(parameters);
+      case AnnotationType.LINE:
+        return new LineAnnotationElement(parameters);
       case AnnotationType.HIGHLIGHT:
         return new HighlightAnnotationElement(parameters);
       case AnnotationType.UNDERLINE:
@@ -1528,7 +1530,7 @@ AnnotationElementFactory.prototype = {
   }
 };
 var AnnotationElement = function AnnotationElementClosure() {
-  function AnnotationElement(parameters, isRenderable) {
+  function AnnotationElement(parameters, isRenderable, ignoreBorder) {
     this.isRenderable = isRenderable || false;
     this.data = parameters.data;
     this.layer = parameters.layer;
@@ -1539,11 +1541,11 @@ var AnnotationElement = function AnnotationElementClosure() {
     this.imageResourcesPath = parameters.imageResourcesPath;
     this.renderInteractiveForms = parameters.renderInteractiveForms;
     if (isRenderable) {
-      this.container = this._createContainer();
+      this.container = this._createContainer(ignoreBorder);
     }
   }
   AnnotationElement.prototype = {
-    _createContainer: function AnnotationElement_createContainer() {
+    _createContainer: function AnnotationElement_createContainer(ignoreBorder) {
       var data = this.data,
           page = this.page,
           viewport = this.viewport;
@@ -1554,7 +1556,7 @@ var AnnotationElement = function AnnotationElementClosure() {
       var rect = Util.normalizeRect([data.rect[0], page.view[3] - data.rect[1] + page.view[1], data.rect[2], page.view[3] - data.rect[3] + page.view[1]]);
       CustomStyle.setProp('transform', container, 'matrix(' + viewport.transform.join(',') + ')');
       CustomStyle.setProp('transformOrigin', container, -rect[0] + 'px ' + -rect[1] + 'px');
-      if (data.borderStyle.width > 0) {
+      if (!ignoreBorder && data.borderStyle.width > 0) {
         container.style.borderWidth = data.borderStyle.width + 'px';
         if (data.borderStyle.style !== AnnotationBorderStyleType.UNDERLINE) {
           width = width - 2 * data.borderStyle.width;
@@ -1837,6 +1839,7 @@ var ChoiceWidgetAnnotationElement = function ChoiceWidgetAnnotationElementClosur
   return ChoiceWidgetAnnotationElement;
 }();
 var PopupAnnotationElement = function PopupAnnotationElementClosure() {
+  var IGNORE_TYPES = ['Line'];
   function PopupAnnotationElement(parameters) {
     var isRenderable = !!(parameters.data.title || parameters.data.contents);
     AnnotationElement.call(this, parameters, isRenderable);
@@ -1844,6 +1847,9 @@ var PopupAnnotationElement = function PopupAnnotationElementClosure() {
   Util.inherit(PopupAnnotationElement, AnnotationElement, {
     render: function PopupAnnotationElement_render() {
       this.container.className = 'popupAnnotation';
+      if (IGNORE_TYPES.indexOf(this.data.parentType) >= 0) {
+        return this.container;
+      }
       var selector = '[data-annotation-id="' + this.data.parentId + '"]';
       var parentElement = this.layer.querySelector(selector);
       if (!parentElement) {
@@ -1944,10 +1950,43 @@ var PopupElement = function PopupElementClosure() {
   };
   return PopupElement;
 }();
+var LineAnnotationElement = function LineAnnotationElementClosure() {
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+  function LineAnnotationElement(parameters) {
+    var isRenderable = !!(parameters.data.hasPopup || parameters.data.title || parameters.data.contents);
+    AnnotationElement.call(this, parameters, isRenderable, true);
+  }
+  Util.inherit(LineAnnotationElement, AnnotationElement, {
+    render: function LineAnnotationElement_render() {
+      this.container.className = 'lineAnnotation';
+      var data = this.data;
+      var width = data.rect[2] - data.rect[0];
+      var height = data.rect[3] - data.rect[1];
+      var svg = document.createElementNS(SVG_NS, 'svg:svg');
+      svg.setAttributeNS(null, 'version', '1.1');
+      svg.setAttributeNS(null, 'width', width + 'px');
+      svg.setAttributeNS(null, 'height', height + 'px');
+      svg.setAttributeNS(null, 'preserveAspectRatio', 'none');
+      svg.setAttributeNS(null, 'viewBox', '0 0 ' + width + ' ' + height);
+      var line = document.createElementNS(SVG_NS, 'svg:line');
+      line.setAttributeNS(null, 'x1', data.rect[2] - data.lineCoordinates[0]);
+      line.setAttributeNS(null, 'y1', data.rect[3] - data.lineCoordinates[1]);
+      line.setAttributeNS(null, 'x2', data.rect[2] - data.lineCoordinates[2]);
+      line.setAttributeNS(null, 'y2', data.rect[3] - data.lineCoordinates[3]);
+      line.setAttributeNS(null, 'stroke-width', data.borderStyle.width);
+      line.setAttributeNS(null, 'stroke', 'transparent');
+      svg.appendChild(line);
+      this.container.append(svg);
+      this._createPopup(this.container, line, this.data);
+      return this.container;
+    }
+  });
+  return LineAnnotationElement;
+}();
 var HighlightAnnotationElement = function HighlightAnnotationElementClosure() {
   function HighlightAnnotationElement(parameters) {
     var isRenderable = !!(parameters.data.hasPopup || parameters.data.title || parameters.data.contents);
-    AnnotationElement.call(this, parameters, isRenderable);
+    AnnotationElement.call(this, parameters, isRenderable, true);
   }
   Util.inherit(HighlightAnnotationElement, AnnotationElement, {
     render: function HighlightAnnotationElement_render() {
@@ -1963,7 +2002,7 @@ var HighlightAnnotationElement = function HighlightAnnotationElementClosure() {
 var UnderlineAnnotationElement = function UnderlineAnnotationElementClosure() {
   function UnderlineAnnotationElement(parameters) {
     var isRenderable = !!(parameters.data.hasPopup || parameters.data.title || parameters.data.contents);
-    AnnotationElement.call(this, parameters, isRenderable);
+    AnnotationElement.call(this, parameters, isRenderable, true);
   }
   Util.inherit(UnderlineAnnotationElement, AnnotationElement, {
     render: function UnderlineAnnotationElement_render() {
@@ -1979,7 +2018,7 @@ var UnderlineAnnotationElement = function UnderlineAnnotationElementClosure() {
 var SquigglyAnnotationElement = function SquigglyAnnotationElementClosure() {
   function SquigglyAnnotationElement(parameters) {
     var isRenderable = !!(parameters.data.hasPopup || parameters.data.title || parameters.data.contents);
-    AnnotationElement.call(this, parameters, isRenderable);
+    AnnotationElement.call(this, parameters, isRenderable, true);
   }
   Util.inherit(SquigglyAnnotationElement, AnnotationElement, {
     render: function SquigglyAnnotationElement_render() {
@@ -1995,7 +2034,7 @@ var SquigglyAnnotationElement = function SquigglyAnnotationElementClosure() {
 var StrikeOutAnnotationElement = function StrikeOutAnnotationElementClosure() {
   function StrikeOutAnnotationElement(parameters) {
     var isRenderable = !!(parameters.data.hasPopup || parameters.data.title || parameters.data.contents);
-    AnnotationElement.call(this, parameters, isRenderable);
+    AnnotationElement.call(this, parameters, isRenderable, true);
   }
   Util.inherit(StrikeOutAnnotationElement, AnnotationElement, {
     render: function StrikeOutAnnotationElement_render() {
@@ -2645,7 +2684,7 @@ var PDFWorker = function PDFWorkerClosure() {
       return getDefaultSetting('workerSrc');
     }
     if (pdfjsFilePath) {
-      return pdfjsFilePath.replace(/\.js$/i, '.worker.js');
+      return pdfjsFilePath.replace(/(\.(?:min\.)?js)$/i, '.worker$1');
     }
     error('No PDFJS.workerSrc specified');
   }
@@ -3451,8 +3490,8 @@ var _UnsupportedManager = function UnsupportedManagerClosure() {
     }
   };
 }();
-exports.version = '1.8.171';
-exports.build = 'c6a8bf8e';
+exports.version = '1.8.189';
+exports.build = 'e2aa7cbf';
 exports.getDocument = getDocument;
 exports.PDFDataRangeTransport = PDFDataRangeTransport;
 exports.PDFWorker = PDFWorker;
@@ -5382,8 +5421,8 @@ if (!globalScope.PDFJS) {
   globalScope.PDFJS = {};
 }
 var PDFJS = globalScope.PDFJS;
-PDFJS.version = '1.8.171';
-PDFJS.build = 'c6a8bf8e';
+PDFJS.version = '1.8.189';
+PDFJS.build = 'e2aa7cbf';
 PDFJS.pdfBug = false;
 if (PDFJS.verbosity !== undefined) {
   sharedUtil.setVerbosityLevel(PDFJS.verbosity);
@@ -6210,17 +6249,7 @@ var CanvasGraphics = function CanvasGraphicsClosure() {
             this.ctx.globalAlpha = state[1];
             break;
           case 'BM':
-            if (value && value.name && value.name !== 'Normal') {
-              var mode = value.name.replace(/([A-Z])/g, function (c) {
-                return '-' + c.toLowerCase();
-              }).substring(1);
-              this.ctx.globalCompositeOperation = mode;
-              if (this.ctx.globalCompositeOperation !== mode) {
-                warn('globalCompositeOperation "' + mode + '" is not supported');
-              }
-            } else {
-              this.ctx.globalCompositeOperation = 'source-over';
-            }
+            this.ctx.globalCompositeOperation = value;
             break;
           case 'SMask':
             if (this.current.activeSMask) {
@@ -6255,7 +6284,7 @@ var CanvasGraphics = function CanvasGraphicsClosure() {
       activeSMask.startTransformInverse = groupCtx.mozCurrentTransformInverse;
       copyCtxState(currentCtx, groupCtx);
       this.ctx = groupCtx;
-      this.setGState([['BM', 'Normal'], ['ca', 1], ['CA', 1]]);
+      this.setGState([['BM', 'source-over'], ['ca', 1], ['CA', 1]]);
       this.groupStack.push(currentCtx);
       this.groupLevel++;
     },
@@ -6924,7 +6953,7 @@ var CanvasGraphics = function CanvasGraphicsClosure() {
       }
       copyCtxState(currentCtx, groupCtx);
       this.ctx = groupCtx;
-      this.setGState([['BM', 'Normal'], ['ca', 1], ['CA', 1]]);
+      this.setGState([['BM', 'source-over'], ['ca', 1], ['CA', 1]]);
       this.groupStack.push(currentCtx);
       this.groupLevel++;
       this.current.activeSMask = null;
@@ -7894,8 +7923,8 @@ exports.TilingPattern = TilingPattern;
 "use strict";
 
 
-var pdfjsVersion = '1.8.171';
-var pdfjsBuild = 'c6a8bf8e';
+var pdfjsVersion = '1.8.189';
+var pdfjsBuild = 'e2aa7cbf';
 var pdfjsSharedUtil = __w_pdfjs_require__(0);
 var pdfjsDisplayGlobal = __w_pdfjs_require__(9);
 var pdfjsDisplayAPI = __w_pdfjs_require__(3);
@@ -8427,9 +8456,10 @@ if (typeof PDFJS === 'undefined' || !PDFJS.compatibilityChecked) {
       return;
     }
     window.requestAnimationFrame = window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame;
-    if (!('requestAnimationFrame' in window)) {
-      installFakeAnimationFrameFunctions();
+    if (window.requestAnimationFrame) {
+      return;
     }
+    installFakeAnimationFrameFunctions();
   })();
   (function checkCanvasSizeLimitation() {
     if (isIOS || isAndroid) {

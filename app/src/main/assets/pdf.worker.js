@@ -15274,6 +15274,48 @@ var PartialEvaluator = function PartialEvaluatorClosure() {
       this.checked = 0;
     }
   };
+  function normalizeBlendMode(value) {
+    if (!isName(value)) {
+      return 'source-over';
+    }
+    switch (value.name) {
+      case 'Normal':
+      case 'Compatible':
+        return 'source-over';
+      case 'Multiply':
+        return 'multiply';
+      case 'Screen':
+        return 'screen';
+      case 'Overlay':
+        return 'overlay';
+      case 'Darken':
+        return 'darken';
+      case 'Lighten':
+        return 'lighten';
+      case 'ColorDodge':
+        return 'color-dodge';
+      case 'ColorBurn':
+        return 'color-burn';
+      case 'HardLight':
+        return 'hard-light';
+      case 'SoftLight':
+        return 'soft-light';
+      case 'Difference':
+        return 'difference';
+      case 'Exclusion':
+        return 'exclusion';
+      case 'Hue':
+        return 'hue';
+      case 'Saturation':
+        return 'saturation';
+      case 'Color':
+        return 'color';
+      case 'Luminosity':
+        return 'luminosity';
+    }
+    warn('Unsupported blend mode: ' + value.name);
+    return 'source-over';
+  }
   var deferred = Promise.resolve();
   var TILING_PATTERN = 1,
       SHADING_PATTERN = 2;
@@ -15550,7 +15592,7 @@ var PartialEvaluator = function PartialEvaluatorClosure() {
             });
             break;
           case 'BM':
-            gStateObj.push([key, value]);
+            gStateObj.push([key, normalizeBlendMode(value)]);
             break;
           case 'SMask':
             if (isName(value, 'None')) {
@@ -15720,7 +15762,7 @@ var PartialEvaluator = function PartialEvaluatorClosure() {
           operatorList.addOp(fn, pattern.getIR());
           return Promise.resolve();
         }
-        return Promise.reject('Unknown PatternType: ' + typeNum);
+        return Promise.reject(new Error('Unknown PatternType: ' + typeNum));
       }
       operatorList.addOp(fn, args);
       return Promise.resolve();
@@ -24439,6 +24481,8 @@ AnnotationFactory.prototype = {
         return new WidgetAnnotation(parameters);
       case 'Popup':
         return new PopupAnnotation(parameters);
+      case 'Line':
+        return new LineAnnotation(parameters);
       case 'Highlight':
         return new HighlightAnnotation(parameters);
       case 'Underline':
@@ -24933,6 +24977,8 @@ var PopupAnnotation = function PopupAnnotationClosure() {
       warn('Popup annotation has a missing or invalid parent annotation.');
       return;
     }
+    var parentSubtype = parentItem.get('Subtype');
+    this.data.parentType = isName(parentSubtype) ? parentSubtype.name : null;
     this.data.parentId = dict.getRaw('Parent').toString();
     this.data.title = stringToPDFString(parentItem.get('T') || '');
     this.data.contents = stringToPDFString(parentItem.get('Contents') || '');
@@ -24952,12 +24998,22 @@ var PopupAnnotation = function PopupAnnotationClosure() {
   Util.inherit(PopupAnnotation, Annotation, {});
   return PopupAnnotation;
 }();
+var LineAnnotation = function LineAnnotationClosure() {
+  function LineAnnotation(parameters) {
+    Annotation.call(this, parameters);
+    this.data.annotationType = AnnotationType.LINE;
+    var dict = parameters.dict;
+    this.data.lineCoordinates = Util.normalizeRect(dict.getArray('L'));
+    this._preparePopup(dict);
+  }
+  Util.inherit(LineAnnotation, Annotation, {});
+  return LineAnnotation;
+}();
 var HighlightAnnotation = function HighlightAnnotationClosure() {
   function HighlightAnnotation(parameters) {
     Annotation.call(this, parameters);
     this.data.annotationType = AnnotationType.HIGHLIGHT;
     this._preparePopup(parameters.dict);
-    this.data.borderStyle.setWidth(0);
   }
   Util.inherit(HighlightAnnotation, Annotation, {});
   return HighlightAnnotation;
@@ -24967,7 +25023,6 @@ var UnderlineAnnotation = function UnderlineAnnotationClosure() {
     Annotation.call(this, parameters);
     this.data.annotationType = AnnotationType.UNDERLINE;
     this._preparePopup(parameters.dict);
-    this.data.borderStyle.setWidth(0);
   }
   Util.inherit(UnderlineAnnotation, Annotation, {});
   return UnderlineAnnotation;
@@ -24977,7 +25032,6 @@ var SquigglyAnnotation = function SquigglyAnnotationClosure() {
     Annotation.call(this, parameters);
     this.data.annotationType = AnnotationType.SQUIGGLY;
     this._preparePopup(parameters.dict);
-    this.data.borderStyle.setWidth(0);
   }
   Util.inherit(SquigglyAnnotation, Annotation, {});
   return SquigglyAnnotation;
@@ -24987,7 +25041,6 @@ var StrikeOutAnnotation = function StrikeOutAnnotationClosure() {
     Annotation.call(this, parameters);
     this.data.annotationType = AnnotationType.STRIKEOUT;
     this._preparePopup(parameters.dict);
-    this.data.borderStyle.setWidth(0);
   }
   Util.inherit(StrikeOutAnnotation, Annotation, {});
   return StrikeOutAnnotation;
@@ -36904,8 +36957,8 @@ exports.Type1Parser = Type1Parser;
 "use strict";
 
 
-var pdfjsVersion = '1.8.171';
-var pdfjsBuild = 'c6a8bf8e';
+var pdfjsVersion = '1.8.189';
+var pdfjsBuild = 'e2aa7cbf';
 var pdfjsCoreWorker = __w_pdfjs_require__(8);
 {
   __w_pdfjs_require__(19);
@@ -37409,9 +37462,10 @@ if (typeof PDFJS === 'undefined' || !PDFJS.compatibilityChecked) {
       return;
     }
     window.requestAnimationFrame = window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame;
-    if (!('requestAnimationFrame' in window)) {
-      installFakeAnimationFrameFunctions();
+    if (window.requestAnimationFrame) {
+      return;
     }
+    installFakeAnimationFrameFunctions();
   })();
   (function checkCanvasSizeLimitation() {
     if (isIOS || isAndroid) {
