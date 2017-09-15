@@ -11,6 +11,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.OpenableColumns;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.Menu;
@@ -34,8 +35,10 @@ import java.io.IOException;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 
@@ -94,8 +97,11 @@ public class PdfViewer extends Activity {
                 throw new SecurityException("mDocumentProperties not null");
             }
             new AsyncTask<Void, Void, Void>() {
-                private String formatProperty(int resId, String propertyValue) {
-                    return String.format("\n%s:\n%s\n", getString(resId), propertyValue);
+                private String formatProperty(String propertyName, String propertyValue) {
+                    if (TextUtils.isEmpty(propertyValue)) {
+                        return String.format("\n%s:\n-\n", propertyName);
+                    }
+                    return String.format("\n%s:\n%s\n", propertyName, propertyValue);
                 }
 
                 private String parseFileSize(long fileSize) {
@@ -246,36 +252,34 @@ public class PdfViewer extends Activity {
 
                         cursor.moveToFirst();
 
-                        final String fileName = cursor.getString(fileNameIndex);
-                        final String fileSize = parseFileSize(Long.valueOf(cursor.getString(fileSizeIndex)));
+                        final List<String> pdfMetadata = new ArrayList<>();
+
+                        pdfMetadata.add(cursor.getString(fileNameIndex));
+                        pdfMetadata.add(parseFileSize(Long.valueOf(cursor.getString(fileSizeIndex))));
 
                         cursor.close();
 
                         final JSONObject json = new JSONObject(properties);
-                        final String title = json.optString("Title", "-");
-                        final String author = json.optString("Author", "-");
-                        final String subject = json.optString("Subject", "-");
-                        final String keywords = json.optString("Keywords", "-");
-                        final String creationDate = parseDate(json.optString("CreationDate", "-"));
-                        final String modifyDate = parseDate(json.optString("ModDate", "-"));
-                        final String producer = json.optString("Producer", "-");
-                        final String creator = json.optString("Creator", "-");
-                        final String pdfVersion = json.optString("PDFFormatVersion", "-");
-                        final String pages = String.valueOf(mNumPages);
+                        pdfMetadata.add(json.optString("Title", "-"));
+                        pdfMetadata.add(json.optString("Author", "-"));
+                        pdfMetadata.add(json.optString("Subject", "-"));
+                        pdfMetadata.add(json.optString("Keywords", "-"));
+                        pdfMetadata.add(parseDate(json.optString("CreationDate", "-")));
+                        pdfMetadata.add(parseDate(json.optString("ModDate", "-")));
+                        pdfMetadata.add(json.optString("Producer", "-"));
+                        pdfMetadata.add(json.optString("Creator", "-"));
+                        pdfMetadata.add(json.optString("PDFFormatVersion", "-"));
+                        pdfMetadata.add(String.valueOf(mNumPages));
 
-                        mDocumentProperties = String.format("%s%s%s%s%s%s%s%s%s%s%s%s",
-                                formatProperty(R.string.document_properties_file_name, fileName),
-                                formatProperty(R.string.document_properties_file_size, fileSize),
-                                formatProperty(R.string.document_properties_title, title),
-                                formatProperty(R.string.document_properties_author, author),
-                                formatProperty(R.string.document_properties_subject, subject),
-                                formatProperty(R.string.document_properties_keywords, keywords),
-                                formatProperty(R.string.document_properties_creation_date, creationDate),
-                                formatProperty(R.string.document_properties_modify_date, modifyDate),
-                                formatProperty(R.string.document_properties_producer, producer),
-                                formatProperty(R.string.document_properties_creator, creator),
-                                formatProperty(R.string.document_properties_pdf_version, pdfVersion),
-                                formatProperty(R.string.document_properties_pages, pages));
+                        final String[] documentPropertiesNames = getApplicationContext()
+                                .getResources().getStringArray(R.array.document_properties);
+                        final StringBuilder documentProperties = new StringBuilder();
+
+                        for (int i = 0; i < documentPropertiesNames.length; i++) {
+                            documentProperties.append(formatProperty(documentPropertiesNames[i], pdfMetadata.get(i)));
+                        }
+
+                        mDocumentProperties = documentProperties.toString();
                     } catch (JSONException e) {
                         Log.e(TAG, e.getMessage());
                     }
