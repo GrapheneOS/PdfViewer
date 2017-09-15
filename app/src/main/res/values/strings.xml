@@ -10,18 +10,6 @@
     <string name="action_jump_to_page">Jump to page</string>
     <string name="action_view_document_properties">Document properties</string>
 
-    <string name="document_properties_file_name">File name</string>
-    <string name="document_properties_file_size">File size</string>
-    <string name="document_properties_title">Title</string>
-    <string name="document_properties_author">Author</string>
-    <string name="document_properties_subject">Subject</string>
-    <string name="document_properties_keywords">Keywords</string>
-    <string name="document_properties_creation_date">Creation date</string>
-    <string name="document_properties_modify_date">Modify date</string>
     <string name="document_properties_invalid_date">Invalid date</string>
-    <string name="document_properties_producer">Producer</string>
-    <string name="document_properties_creator">Creator</string>
-    <string name="document_properties_pdf_version">PDF version</string>
-    <string name="document_properties_pages">Pages</string>
     <string name="document_properties_retrieval_failed">Failed to obtain document metadata</string>
 </resources>
