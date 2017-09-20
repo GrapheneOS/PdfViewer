@@ -336,7 +336,9 @@ public class PdfViewer extends Activity {
         final Intent intent = getIntent();
         if (Intent.ACTION_VIEW.equals(intent.getAction())) {
             if (!"application/pdf".equals(intent.getType())) {
-                throw new RuntimeException();
+                Log.e(TAG, "invalid mime type");
+                finish();
+                return;
             }
             mUri = (Uri) intent.getData();
             mPage = 1;
