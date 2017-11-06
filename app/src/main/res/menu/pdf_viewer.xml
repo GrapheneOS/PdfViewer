@@ -19,10 +19,16 @@
         android:showAsAction="ifRoom" />
 
     <item
-        android:id="@+id/action_open"
-        android:icon="@drawable/ic_insert_drive_file_white_24dp"
-        android:title="@string/action_open"
-        android:showAsAction="ifRoom" />
+            android:id="@+id/action_open"
+            android:icon="@drawable/ic_insert_drive_file_white_24dp"
+            android:title="@string/action_open"
+            android:showAsAction="ifRoom" />
+
+    <item
+            android:id="@+id/action_close"
+            android:icon="@android:drawable/ic_menu_close_clear_cancel"
+            android:title="@string/action_close"
+            android:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_zoom_out"

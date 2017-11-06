@@ -1,15 +1,19 @@
 package co.copperhead.pdfviewer;
 
-import android.app.Activity;
 import android.annotation.SuppressLint;
+import android.app.ActionBar;
+import android.app.Activity;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.res.ColorStateList;
+import android.database.ContentObserver;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.OpenableColumns;
 import android.util.Log;
 import android.view.Gravity;
@@ -25,12 +29,13 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.TextView;
 import android.widget.Toast;
-
+import co.copperhead.pdfviewer.fragment.DocumentPropertiesFragment;
+import co.copperhead.pdfviewer.fragment.JumpToPageFragment;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -38,9 +43,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
-
-import co.copperhead.pdfviewer.fragment.DocumentPropertiesFragment;
-import co.copperhead.pdfviewer.fragment.JumpToPageFragment;
 
 public class PdfViewer extends Activity {
     private static final String TAG = "PdfViewer";
@@ -291,6 +293,11 @@ public class PdfViewer extends Activity {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.webview);
+        ActionBar actionBar = getActionBar();
+        if (actionBar != null) {
+            actionBar.setDisplayHomeAsUpEnabled(true);
+            actionBar.setHomeActionContentDescription(R.string.action_close);
+        }
 
         mWebView = (WebView) findViewById(R.id.webview);
         WebSettings settings = mWebView.getSettings();
@@ -355,13 +362,32 @@ public class PdfViewer extends Activity {
         }
     }
 
+
+    /**
+     * Read the contents of the PDF via an {@link InputStream} to the
+     * {@link android.content.ContentProvider}.  If that is not available,
+     * or this app no longer has
+     * {@link android.content.ContextWrapper#grantUriPermission(String, Uri, int)},
+     * then {@link #closeDocument()} is called to quit showing the app.
+     */
     private void loadPdf() {
         try {
             if (mInputStream != null) {
                 mInputStream.close();
             }
+            ContentResolver contentResolver = getContentResolver();
+            ContentObserver contentObserver = new ContentObserver(new Handler(getMainLooper())) {
+                @Override
+                public void onChange(boolean selfChange) {
+                    super.onChange(selfChange);
+                    loadPdf();
+                }
+            };
+            contentResolver.registerContentObserver(mUri, false, contentObserver);
+
             mInputStream = getContentResolver().openInputStream(mUri);
-        } catch (IOException e) {
+        } catch (SecurityException | IOException e) {
+            closeDocument();
             return;
         }
         mWebView.loadUrl("file:///android_asset/viewer.html");
@@ -376,6 +402,19 @@ public class PdfViewer extends Activity {
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("application/pdf");
         startActivityForResult(intent, ACTION_OPEN_DOCUMENT_REQUEST_CODE);
+    }
+
+    private void closeDocument() {
+        if (mWebView != null) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mWebView.loadUrl("about:blank");
+                    mDocumentProperties = null;
+                    finish();
+                }
+            });
+        }
     }
 
     private void saveMenuItemState(MenuItem item, boolean state) {
@@ -425,8 +464,15 @@ public class PdfViewer extends Activity {
     }
 
     private void enableDisableItems(Menu menu, boolean disable) {
-        final int ids[] = { R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
-            R.id.action_next, R.id.action_previous, R.id.action_view_document_properties };
+        final int ids[] = {
+                R.id.action_close,
+                R.id.action_zoom_in,
+                R.id.action_zoom_out,
+                R.id.action_jump_to_page,
+                R.id.action_next,
+                R.id.action_previous,
+                R.id.action_view_document_properties,
+        };
         for (final int id : ids) {
             if (disable) {
                 disableItem(menu.findItem(id));
@@ -536,6 +582,11 @@ public class PdfViewer extends Activity {
             case R.id.action_open:
                 openDocument();
                 return super.onOptionsItemSelected(item);
+
+            case android.R.id.home:
+            case R.id.action_close:
+                closeDocument();
+                return true;
 
             case R.id.action_zoom_out:
                 if (mZoomLevel > 0) {
