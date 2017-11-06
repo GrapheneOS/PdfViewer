@@ -297,7 +297,7 @@ public class PdfViewer extends Activity {
         settings.setAllowContentAccess(false);
         settings.setAllowFileAccess(false);
         settings.setAllowUniversalAccessFromFileURLs(true);
-        settings.setCacheMode(settings.LOAD_NO_CACHE);
+        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         settings.setJavaScriptEnabled(true);
         settings.setSaveFormData(false);
 
