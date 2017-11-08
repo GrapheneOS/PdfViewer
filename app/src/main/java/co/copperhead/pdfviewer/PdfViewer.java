@@ -3,6 +3,7 @@ package co.copperhead.pdfviewer;
 import android.annotation.SuppressLint;
 import android.app.ActionBar;
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -15,7 +16,9 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.provider.MediaStore;
 import android.provider.OpenableColumns;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.Menu;
@@ -389,7 +392,29 @@ public class PdfViewer extends Activity {
             };
             contentResolver.registerContentObserver(mUri, false, contentObserver);
 
-            mInputStream = getContentResolver().openInputStream(mUri);
+            Cursor cursor = contentResolver.query(mUri, null, null, null, null);
+            String[] projection = new String[]{
+                    OpenableColumns.DISPLAY_NAME,
+                    MediaStore.MediaColumns.TITLE,
+            };
+            if (cursor != null) {
+                if (cursor.moveToNext()) {
+                    for (String check : projection) {
+                        int index = cursor.getColumnIndex(check);
+                        if (index > -1) {
+                            String name = cursor.getString(index);
+                            if (!TextUtils.isEmpty(name)) {
+                                setTitle(name);
+                                setTaskDescription(new ActivityManager.TaskDescription(name));
+                                break;
+                            }
+                        }
+                    }
+                }
+                cursor.close();
+            }
+
+            mInputStream = contentResolver.openInputStream(mUri);
         } catch (SecurityException | IOException e) {
             closeDocument();
             return;
