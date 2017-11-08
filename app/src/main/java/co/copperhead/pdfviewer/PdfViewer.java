@@ -12,6 +12,7 @@ import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.OpenableColumns;
@@ -20,6 +21,7 @@ import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
@@ -292,6 +294,8 @@ public class PdfViewer extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+
         setContentView(R.layout.webview);
         ActionBar actionBar = getActionBar();
         if (actionBar != null) {
@@ -411,7 +415,11 @@ public class PdfViewer extends Activity {
                 public void run() {
                     mWebView.loadUrl("about:blank");
                     mDocumentProperties = null;
-                    finish();
+                    if (Build.VERSION.SDK_INT < 21) {
+                        finish();
+                    } else {
+                        finishAndRemoveTask();
+                    }
                 }
             });
         }
