@@ -5,6 +5,7 @@ import android.app.ActionBar;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.database.ContentObserver;
@@ -24,7 +25,9 @@ import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
@@ -305,6 +308,14 @@ public class PdfViewer extends Activity {
             actionBar.setDisplayHomeAsUpEnabled(true);
             actionBar.setHomeActionContentDescription(R.string.action_close);
         }
+
+        // some apps launch the PDF document, but leave the keyboard open, so hide it
+        View view = this.getCurrentFocus();
+        if (view == null) {
+            view = findViewById(android.R.id.content).getRootView();
+        }
+        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
 
         mWebView = (WebView) findViewById(R.id.webview);
         WebSettings settings = mWebView.getSettings();
