@@ -1,9 +1,14 @@
 package co.copperhead.pdfviewer.fragment;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.os.Bundle;
+import android.widget.ArrayAdapter;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import co.copperhead.pdfviewer.R;
 
@@ -12,18 +17,18 @@ public class DocumentPropertiesFragment extends DialogFragment {
 
     private static DocumentPropertiesFragment sDocumentPropertiesFragment;
 
-    private String mPDFDocumentProperties;
+    private List<String> mDocumentProperties;
 
-    public static DocumentPropertiesFragment getInstance(final String metaData) {
+    public static DocumentPropertiesFragment getInstance(final ArrayList<CharSequence> metaData) {
         if (sDocumentPropertiesFragment == null) {
             sDocumentPropertiesFragment = new DocumentPropertiesFragment();
             final Bundle args = new Bundle();
-            args.putString(KEY_DOCUMENT_PROPERTIES, metaData);
+            args.putCharSequenceArrayList(KEY_DOCUMENT_PROPERTIES, metaData);
             sDocumentPropertiesFragment.setArguments(args);
         } else {
             final Bundle args = sDocumentPropertiesFragment.getArguments();
             args.clear();
-            args.putString(KEY_DOCUMENT_PROPERTIES, metaData);
+            args.putCharSequenceArrayList(KEY_DOCUMENT_PROPERTIES, metaData);
         }
         return sDocumentPropertiesFragment;
     }
@@ -31,15 +36,23 @@ public class DocumentPropertiesFragment extends DialogFragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mPDFDocumentProperties = getArguments().getString(KEY_DOCUMENT_PROPERTIES);
+        mDocumentProperties = getArguments().getStringArrayList(KEY_DOCUMENT_PROPERTIES);
     }
 
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
-        return new AlertDialog.Builder(getActivity())
-                .setTitle(getString(R.string.action_view_document_properties))
-                .setMessage(mPDFDocumentProperties)
-                .setPositiveButton(android.R.string.ok, null)
-                .create();
+        final Activity activity = getActivity();
+
+        final AlertDialog.Builder dialog = new AlertDialog.Builder(activity)
+                .setPositiveButton(android.R.string.ok, null);
+
+        if (mDocumentProperties != null) {
+            dialog.setTitle(getString(R.string.action_view_document_properties));
+            dialog.setAdapter(new ArrayAdapter<>(activity, android.R.layout.simple_list_item_1,
+                    mDocumentProperties), null);
+        } else {
+            dialog.setTitle(R.string.document_properties_retrieval_failed);
+        }
+        return dialog.create();
     }
 }

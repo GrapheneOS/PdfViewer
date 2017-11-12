@@ -2,15 +2,13 @@ package co.copperhead.pdfviewer;
 
 import android.app.Activity;
 import android.annotation.SuppressLint;
+import android.app.LoaderManager;
 import android.content.Intent;
+import android.content.Loader;
 import android.content.res.ColorStateList;
-import android.database.Cursor;
 import android.graphics.Color;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.provider.OpenableColumns;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.Menu;
@@ -26,26 +24,23 @@ import android.webkit.WebViewClient;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.InputStream;
 import java.io.IOException;
-import java.math.RoundingMode;
-import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
-import java.util.TimeZone;
 
 import co.copperhead.pdfviewer.fragment.DocumentPropertiesFragment;
 import co.copperhead.pdfviewer.fragment.JumpToPageFragment;
+import co.copperhead.pdfviewer.loader.DocumentPropertiesLoader;
 
-public class PdfViewer extends Activity {
-    private static final String TAG = "PdfViewer";
+public class PdfViewer extends Activity implements LoaderManager.LoaderCallbacks<List<CharSequence>> {
+    public static final String TAG = PdfViewer.class.getSimpleName();
+
+    private static final String STATE_URI = "uri";
+    private static final String STATE_PAGE = "page";
+    private static final String STATE_ZOOM_LEVEL = "zoomLevel";
+    private static final String STATE_PROPERTIES = "properties";
+    private static final String STATE_JSON_PROPERTIES = "json_properties";
 
     private static final int MIN_ZOOM_LEVEL = 0;
     private static final int MAX_ZOOM_LEVEL = 4;
@@ -54,9 +49,6 @@ public class PdfViewer extends Activity {
     private static final int ACTION_OPEN_DOCUMENT_REQUEST_CODE = 1;
     private static final int STATE_LOADED = 1;
     private static final int STATE_END = 2;
-    private static final String STATE_URI = "uri";
-    private static final String STATE_PAGE = "page";
-    private static final String STATE_ZOOM_LEVEL = "zoomLevel";
     private static final int PADDING = 10;
 
     private WebView mWebView;
@@ -66,7 +58,7 @@ public class PdfViewer extends Activity {
     private int mZoomLevel = 2;
     private int mDocumentState;
     private Channel mChannel;
-    private String mDocumentProperties;
+    private List<CharSequence> mDocumentProperties;
     private InputStream mInputStream;
     private TextView mTextView;
     private Toast mToast;
@@ -92,196 +84,10 @@ public class PdfViewer extends Activity {
             if (mDocumentProperties != null) {
                 throw new SecurityException("mDocumentProperties not null");
             }
-            new AsyncTask<Void, Void, Void>() {
-                private String formatProperty(String propertyName, String propertyValue) {
-                    if (TextUtils.isEmpty(propertyValue)) {
-                        return String.format("\n%s:\n-\n", propertyName);
-                    }
-                    return String.format("\n%s:\n%s\n", propertyName, propertyValue);
-                }
 
-                private String parseFileSize(long fileSize) {
-                    final double kb = fileSize / 1000;
-                    if (((long) kb) == 0) {
-                        return String.format("%s bytes", String.valueOf(fileSize));
-                    } else {
-                        final DecimalFormat format = new DecimalFormat("#.##");
-                        format.setRoundingMode(RoundingMode.CEILING);
-                        if (kb < 1000) {
-                            return String.format("%s kB (%s bytes)", format.format(kb), String.valueOf(fileSize));
-                        }
-                        return String.format("%s MB (%s bytes)", format.format(kb / 1000), String.valueOf(fileSize));
-                    }
-                }
-
-                private String parseDate(String dateToParse) {
-                    // No date property found
-                    if (dateToParse.equals("-")) {
-                        return "-";
-                    }
-
-                    // Date must at least contain a year
-                    final boolean dateHasPrefix = dateToParse.startsWith("D:");
-                    final int dateMinLength = dateHasPrefix ? 6 : 4;
-                    if (dateToParse.length() < dateMinLength || dateToParse.length() > 23) {
-                        Log.e(TAG, "Supplied date length mismatch");
-                        return getString(R.string.document_properties_invalid_date);
-                    }
-
-                    // Date can have a D: prefix
-                    if (dateHasPrefix) {
-                        dateToParse = dateToParse.substring(2);
-                    }
-
-                    // Calendar month starts at 0
-                    int year = 1970, month = 0, day = 1, hours = 0, minutes = 0;
-                    int seconds = 0, utRelOffset = 4;
-                    final Calendar calendar = Calendar.getInstance();
-
-                    // Year is mandatory
-                    try {
-                        final int parsedYear = Integer.valueOf(dateToParse.substring(0, 4));
-                        if (parsedYear <= calendar.get(Calendar.YEAR) && parsedYear > year) {
-                            year = parsedYear;
-                        }
-                    } catch (NumberFormatException e) {
-                        Log.e(TAG, e.getMessage());
-                        return getString(R.string.document_properties_invalid_date);
-                    }
-                    // Those fields are optional
-                    try {
-                        month = Integer.valueOf(dateToParse.substring(4, 6)) - 1;
-                        utRelOffset += 2;
-                        day = Integer.valueOf(dateToParse.substring(6, 8));
-                        utRelOffset += 2;
-                        hours = Integer.valueOf(dateToParse.substring(8, 10));
-                        utRelOffset += 2;
-                        minutes = Integer.valueOf(dateToParse.substring(10, 12));
-                        utRelOffset += 2;
-                        seconds = Integer.valueOf(dateToParse.substring(12, 14));
-                        utRelOffset += 2;
-                    } catch (IndexOutOfBoundsException ignored) {
-                        // It is allowed for all fields except year to be missing
-                    } catch (NumberFormatException e) {
-                        Log.e(TAG, "Invalid date supplied");
-                        return getString(R.string.document_properties_invalid_date);
-                    }
-
-                    // Perform basic date validation
-                    if ((month < 0 || month > 11) || (day < 1 || day > 31) ||
-                            (hours < 0 || hours > 23) || (minutes < 0 || minutes > 59) ||
-                            (seconds < 0 || seconds > 59)) {
-                        Log.e(TAG, "Date validation failed");
-                        return getString(R.string.document_properties_invalid_date);
-                    }
-
-                    int offsetHours = 0, offsetMinutes = 0, combinedOffset = 0;
-                    String utRel = "";
-
-                    try {
-                        utRel = String.valueOf(dateToParse.charAt(utRelOffset));
-                        if (utRel.equals("+") || utRel.equals("-") || utRel.equals("Z")) {
-                            offsetHours = Integer.parseInt(dateToParse.substring(15, 17));
-                            final String rawOffsetMinutes = dateToParse.substring(18, 20);
-                            offsetMinutes = Integer.parseInt(rawOffsetMinutes);
-                            combinedOffset = Integer.valueOf(String.format("%s%s%s", utRel, offsetHours, rawOffsetMinutes));
-                        } else {
-                            offsetHours = Integer.parseInt(dateToParse.substring(14, 16));
-                            final String rawOffsetMinutes = dateToParse.substring(17, 19);
-                            offsetMinutes = Integer.parseInt(rawOffsetMinutes);
-                            combinedOffset = Integer.valueOf(String.format("%s%s", offsetHours, rawOffsetMinutes));
-                        }
-                    } catch (IndexOutOfBoundsException ignored) {
-                        // It is allowed for all fields except year to be missing
-                    } catch (NumberFormatException e) {
-                        Log.e(TAG, "Invalid UTC offset supplied");
-                        return getString(R.string.document_properties_invalid_date);
-                    }
-
-                    // Validate UT offset
-                    if (combinedOffset < -1200 || combinedOffset > 1400) {
-                        Log.e(TAG, "UTC offset out of bounds");
-                        return getString(R.string.document_properties_invalid_date);
-                    }
-
-
-                    switch (utRel) {
-                        case "+":
-                            hours += offsetHours;
-                            minutes += offsetMinutes;
-                            break;
-                        case "-":
-                            hours -= offsetHours;
-                            minutes -= offsetMinutes;
-                            break;
-                        case "Z":
-                            // "Z" means local time equal to UT
-                            break;
-                        default:
-                            break;
-                    }
-
-                    calendar.set(year, month, day, hours, minutes, seconds);
-                    final Locale locale = getResources().getConfiguration().getLocales().get(0);
-                    SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy", locale);
-                    final TimeZone timeZone = TimeZone.getTimeZone("UTC");
-                    dateFormat.setTimeZone(timeZone);
-                    final Date date = calendar.getTime();
-                    final String dateString = dateFormat.format(date);
-                    dateFormat = new SimpleDateFormat("HH:mm:ss", locale);
-                    dateFormat.setTimeZone(timeZone);
-                    final String timeString = dateFormat.format(date);
-
-                    return String.format("%s %s", dateString, timeString);
-                }
-
-                @Override
-                protected Void doInBackground(Void... voids) {
-                    try {
-                        final Cursor cursor = getContentResolver().query(mUri, null, null, null, null);
-                        if (cursor == null || cursor.getCount() == 0) {
-                            return null;
-                        }
-
-                        final int fileNameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-                        final int fileSizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE);
-
-                        cursor.moveToFirst();
-
-                        final List<String> pdfMetadata = new ArrayList<>();
-
-                        pdfMetadata.add(cursor.getString(fileNameIndex));
-                        pdfMetadata.add(parseFileSize(Long.valueOf(cursor.getString(fileSizeIndex))));
-
-                        cursor.close();
-
-                        final JSONObject json = new JSONObject(properties);
-                        pdfMetadata.add(json.optString("Title", "-"));
-                        pdfMetadata.add(json.optString("Author", "-"));
-                        pdfMetadata.add(json.optString("Subject", "-"));
-                        pdfMetadata.add(json.optString("Keywords", "-"));
-                        pdfMetadata.add(parseDate(json.optString("CreationDate", "-")));
-                        pdfMetadata.add(parseDate(json.optString("ModDate", "-")));
-                        pdfMetadata.add(json.optString("Producer", "-"));
-                        pdfMetadata.add(json.optString("Creator", "-"));
-                        pdfMetadata.add(json.optString("PDFFormatVersion", "-"));
-                        pdfMetadata.add(String.valueOf(mNumPages));
-
-                        final String[] documentPropertiesNames = getApplicationContext()
-                                .getResources().getStringArray(R.array.document_properties);
-                        final StringBuilder documentProperties = new StringBuilder();
-
-                        for (int i = 0; i < documentPropertiesNames.length; i++) {
-                            documentProperties.append(formatProperty(documentPropertiesNames[i], pdfMetadata.get(i)));
-                        }
-
-                        mDocumentProperties = documentProperties.toString();
-                    } catch (JSONException e) {
-                        Log.e(TAG, e.getMessage());
-                    }
-                    return null;
-                }
-            }.execute();
+            final Bundle args = new Bundle();
+            args.putString(STATE_JSON_PROPERTIES, properties);
+            getLoaderManager().restartLoader(DocumentPropertiesLoader.ID, args, PdfViewer.this);
         }
     }
 
@@ -354,11 +160,28 @@ public class PdfViewer extends Activity {
             mUri = savedInstanceState.getParcelable(STATE_URI);
             mPage = savedInstanceState.getInt(STATE_PAGE);
             mZoomLevel = savedInstanceState.getInt(STATE_ZOOM_LEVEL);
+            mDocumentProperties = savedInstanceState.getCharSequenceArrayList(STATE_PROPERTIES);
         }
 
         if (mUri != null) {
             loadPdf();
         }
+    }
+
+    @Override
+    public Loader<List<CharSequence>> onCreateLoader(int id, Bundle args) {
+        return new DocumentPropertiesLoader(this, args.getString(STATE_JSON_PROPERTIES), mNumPages, mUri);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<List<CharSequence>> loader, List<CharSequence> data) {
+        mDocumentProperties = data;
+        getLoaderManager().destroyLoader(DocumentPropertiesLoader.ID);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<List<CharSequence>> loader) {
+        mDocumentProperties = null;
     }
 
     private void loadPdf() {
@@ -410,6 +233,8 @@ public class PdfViewer extends Activity {
         savedInstanceState.putParcelable(STATE_URI, mUri);
         savedInstanceState.putInt(STATE_PAGE, mPage);
         savedInstanceState.putInt(STATE_ZOOM_LEVEL, mZoomLevel);
+        savedInstanceState.putCharSequenceArrayList(STATE_PROPERTIES,
+                (ArrayList<CharSequence>) mDocumentProperties);
     }
 
     @Override
@@ -520,10 +345,9 @@ public class PdfViewer extends Activity {
                 return true;
 
             case R.id.action_view_document_properties:
-                if (mDocumentProperties == null) {
-                    mDocumentProperties = getString(R.string.document_properties_retrieval_failed);
-                }
-                DocumentPropertiesFragment.getInstance(mDocumentProperties).show(getFragmentManager(), null);
+                DocumentPropertiesFragment
+                        .getInstance((ArrayList<CharSequence>) mDocumentProperties)
+                        .show(getFragmentManager(), null);
                 return true;
 
             case R.id.action_jump_to_page:
