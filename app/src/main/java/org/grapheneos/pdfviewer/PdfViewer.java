@@ -86,6 +86,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     public int mPage;
     public int mNumPages;
     private int mZoomLevel = 2;
+    private int mDocumentOrientationDegrees;
     private int mDocumentState;
     private List<CharSequence> mDocumentProperties;
     private InputStream mInputStream;
@@ -103,6 +104,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         @JavascriptInterface
         public int getZoomLevel() {
             return mZoomLevel;
+        }
+
+        @JavascriptInterface
+        public int getDocumentOrientationDegrees() {
+            return mDocumentOrientationDegrees;
         }
 
         @JavascriptInterface
@@ -274,6 +280,14 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         mWebView.evaluateJavascript(lazy ? "onRenderPage(true)" : "onRenderPage(false)", null);
     }
 
+    private void documentOrientationChanged(final int orientationDegreesOffset) {
+        mDocumentOrientationDegrees = (mDocumentOrientationDegrees + orientationDegreesOffset) % 360;
+        if (mDocumentOrientationDegrees < 0) {
+            mDocumentOrientationDegrees += 360;
+        }
+        renderPage(true);
+    }
+
     private void openDocument() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -345,7 +359,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         final int ids[] = { R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
-                R.id.action_next, R.id.action_previous, R.id.action_view_document_properties };
+                R.id.action_next, R.id.action_previous, R.id.action_rotate_clockwise,
+                R.id.action_rotate_counterclockwise, R.id.action_view_document_properties };
         if (mDocumentState < STATE_LOADED) {
             for (final int id : ids) {
                 final MenuItem item = menu.findItem(id);
@@ -414,6 +429,14 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     renderPage(true);
                     invalidateOptionsMenu();
                 }
+                return true;
+
+            case R.id.action_rotate_clockwise:
+                documentOrientationChanged(90);
+                return true;
+
+            case R.id.action_rotate_counterclockwise:
+                documentOrientationChanged(-90);
                 return true;
 
             case R.id.action_view_document_properties:

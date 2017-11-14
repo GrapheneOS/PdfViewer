@@ -5,6 +5,7 @@ let pageRendering = false;
 let renderPending = false;
 let renderPendingLazy = false;
 const canvas = document.getElementById('content');
+let orientationDegrees = 0;
 let zoomLevel = 100;
 let textLayerDiv = document.getElementById("text");
 const zoomLevels = [50, 75, 100, 125, 150];
@@ -63,10 +64,13 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
 
     newPageNumber = pageNumber;
     newZoomLevel = zoomLevels[channel.getZoomLevel()];
-    console.log("page: " + pageNumber + ", zoom: " + newZoomLevel + ", prerender: " + prerender);
+    orientationDegrees = channel.getDocumentOrientationDegrees();
+    console.log("page: " + pageNumber + ", zoom: " + newZoomLevel +
+                ", orientationDegrees: " + orientationDegrees + ", prerender: " + prerender);
     for (let i = 0; i < cache.length; i++) {
         const cached = cache[i];
-        if (cached.pageNumber === pageNumber && cached.zoomLevel === newZoomLevel) {
+        if (cached.pageNumber === pageNumber && cached.zoomLevel === newZoomLevel &&
+                cache.orientationDegrees == orientationDegrees) {
             if (useRender) {
                 cache.splice(i, 1);
                 cache.push(cached);
@@ -89,7 +93,7 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
         }
 
         const newCanvas = document.createElement("canvas");
-        const viewport = page.getViewport(newZoomLevel / 100)
+        const viewport = page.getViewport(newZoomLevel / 100, orientationDegrees)
         const ratio = window.devicePixelRatio;
         newCanvas.height = viewport.height * ratio;
         newCanvas.width = viewport.width * ratio;
@@ -150,6 +154,7 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
                 cache.push({
                     pageNumber: pageNumber,
                     zoomLevel: newZoomLevel,
+                    orientationDegrees: orientationDegrees,
                     canvas: newCanvas,
                     textLayerDiv: newTextLayerDiv
                 });
@@ -163,7 +168,8 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
 
 function onRenderPage(lazy) {
     if (pageRendering) {
-        if (newPageNumber === channel.getPage() && newZoomLevel === zoomLevels[channel.getZoomLevel()]) {
+        if (newPageNumber === channel.getPage() && newZoomLevel === zoomLevels[channel.getZoomLevel()] &&
+                orientationDegrees === channel.getDocumentOrientationDegrees()) {
             useRender = true;
             return;
         }

@@ -44,6 +44,18 @@
         app:showAsAction="ifRoom" />
 
     <item
+        android:id="@+id/action_rotate_clockwise"
+        android:icon="@drawable/ic_rotate_right_white_24dp"
+        android:title="@string/action_rotate_clockwise"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_rotate_counterclockwise"
+        android:icon="@drawable/ic_rotate_left_white_24dp"
+        android:title="@string/action_rotate_counterclockwise"
+        app:showAsAction="ifRoom" />
+
+    <item
         android:id="@+id/action_view_document_properties"
         android:title="@string/action_view_document_properties"
         app:showAsAction="never" />
