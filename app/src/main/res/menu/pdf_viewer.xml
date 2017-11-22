@@ -38,6 +38,18 @@
         app:showAsAction="ifRoom" />
 
     <item
+        android:id="@+id/action_first"
+        android:icon="@drawable/baseline_first_page_24"
+        android:title="@string/action_first"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_last"
+        android:icon="@drawable/baseline_last_page_24"
+        android:title="@string/action_last"
+        app:showAsAction="ifRoom" />
+
+    <item
         android:id="@+id/action_jump_to_page"
         android:icon="@drawable/ic_pageview_white_24dp"
         android:title="@string/action_jump_to_page"
