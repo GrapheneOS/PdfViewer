@@ -310,8 +310,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
     }
 
-    public void onJumpToPageInDocument(int selected_page) {
-        if (selected_page >= 1 && selected_page <= mNumPages) {
+    public void onJumpToPageInDocument(final int selected_page) {
+        if (selected_page >= 1 && selected_page <= mNumPages && mPage != selected_page) {
             mPage = selected_page;
             renderPage(false);
             showPageNumber();
@@ -363,8 +363,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         final int ids[] = { R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
-                R.id.action_next, R.id.action_previous, R.id.action_rotate_clockwise,
-                R.id.action_rotate_counterclockwise, R.id.action_view_document_properties };
+                R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
+                R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
+                R.id.action_view_document_properties };
         if (mDocumentState < STATE_LOADED) {
             for (final int id : ids) {
                 final MenuItem item = menu.findItem(id);
@@ -400,19 +401,19 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_previous:
-                if (mPage > 1) {
-                    mPage--;
-                    renderPage(false);
-                    showPageNumber();
-                }
+                onJumpToPageInDocument(mPage - 1);
                 return true;
 
             case R.id.action_next:
-                if (mPage < mNumPages) {
-                    mPage++;
-                    renderPage(false);
-                    showPageNumber();
-                }
+                onJumpToPageInDocument(mPage + 1);
+                return true;
+
+            case R.id.action_first:
+                onJumpToPageInDocument(1);
+                return true;
+
+            case R.id.action_last:
+                onJumpToPageInDocument(mNumPages);
                 return true;
 
             case R.id.action_open:

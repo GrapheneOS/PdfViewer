@@ -5,6 +5,8 @@
     <string name="action_previous">Previous page</string>
     <string name="action_next">Next page</string>
     <string name="action_open">Open document</string>
+    <string name="action_first">First page</string>
+    <string name="action_last">Last page</string>
     <string name="action_zoom_out">Zoom out</string>
     <string name="action_zoom_in">Zoom in</string>
     <string name="action_rotate_clockwise">Rotate clockwise</string>
