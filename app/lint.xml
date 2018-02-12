@@ -1,4 +1,9 @@
 <lint>
+    <!-- full backups are desired -->
+    <issue id="AllowBackup">
+        <ignore path="src/main/AndroidManifest.xml"/>
+    </issue>
+
     <!-- Google app indexing doesn't make any sense for this app -->
     <issue id="AppLinkUrlError">
         <ignore path="src/main/AndroidManifest.xml"/>
