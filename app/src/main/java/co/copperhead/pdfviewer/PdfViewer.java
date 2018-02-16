@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.database.Cursor;
 import android.graphics.Color;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -293,7 +292,7 @@ public class PdfViewer extends Activity {
 
         setContentView(R.layout.webview);
 
-        mWebView = (WebView) findViewById(R.id.webview);
+        mWebView = findViewById(R.id.webview);
         WebSettings settings = mWebView.getSettings();
         settings.setAllowContentAccess(false);
         settings.setAllowFileAccess(false);
@@ -341,7 +340,7 @@ public class PdfViewer extends Activity {
                 finish();
                 return;
             }
-            mUri = (Uri) intent.getData();
+            mUri = intent.getData();
             mPage = 1;
         }
 
