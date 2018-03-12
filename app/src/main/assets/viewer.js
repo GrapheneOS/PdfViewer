@@ -51,6 +51,7 @@ function renderPage(pageNumber, lazy, prerender) {
 
     newPageNumber = pageNumber;
     newZoomLevel = zoomLevels[channel.getZoomLevel()];
+    console.log("page: " + pageNumber + ", zoom: " + newZoomLevel + ", prerender: " + prerender);
     for (let i = 0; i < cache.length; i++) {
         let cached = cache[i];
         if (cached.pageNumber == pageNumber && cached.zoomLevel == newZoomLevel) {
@@ -70,8 +71,6 @@ function renderPage(pageNumber, lazy, prerender) {
             return;
         }
     }
-
-    console.log("page: " + pageNumber + ", zoom: " + zoomLevel + ", prerender: " + prerender);
 
     pdfDoc.getPage(pageNumber).then(function(page) {
         newTextLayerDiv = textLayerDiv.cloneNode();
