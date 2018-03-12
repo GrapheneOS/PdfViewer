@@ -89,7 +89,7 @@ function renderPage(pageNumber, lazy, prerender) {
         newCanvas.style.width = viewport.width + "px";
         newTextLayerDiv.style.height = newCanvas.style.height;
         newTextLayerDiv.style.width = newCanvas.style.width;
-        const ctx = newCanvas.getContext("2d");
+        const ctx = newCanvas.getContext("2d", { alpha: false });
         ctx.scale(ratio, ratio);
 
         if (!prerender) {
