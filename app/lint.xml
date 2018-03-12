@@ -8,4 +8,9 @@
     <issue id="AppLinkUrlError">
         <ignore path="src/main/AndroidManifest.xml"/>
     </issue>
+
+    <!-- targetSandboxVersion unused with API level < 26 -->
+    <issue id="UnusedAttribute">
+        <ignore path="src/main/AndroidManifest.xml"/>
+    </issue>
 </lint>
