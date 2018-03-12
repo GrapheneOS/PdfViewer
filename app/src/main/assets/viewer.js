@@ -3,7 +3,9 @@
 let pdfDoc = null;
 let pageRendering = false;
 let renderPending = false;
+let renderPendingLazy = false;
 let canvas = document.getElementById('content');
+let zoomLevel = 100;
 const textLayerDiv = document.getElementById("text");
 const zoomLevels = [50, 75, 100, 125, 150];
 let renderTask = null;
@@ -13,13 +15,13 @@ function maybeRenderNextPage() {
     if (renderPending) {
         pageRendering = false;
         renderPending = false;
-        renderPage();
+        renderPage(renderPendingLazy);
         return true;
     }
     return false;
 }
 
-function renderPage() {
+function renderPage(lazy) {
     pageRendering = true;
     pdfDoc.getPage(channel.getPage()).then(function(page) {
         let last;
@@ -27,21 +29,28 @@ function renderPage() {
             textLayerDiv.removeChild(last);
         }
 
-        const newCanvas = document.createElement("canvas");
-        canvas.replaceWith(newCanvas);
-        canvas = newCanvas;
+        const newZoomLevel = zoomLevels[channel.getZoomLevel()];
 
-        const viewport = page.getViewport(zoomLevels[channel.getZoomLevel()] / 100)
+        const newCanvas = document.createElement("canvas");
+        const viewport = page.getViewport(newZoomLevel / 100)
         const ratio = window.devicePixelRatio;
-        canvas.height = viewport.height * ratio;
-        canvas.width = viewport.width * ratio;
-        canvas.style.height = viewport.height + "px";
-        canvas.style.width = viewport.width + "px";
-        const ctx = canvas.getContext("2d");
+        newCanvas.height = viewport.height * ratio;
+        newCanvas.width = viewport.width * ratio;
+        newCanvas.style.height = viewport.height + "px";
+        newCanvas.style.width = viewport.width + "px";
+        textLayerDiv.style.height = newCanvas.style.height;
+        textLayerDiv.style.width = newCanvas.style.width;
+        const ctx = newCanvas.getContext("2d");
         ctx.scale(ratio, ratio);
 
-        textLayerDiv.style.height = canvas.style.height;
-        textLayerDiv.style.width = canvas.style.width;
+        if (!lazy) {
+            canvas.replaceWith(newCanvas);
+            canvas = newCanvas;
+        } else if (newZoomLevel != zoomLevel) {
+            canvas.style.height = viewport.height + "px";
+            canvas.style.width = viewport.width + "px";
+        }
+        zoomLevel = newZoomLevel;
 
         renderTask = page.render({
             canvasContext: ctx,
@@ -56,6 +65,11 @@ function renderPage() {
         renderTask.then(function() {
             if (maybeRenderNextPage()) {
                 return;
+            }
+
+            if (lazy) {
+                canvas.replaceWith(newCanvas);
+                canvas = newCanvas;
             }
 
             page.getTextContent().then(function(textContent) {
@@ -78,9 +92,10 @@ function renderPage() {
     });
 }
 
-function onRenderPage() {
+function onRenderPage(lazy) {
     if (pageRendering) {
         renderPending = true;
+        renderPendingLazy = lazy;
         if (renderTask !== null) {
             renderTask.cancel();
             renderTask = null;
@@ -90,7 +105,7 @@ function onRenderPage() {
             textLayerRenderTask = null;
         }
     } else {
-        renderPage();
+        renderPage(lazy);
     }
 }
 
@@ -100,5 +115,5 @@ PDFJS.getDocument("https://localhost/placeholder.pdf").then(function(newDoc) {
     pdfDoc.getMetadata().then(function(data) {
         channel.setDocumentProperties(JSON.stringify(data.info, null, 2));
     });
-    renderPage();
+    renderPage(false);
 });

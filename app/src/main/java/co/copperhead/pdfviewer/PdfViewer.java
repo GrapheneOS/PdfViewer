@@ -373,8 +373,8 @@ public class PdfViewer extends Activity {
         mWebView.loadUrl("file:///android_asset/viewer.html");
     }
 
-    private void renderPage() {
-        mWebView.evaluateJavascript("onRenderPage()", null);
+    private void renderPage(final boolean lazy) {
+        mWebView.evaluateJavascript(lazy ? "onRenderPage(true)" : "onRenderPage(false)", null);
     }
 
     private void openDocument() {
@@ -399,7 +399,7 @@ public class PdfViewer extends Activity {
     public void positiveButtonRenderPage(int selected_page) {
         if (selected_page >= 1 && selected_page <= mNumPages) {
             mPage = selected_page;
-            renderPage();
+            renderPage(false);
             showPageNumber();
         }
     }
@@ -486,7 +486,7 @@ public class PdfViewer extends Activity {
             case R.id.action_previous:
                 if (mPage > 1) {
                     mPage--;
-                    renderPage();
+                    renderPage(false);
                     showPageNumber();
                 }
                 return true;
@@ -494,7 +494,7 @@ public class PdfViewer extends Activity {
             case R.id.action_next:
                 if (mPage < mNumPages) {
                     mPage++;
-                    renderPage();
+                    renderPage(false);
                     showPageNumber();
                 }
                 return true;
@@ -506,7 +506,7 @@ public class PdfViewer extends Activity {
             case R.id.action_zoom_out:
                 if (mZoomLevel > 0) {
                     mZoomLevel--;
-                    renderPage();
+                    renderPage(true);
                     invalidateOptionsMenu();
                 }
                 return true;
@@ -514,7 +514,7 @@ public class PdfViewer extends Activity {
             case R.id.action_zoom_in:
                 if (mZoomLevel < MAX_ZOOM_LEVEL) {
                     mZoomLevel++;
-                    renderPage();
+                    renderPage(true);
                     invalidateOptionsMenu();
                 }
                 return true;
