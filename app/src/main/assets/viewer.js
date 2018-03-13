@@ -28,27 +28,36 @@ function maybeRenderNextPage() {
     return false;
 }
 
+function handleRenderingError(error) {
+    console.log("error: " + error);
+
+    pageRendering = false;
+    maybeRenderNextPage();
+}
+
+function doPrerender() {
+    if (useRender) {
+        if (!maybeRenderNextPage() && pageNumber + 1 <= pdfDoc.numPages) {
+            renderPage(pageNumber + 1, false, true);
+        }
+        if (!maybeRenderNextPage() && pageNumber - 1 > 0) {
+            renderPage(pageNumber - 1, false, true);
+        }
+    }
+}
+
+function display(newCanvas) {
+    canvas.height = newCanvas.height;
+    canvas.width = newCanvas.width;
+    canvas.style.height = newCanvas.style.height;
+    canvas.style.width = newCanvas.style.width;
+    canvas.getContext("2d", { alpha: false }).drawImage(newCanvas, 0, 0);
+    scrollTo(0, 0);
+}
+
 function renderPage(pageNumber, lazy, prerender) {
     pageRendering = true;
     useRender = !prerender;
-
-    function handleRenderingError(error) {
-        console.log("error: " + error);
-
-        pageRendering = false;
-        maybeRenderNextPage();
-    }
-
-    function doPrerender() {
-        if (useRender) {
-            if (!maybeRenderNextPage() && pageNumber + 1 <= pdfDoc.numPages) {
-                renderPage(pageNumber + 1, false, true);
-            }
-            if (!maybeRenderNextPage() && pageNumber - 1 > 0) {
-                renderPage(pageNumber - 1, false, true);
-            }
-        }
-    }
 
     newPageNumber = pageNumber;
     newZoomLevel = zoomLevels[channel.getZoomLevel()];
@@ -60,13 +69,7 @@ function renderPage(pageNumber, lazy, prerender) {
                 cache.splice(i, 1);
                 cache.push(cached);
 
-                canvas.height = cached.canvas.height;
-                canvas.width = cached.canvas.width;
-                canvas.style.height = cached.canvas.style.height;
-                canvas.style.width = cached.canvas.style.width;
-                const context = canvas.getContext("2d", { alpha: false });
-                context.drawImage(cached.canvas, 0, 0);
-                scrollTo(0, 0);
+                display(cached.canvas);
 
                 textLayerDiv.replaceWith(cached.textLayerDiv);
                 textLayerDiv = cached.textLayerDiv;
@@ -112,13 +115,7 @@ function renderPage(pageNumber, lazy, prerender) {
                 if (!useRender || rendered) {
                     return;
                 }
-                canvas.height = newCanvas.height;
-                canvas.width = newCanvas.width;
-                canvas.style.height = newCanvas.style.height;
-                canvas.style.width = newCanvas.style.width;
-                const context = canvas.getContext("2d", { alpha: false });
-                context.drawImage(newCanvas, 0, 0);
-                scrollTo(0, 0);
+                display(newCanvas);
                 rendered = true;
             }
             render();
