@@ -16,7 +16,7 @@ let newZoomLevel = 0;
 let useRender;
 
 const cache = [];
-const maxCached = 5;
+const maxCached = 6;
 
 function maybeRenderNextPage() {
     if (renderPending) {
