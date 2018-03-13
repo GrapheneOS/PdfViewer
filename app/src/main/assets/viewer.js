@@ -66,6 +66,7 @@ function renderPage(pageNumber, lazy, prerender) {
                 canvas.style.width = cached.canvas.style.width;
                 const context = canvas.getContext("2d", { alpha: false });
                 context.drawImage(cached.canvas, 0, 0);
+                scrollTo(0, 0);
 
                 textLayerDiv.replaceWith(cached.textLayerDiv);
                 textLayerDiv = cached.textLayerDiv;
@@ -117,6 +118,7 @@ function renderPage(pageNumber, lazy, prerender) {
                 canvas.style.width = newCanvas.style.width;
                 const context = canvas.getContext("2d", { alpha: false });
                 context.drawImage(newCanvas, 0, 0);
+                scrollTo(0, 0);
                 rendered = true;
             }
             render();
