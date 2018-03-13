@@ -46,6 +46,9 @@ function renderPage(pageNumber, lazy, prerender) {
         let cached = cache[i];
         if (cached.pageNumber == pageNumber && cached.zoomLevel == newZoomLevel) {
             if (useRender) {
+                cache.splice(i, 1);
+                cache.push(cached);
+
                 canvas.height = cached.canvas.height;
                 canvas.width = cached.canvas.width;
                 canvas.style.height = cached.canvas.style.height;
@@ -55,8 +58,6 @@ function renderPage(pageNumber, lazy, prerender) {
 
                 textLayerDiv.replaceWith(cached.textLayerDiv);
                 textLayerDiv = cached.textLayerDiv;
-                cache.splice(i, 1);
-                cache.push(cached);
             }
 
             pageRendering = false;
