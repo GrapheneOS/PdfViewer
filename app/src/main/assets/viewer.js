@@ -44,7 +44,9 @@ function useRender() {
 function renderPage(pageNumber, lazy, prerender) {
     pageRendering = true;
 
-    function finishRendering() {
+    function handleRenderingError(error) {
+        console.log("error: " + error);
+
         pageRendering = false;
         maybeRenderNextPage();
     }
@@ -143,9 +145,9 @@ function renderPage(pageNumber, lazy, prerender) {
                     if (!maybeRenderNextPage() && !prerender && pageNumber + 1 <= pdfDoc.numPages) {
                         renderPage(pageNumber + 1, false, true);
                     }
-                }).catch(finishRendering);
-            }).catch(finishRendering);
-        }).catch(finishRendering);
+                }).catch(handleRenderingError);
+            }).catch(handleRenderingError);
+        }).catch(handleRenderingError);
     });
 }
 
