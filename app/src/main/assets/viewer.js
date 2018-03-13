@@ -39,6 +39,17 @@ function renderPage(pageNumber, lazy, prerender) {
         maybeRenderNextPage();
     }
 
+    function doPrerender() {
+        if (useRender) {
+            if (!maybeRenderNextPage() && pageNumber + 1 <= pdfDoc.numPages) {
+                renderPage(pageNumber + 1, false, true);
+            }
+            if (!maybeRenderNextPage() && pageNumber - 1 > 0) {
+                renderPage(pageNumber - 1, false, true);
+            }
+        }
+    }
+
     newPageNumber = pageNumber;
     newZoomLevel = zoomLevels[channel.getZoomLevel()];
     console.log("page: " + pageNumber + ", zoom: " + newZoomLevel + ", prerender: " + prerender);
@@ -61,9 +72,7 @@ function renderPage(pageNumber, lazy, prerender) {
             }
 
             pageRendering = false;
-            if (!maybeRenderNextPage() && useRender && pageNumber + 1 <= pdfDoc.numPages) {
-                renderPage(pageNumber + 1, false, true);
-            }
+            doPrerender();
             return;
         }
     }
@@ -146,9 +155,7 @@ function renderPage(pageNumber, lazy, prerender) {
                         textLayerDiv: newTextLayerDiv
                     });
                     pageRendering = false;
-                    if (!maybeRenderNextPage() && useRender && pageNumber + 1 <= pdfDoc.numPages) {
-                        renderPage(pageNumber + 1, false, true);
-                    }
+                    doPrerender();
                 }).catch(handleRenderingError);
             }).catch(handleRenderingError);
         }).catch(handleRenderingError);
