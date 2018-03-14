@@ -123,42 +123,35 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
             }
             render();
 
-            page.getTextContent().then(function(textContent) {
-                if (maybeRenderNextPage()) {
-                    return;
-                }
+            const textLayerFrag = document.createDocumentFragment();
+            textLayerRenderTask = PDFJS.renderTextLayer({
+                textContentStream: page.streamTextContent(),
+                container: textLayerFrag,
+                viewport: viewport
+            });
+            textLayerRenderTask.promise.then(function() {
                 render();
 
-                const textLayerFrag = document.createDocumentFragment();
-                textLayerRenderTask = PDFJS.renderTextLayer({
-                    textContent: textContent,
-                    container: textLayerFrag,
-                    viewport: viewport
+                const newTextLayerDiv = textLayerDiv.cloneNode();
+                newTextLayerDiv.style.height = newCanvas.style.height;
+                newTextLayerDiv.style.width = newCanvas.style.width;
+                if (useRender) {
+                    textLayerDiv.replaceWith(newTextLayerDiv);
+                    textLayerDiv = newTextLayerDiv;
+                }
+
+                newTextLayerDiv.appendChild(textLayerFrag);
+                if (cache.length === maxCached) {
+                    cache.shift()
+                }
+                cache.push({
+                    pageNumber: pageNumber,
+                    zoomLevel: newZoomLevel,
+                    canvas: newCanvas,
+                    textLayerDiv: newTextLayerDiv
                 });
-                textLayerRenderTask.promise.then(function() {
-                    render();
-
-                    const newTextLayerDiv = textLayerDiv.cloneNode();
-                    newTextLayerDiv.style.height = newCanvas.style.height;
-                    newTextLayerDiv.style.width = newCanvas.style.width;
-                    if (useRender) {
-                        textLayerDiv.replaceWith(newTextLayerDiv);
-                        textLayerDiv = newTextLayerDiv;
-                    }
-
-                    newTextLayerDiv.appendChild(textLayerFrag);
-                    if (cache.length === maxCached) {
-                        cache.shift()
-                    }
-                    cache.push({
-                        pageNumber: pageNumber,
-                        zoomLevel: newZoomLevel,
-                        canvas: newCanvas,
-                        textLayerDiv: newTextLayerDiv
-                    });
-                    pageRendering = false;
-                    doPrerender(pageNumber, prerenderTrigger);
-                }).catch(handleRenderingError);
+                pageRendering = false;
+                doPrerender(pageNumber, prerenderTrigger);
             }).catch(handleRenderingError);
         }).catch(handleRenderingError);
     });
