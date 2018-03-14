@@ -35,13 +35,16 @@ function handleRenderingError(error) {
     maybeRenderNextPage();
 }
 
-function doPrerender(pageNumber) {
+function doPrerender(pageNumber, prerenderTrigger) {
     if (useRender) {
-        if (!maybeRenderNextPage() && pageNumber + 1 <= pdfDoc.numPages) {
-            renderPage(pageNumber + 1, false, true);
+        if (pageNumber + 1 <= pdfDoc.numPages) {
+            renderPage(pageNumber + 1, false, true, pageNumber);
+        } else if (pageNumber - 1 > 0) {
+            renderPage(pageNumber - 1, false, true, pageNumber);
         }
-        if (!maybeRenderNextPage() && pageNumber - 1 > 0) {
-            renderPage(pageNumber - 1, false, true);
+    } else if (pageNumber == prerenderTrigger + 1) {
+        if (prerenderTrigger - 1 > 0) {
+            renderPage(prerenderTrigger - 1, false, true, prerenderTrigger);
         }
     }
 }
@@ -55,7 +58,7 @@ function display(newCanvas) {
     scrollTo(0, 0);
 }
 
-function renderPage(pageNumber, lazy, prerender) {
+function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
     pageRendering = true;
     useRender = !prerender;
 
@@ -76,7 +79,7 @@ function renderPage(pageNumber, lazy, prerender) {
             }
 
             pageRendering = false;
-            doPrerender(pageNumber);
+            doPrerender(pageNumber, prerenderTrigger);
             return;
         }
     }
@@ -154,7 +157,7 @@ function renderPage(pageNumber, lazy, prerender) {
                         textLayerDiv: newTextLayerDiv
                     });
                     pageRendering = false;
-                    doPrerender(pageNumber);
+                    doPrerender(pageNumber, prerenderTrigger);
                 }).catch(handleRenderingError);
             }).catch(handleRenderingError);
         }).catch(handleRenderingError);
