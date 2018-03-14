@@ -183,8 +183,10 @@ PDFJS.getDocument("https://localhost/placeholder.pdf").then(function(newDoc) {
     channel.setNumPages(pdfDoc.numPages);
     pdfDoc.getMetadata().then(function(data) {
         channel.setDocumentProperties(JSON.stringify(data.info));
-    }).catch(function(err) {
-        console.log(err);
+    }).catch(function(error) {
+        console.log("error: " + error);
     });
     renderPage(channel.getPage(), false, false);
+}).catch(function(error) {
+    console.log("error: " + error);
 });
