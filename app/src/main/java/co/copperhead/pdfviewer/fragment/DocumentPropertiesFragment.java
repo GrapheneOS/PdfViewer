@@ -13,11 +13,12 @@ import java.util.List;
 import co.copperhead.pdfviewer.R;
 
 public class DocumentPropertiesFragment extends DialogFragment {
+    public static final String TAG = DocumentPropertiesFragment.class.getSimpleName();
+
     private static final String KEY_DOCUMENT_PROPERTIES = "key_document_properties";
 
     private static DocumentPropertiesFragment sDocumentPropertiesFragment;
-
-    private List<String> mDocumentProperties;
+    private List<CharSequence> mDocumentProperties;
 
     public static DocumentPropertiesFragment getInstance(final ArrayList<CharSequence> metaData) {
         if (sDocumentPropertiesFragment == null) {
@@ -36,13 +37,12 @@ public class DocumentPropertiesFragment extends DialogFragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mDocumentProperties = getArguments().getStringArrayList(KEY_DOCUMENT_PROPERTIES);
+        mDocumentProperties = getArguments().getCharSequenceArrayList(KEY_DOCUMENT_PROPERTIES);
     }
 
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         final Activity activity = getActivity();
-
         final AlertDialog.Builder dialog = new AlertDialog.Builder(activity)
                 .setPositiveButton(android.R.string.ok, null);
 

@@ -45,7 +45,7 @@ public class DocumentPropertiesLoader extends AsyncTaskLoader<List<CharSequence>
         final Context context = getContext();
 
         final String[] names = context.getResources().getStringArray(R.array.property_names);
-        final List<CharSequence> properties = new ArrayList<>();
+        final List<CharSequence> properties = new ArrayList<>(names.length);
 
         mCursor = context.getContentResolver().query(mUri, null, null, null, null);
         if (mCursor != null) {
@@ -65,9 +65,7 @@ public class DocumentPropertiesLoader extends AsyncTaskLoader<List<CharSequence>
             mCursor.close();
         }
 
-
-
-        try{
+        try {
             final JSONObject json = new JSONObject(mProperties);
 
             properties.add(getProperty(json, names[2], "Title"));
@@ -80,6 +78,7 @@ public class DocumentPropertiesLoader extends AsyncTaskLoader<List<CharSequence>
             properties.add(getProperty(json, names[9], "Creator"));
             properties.add(getProperty(json, names[10], "PDFFormatVersion"));
             properties.add(getProperty(null, names[11], String.valueOf(mNumPages)));
+
             return properties;
         } catch (JSONException e) {
             e.printStackTrace();
