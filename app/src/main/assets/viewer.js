@@ -63,8 +63,8 @@ function renderPage(pageNumber, lazy, prerender) {
     newZoomLevel = zoomLevels[channel.getZoomLevel()];
     console.log("page: " + pageNumber + ", zoom: " + newZoomLevel + ", prerender: " + prerender);
     for (let i = 0; i < cache.length; i++) {
-        let cached = cache[i];
-        if (cached.pageNumber == pageNumber && cached.zoomLevel == newZoomLevel) {
+        const cached = cache[i];
+        if (cached.pageNumber === pageNumber && cached.zoomLevel === newZoomLevel) {
             if (useRender) {
                 cache.splice(i, 1);
                 cache.push(cached);
@@ -144,7 +144,7 @@ function renderPage(pageNumber, lazy, prerender) {
                     }
 
                     newTextLayerDiv.appendChild(textLayerFrag);
-                    if (cache.length == maxCached) {
+                    if (cache.length === maxCached) {
                         cache.shift()
                     }
                     cache.push({
@@ -163,7 +163,7 @@ function renderPage(pageNumber, lazy, prerender) {
 
 function onRenderPage(lazy) {
     if (pageRendering) {
-        if (newPageNumber == channel.getPage() && newZoomLevel == zoomLevels[channel.getZoomLevel()]) {
+        if (newPageNumber === channel.getPage() && newZoomLevel === zoomLevels[channel.getZoomLevel()]) {
             useRender = true;
             return;
         }
