@@ -35,7 +35,7 @@ function handleRenderingError(error) {
     maybeRenderNextPage();
 }
 
-function doPrerender() {
+function doPrerender(pageNumber) {
     if (useRender) {
         if (!maybeRenderNextPage() && pageNumber + 1 <= pdfDoc.numPages) {
             renderPage(pageNumber + 1, false, true);
@@ -76,7 +76,7 @@ function renderPage(pageNumber, lazy, prerender) {
             }
 
             pageRendering = false;
-            doPrerender();
+            doPrerender(pageNumber);
             return;
         }
     }
@@ -154,7 +154,7 @@ function renderPage(pageNumber, lazy, prerender) {
                         textLayerDiv: newTextLayerDiv
                     });
                     pageRendering = false;
-                    doPrerender();
+                    doPrerender(pageNumber);
                 }).catch(handleRenderingError);
             }).catch(handleRenderingError);
         }).catch(handleRenderingError);
