@@ -28,7 +28,7 @@ function maybeRenderNextPage() {
 }
 
 function handleRenderingError(error) {
-    console.log("error: " + error);
+    console.log("rendering error: " + error);
 
     pageRendering = false;
     maybeRenderNextPage();
@@ -184,9 +184,9 @@ PDFJS.getDocument("https://localhost/placeholder.pdf").then(function(newDoc) {
     pdfDoc.getMetadata().then(function(data) {
         channel.setDocumentProperties(JSON.stringify(data.info));
     }).catch(function(error) {
-        console.log("error: " + error);
+        console.log("getMetadata error: " + error);
     });
     renderPage(channel.getPage(), false, false);
 }).catch(function(error) {
-    console.log("error: " + error);
+    console.log("getDocument error: " + error);
 });
