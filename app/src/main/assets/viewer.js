@@ -8,8 +8,7 @@ const canvas = document.getElementById('content');
 let zoomLevel = 100;
 let textLayerDiv = document.getElementById("text");
 const zoomLevels = [50, 75, 100, 125, 150];
-let renderTask = null;
-let textLayerRenderTask = null;
+let task = null;
 
 let newPageNumber = 0;
 let newZoomLevel = 0;
@@ -107,12 +106,14 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
             zoomLevel = newZoomLevel;
         }
 
-        renderTask = page.render({
+        task = page.render({
             canvasContext: newContext,
             viewport: viewport
         });
 
-        renderTask.then(function() {
+        task.then(function() {
+            task = null;
+
             let rendered = false;
             function render() {
                 if (!useRender || rendered) {
@@ -124,12 +125,14 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
             render();
 
             const textLayerFrag = document.createDocumentFragment();
-            textLayerRenderTask = PDFJS.renderTextLayer({
+            task = PDFJS.renderTextLayer({
                 textContentStream: page.streamTextContent(),
                 container: textLayerFrag,
                 viewport: viewport
             });
-            textLayerRenderTask.promise.then(function() {
+            task.promise.then(function() {
+                task = null;
+
                 render();
 
                 const newTextLayerDiv = textLayerDiv.cloneNode();
@@ -166,13 +169,9 @@ function onRenderPage(lazy) {
 
         renderPending = true;
         renderPendingLazy = lazy;
-        if (renderTask !== null) {
-            renderTask.cancel();
-            renderTask = null;
-        }
-        if (textLayerRenderTask !== null) {
-            textLayerRenderTask.cancel();
-            textLayerRenderTask = null;
+        if (task !== null) {
+            task.cancel();
+            task = null;
         }
     } else {
         renderPage(channel.getPage(), lazy, false);
