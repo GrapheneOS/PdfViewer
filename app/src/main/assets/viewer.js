@@ -85,6 +85,10 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
     }
 
     pdfDoc.getPage(pageNumber).then(function(page) {
+        if (maybeRenderNextPage()) {
+            return;
+        }
+
         const newCanvas = document.createElement("canvas");
         const viewport = page.getViewport(newZoomLevel / 100)
         const ratio = window.devicePixelRatio;
@@ -109,10 +113,6 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
         });
 
         renderTask.then(function() {
-            if (maybeRenderNextPage()) {
-                return;
-            }
-
             let rendered = false;
             function render() {
                 if (!useRender || rendered) {
