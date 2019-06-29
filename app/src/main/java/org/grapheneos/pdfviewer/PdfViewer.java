@@ -426,7 +426,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
             case R.id.action_view_document_properties:
                 DocumentPropertiesFragment
-                        .getInstance((ArrayList<CharSequence>) mDocumentProperties)
+                        .newInstance(mDocumentProperties)
                         .show(getSupportFragmentManager(), DocumentPropertiesFragment.TAG);
                 return true;
 
