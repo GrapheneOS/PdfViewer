@@ -190,15 +190,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     return fromAsset("text/css", path);
                 }
 
-                if ("/viewer.js".equals(path)) {
-                    return fromAsset("application/javascript", path);
-                }
-
-                if ("/pdf.js".equals(path)) {
-                    return fromAsset("application/javascript", path);
-                }
-
-                if ("/pdf.worker.js".equals(path)) {
+                if ("/viewer.js".equals(path) || "/pdf.js".equals(path) || "/pdf.worker.js".equals(path)) {
                     return fromAsset("application/javascript", path);
                 }
 
