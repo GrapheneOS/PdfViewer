@@ -288,7 +288,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         if (mDocumentOrientationDegrees < 0) {
             mDocumentOrientationDegrees += 360;
         }
-        renderPage(true);
+        renderPage(false);
     }
 
     private void openDocument() {
