@@ -42,7 +42,7 @@ function doPrerender(pageNumber, prerenderTrigger) {
         } else if (pageNumber - 1 > 0) {
             renderPage(pageNumber - 1, false, true, pageNumber);
         }
-    } else if (pageNumber == prerenderTrigger + 1) {
+    } else if (pageNumber === prerenderTrigger + 1) {
         if (prerenderTrigger - 1 > 0) {
             renderPage(prerenderTrigger - 1, false, true, prerenderTrigger);
         }
@@ -70,7 +70,7 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
     for (let i = 0; i < cache.length; i++) {
         const cached = cache[i];
         if (cached.pageNumber === pageNumber && cached.zoomLevel === newZoomLevel &&
-                cache.orientationDegrees == orientationDegrees) {
+                cache.orientationDegrees === orientationDegrees) {
             if (useRender) {
                 cache.splice(i, 1);
                 cache.push(cached);
@@ -103,7 +103,7 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
         newContext.scale(ratio, ratio);
 
         if (useRender) {
-            if (newZoomLevel != zoomLevel) {
+            if (newZoomLevel !== zoomLevel) {
                 canvas.style.height = viewport.height + "px";
                 canvas.style.width = viewport.width + "px";
             }
