@@ -42,6 +42,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final String STATE_URI = "uri";
     private static final String STATE_PAGE = "page";
     private static final String STATE_ZOOM_LEVEL = "zoomLevel";
+    private static final String STATE_DOCUMENT_ORIENTATION_DEGREES = "documentOrientationDegrees";
     private static final String KEY_PROPERTIES = "properties";
 
     private static final String CONTENT_SECURITY_POLICY =
@@ -241,6 +242,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mUri = savedInstanceState.getParcelable(STATE_URI);
             mPage = savedInstanceState.getInt(STATE_PAGE);
             mZoomLevel = savedInstanceState.getInt(STATE_ZOOM_LEVEL);
+            mDocumentOrientationDegrees = savedInstanceState.getInt(STATE_DOCUMENT_ORIENTATION_DEGREES);
         }
 
         if (mUri != null) {
@@ -321,6 +323,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         savedInstanceState.putParcelable(STATE_URI, mUri);
         savedInstanceState.putInt(STATE_PAGE, mPage);
         savedInstanceState.putInt(STATE_ZOOM_LEVEL, mZoomLevel);
+        savedInstanceState.putInt(STATE_DOCUMENT_ORIENTATION_DEGREES, mDocumentOrientationDegrees);
     }
 
     @Override
