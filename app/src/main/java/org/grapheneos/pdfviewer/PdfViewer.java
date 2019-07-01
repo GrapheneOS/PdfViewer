@@ -189,6 +189,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     HashMap<String, String> headers = new HashMap<String, String>();
                     headers.put("Content-Security-Policy", CONTENT_SECURITY_POLICY);
                     headers.put("Feature-Policy", FEATURE_POLICY);
+                    headers.put("X-Content-Type-Options", "nosniff");
                     response.setResponseHeaders(headers);
                     return response;
                 }
