@@ -47,7 +47,6 @@ body, canvas {
 }
 
 .textLayer ::selection { background: rgb(0,0,255); }
-.textLayer ::-moz-selection { background: rgb(0,0,255); }
 
 .textLayer .endOfContent {
     display: block;
