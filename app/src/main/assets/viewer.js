@@ -93,7 +93,7 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
         }
 
         const newCanvas = document.createElement("canvas");
-        const viewport = page.getViewport(newZoomLevel / 100, orientationDegrees)
+        const viewport = page.getViewport({scale: newZoomLevel / 100, rotation: orientationDegrees})
         const ratio = window.devicePixelRatio;
         newCanvas.height = viewport.height * ratio;
         newCanvas.width = viewport.width * ratio;
@@ -115,7 +115,7 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
             viewport: viewport
         });
 
-        task.then(function() {
+        task.promise.then(function() {
             task = null;
 
             let rendered = false;
@@ -129,7 +129,7 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
             render();
 
             const textLayerFrag = document.createDocumentFragment();
-            task = PDFJS.renderTextLayer({
+            task = pdfjsLib.renderTextLayer({
                 textContentStream: page.streamTextContent(),
                 container: textLayerFrag,
                 viewport: viewport
@@ -185,7 +185,7 @@ function onRenderPage(lazy) {
     }
 }
 
-PDFJS.getDocument("https://localhost/placeholder.pdf").then(function(newDoc) {
+pdfjsLib.getDocument("https://localhost/placeholder.pdf").promise.then(function(newDoc) {
     pdfDoc = newDoc;
     channel.setNumPages(pdfDoc.numPages);
     pdfDoc.getMetadata().then(function(data) {
