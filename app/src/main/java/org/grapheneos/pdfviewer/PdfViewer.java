@@ -219,6 +219,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             }
         });
 
+        showSystemUi();
+
         final GestureDetector detector = new GestureDetector(PdfViewer.this,
                 new GestureDetector.SimpleOnGestureListener() {
                     @Override
