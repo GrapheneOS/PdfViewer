@@ -4,6 +4,7 @@ body, canvas, #padding {
 }
 
 #padding {
+    min-width: 100%;
     background: black;
 }
 
