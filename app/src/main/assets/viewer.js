@@ -189,6 +189,15 @@ function isTextSelected() {
     return window.getSelection().toString() !== "";
 }
 
+function updateInset() {
+    const padding = document.getElementById("padding");
+    const windowInsetTop = channel.getWindowInsetTop() / window.devicePixelRatio + "px";
+    padding.style.paddingTop = windowInsetTop;
+    textLayerDiv.style.top = windowInsetTop;
+}
+
+updateInset();
+
 pdfjsLib.getDocument("https://localhost/placeholder.pdf").promise.then(function(newDoc) {
     pdfDoc = newDoc;
     channel.setNumPages(pdfDoc.numPages);

@@ -91,6 +91,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private int mZoomLevel = 2;
     private int mDocumentOrientationDegrees;
     private int mDocumentState;
+    private int windowInsetTop;
     private List<CharSequence> mDocumentProperties;
     private InputStream mInputStream;
 
@@ -99,6 +100,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private Toast mToast;
 
     private class Channel {
+        @JavascriptInterface
+        public int getWindowInsetTop() {
+            return windowInsetTop;
+        }
+
         @JavascriptInterface
         public int getPage() {
             return mPage;
@@ -147,6 +153,13 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         setContentView(R.layout.webview);
 
         mWebView = findViewById(R.id.webview);
+
+        mWebView.setOnApplyWindowInsetsListener((view, insets) -> {
+            windowInsetTop = insets.getSystemWindowInsetTop();
+            mWebView.evaluateJavascript("updateInset()", null);
+            return insets;
+        });
+
         final WebSettings settings = mWebView.getSettings();
         settings.setAllowContentAccess(false);
         settings.setAllowFileAccess(false);

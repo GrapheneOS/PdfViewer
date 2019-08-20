@@ -1,6 +1,10 @@
-body, canvas {
+body, canvas, #padding {
     padding: 0;
     margin: 0;
+}
+
+#padding {
+    background: black;
 }
 
 .textLayer {
