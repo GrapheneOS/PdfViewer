@@ -6,7 +6,7 @@ android {
     defaultConfig {
         applicationId "org.grapheneos.pdfviewer"
         minSdkVersion 24
-        targetSdkVersion 28
+        targetSdkVersion 29
         versionCode 3
         versionName versionCode.toString()
         resConfigs "en"
