@@ -14,6 +14,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
@@ -254,8 +255,45 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                         return false;
                     }
                 });
+
+        final ScaleGestureDetector scaleDetector = new ScaleGestureDetector(PdfViewer.this,
+                new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                    // As the zoom value is discrete we listen to scaling step and not scaling ratio
+                    float SPAN_STEP = 150;
+                    float initialSpan;
+                    int prevNbStep;
+
+                    @Override
+                    public boolean onScaleBegin(ScaleGestureDetector detector) {
+                        initialSpan = detector.getCurrentSpan();
+                        prevNbStep = 0;
+                        return super.onScaleBegin(detector);
+                    }
+
+                    @Override
+                    public boolean onScale(ScaleGestureDetector detector) {
+                        float spanDiff = initialSpan - detector.getCurrentSpan();
+                        int curNbStep = (int) (spanDiff/SPAN_STEP);
+                        if (curNbStep != prevNbStep) {
+                            int stepDiff = curNbStep - prevNbStep;
+                            if (stepDiff > 0) {
+                                for (int i = prevNbStep; i < curNbStep; i++) {
+                                    zoomOut();
+                                }
+                            } else {
+                                for (int i = prevNbStep; i > curNbStep; i--) {
+                                    zoomIn();
+                                }
+                            }
+                            prevNbStep = curNbStep;
+                        }
+                        return true;
+                    }
+                });
+
         mWebView.setOnTouchListener((view, motionEvent) -> {
             detector.onTouchEvent(motionEvent);
+            scaleDetector.onTouchEvent(motionEvent);
             return false;
         });
 
@@ -338,6 +376,22 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("application/pdf");
         startActivityForResult(intent, ACTION_OPEN_DOCUMENT_REQUEST_CODE);
+    }
+
+    private void zoomIn() {
+        if (mZoomLevel < MAX_ZOOM_LEVEL) {
+            mZoomLevel++;
+            renderPage(true);
+            invalidateOptionsMenu();
+        }
+    }
+
+    private void zoomOut() {
+        if (mZoomLevel > 0) {
+            mZoomLevel--;
+            renderPage(true);
+            invalidateOptionsMenu();
+        }
     }
 
     private static void enableDisableMenuItem(MenuItem item, boolean enable) {
@@ -482,19 +536,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 return super.onOptionsItemSelected(item);
 
             case R.id.action_zoom_out:
-                if (mZoomLevel > 0) {
-                    mZoomLevel--;
-                    renderPage(true);
-                    invalidateOptionsMenu();
-                }
+                zoomOut();
                 return true;
 
             case R.id.action_zoom_in:
-                if (mZoomLevel < MAX_ZOOM_LEVEL) {
-                    mZoomLevel++;
-                    renderPage(true);
-                    invalidateOptionsMenu();
-                }
+                zoomIn();
                 return true;
 
             case R.id.action_rotate_clockwise:
@@ -513,7 +559,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
             case R.id.action_jump_to_page:
                 new JumpToPageFragment()
-                    .show(getSupportFragmentManager(), JumpToPageFragment.TAG);
+                        .show(getSupportFragmentManager(), JumpToPageFragment.TAG);
                 return true;
 
             default:
