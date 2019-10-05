@@ -8,13 +8,10 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.MotionEvent;
-import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
@@ -49,33 +46,33 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final String KEY_PROPERTIES = "properties";
 
     private static final String CONTENT_SECURITY_POLICY =
-            "default-src 'none'; " +
-            "form-action 'none'; " +
-            "connect-src https://localhost/placeholder.pdf; " +
-            "img-src blob: 'self'; " +
-            "script-src 'self'; " +
-            "style-src 'self'; " +
-            "frame-ancestors 'none'; " +
-            "base-uri 'none'";
+        "default-src 'none'; " +
+        "form-action 'none'; " +
+        "connect-src https://localhost/placeholder.pdf; " +
+        "img-src blob: 'self'; " +
+        "script-src 'self'; " +
+        "style-src 'self'; " +
+        "frame-ancestors 'none'; " +
+        "base-uri 'none'";
 
     private static final String FEATURE_POLICY =
-            "accelerometer 'none'; " +
-            "ambient-light-sensor 'none'; " +
-            "autoplay 'none'; " +
-            "camera 'none'; " +
-            "encrypted-media 'none'; " +
-            "fullscreen 'none'; " +
-            "geolocation 'none'; " +
-            "gyroscope 'none'; " +
-            "magnetometer 'none'; " +
-            "microphone 'none'; " +
-            "midi 'none'; " +
-            "payment 'none'; " +
-            "picture-in-picture 'none'; " +
-            "speaker 'none'; " +
-            "sync-xhr 'none'; " +
-            "usb 'none'; " +
-            "vr 'none'";
+        "accelerometer 'none'; " +
+        "ambient-light-sensor 'none'; " +
+        "autoplay 'none'; " +
+        "camera 'none'; " +
+        "encrypted-media 'none'; " +
+        "fullscreen 'none'; " +
+        "geolocation 'none'; " +
+        "gyroscope 'none'; " +
+        "magnetometer 'none'; " +
+        "microphone 'none'; " +
+        "midi 'none'; " +
+        "payment 'none'; " +
+        "picture-in-picture 'none'; " +
+        "speaker 'none'; " +
+        "sync-xhr 'none'; " +
+        "usb 'none'; " +
+        "vr 'none'";
 
     private static final int MIN_ZOOM_LEVEL = 0;
     private static final int MAX_ZOOM_LEVEL = 4;
@@ -235,10 +232,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
         showSystemUi();
 
-        final GestureDetector detector = new GestureDetector(PdfViewer.this,
-                new GestureDetector.SimpleOnGestureListener() {
+        GestureHelper.attach(PdfViewer.this, mWebView,
+                new GestureHelper.GestureListener() {
                     @Override
-                    public boolean onSingleTapUp(MotionEvent motionEvent) {
+                    public boolean onTapUp() {
                         if (mUri != null) {
                             mWebView.evaluateJavascript("isTextSelected()", selection -> {
                                 if (!Boolean.valueOf(selection)) {
@@ -254,48 +251,21 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                         }
                         return false;
                     }
-                });
-
-        final ScaleGestureDetector scaleDetector = new ScaleGestureDetector(PdfViewer.this,
-                new ScaleGestureDetector.SimpleOnScaleGestureListener() {
-                    // As the zoom value is discrete we listen to scaling step and not scaling ratio
-                    float SPAN_STEP = 150;
-                    float initialSpan;
-                    int prevNbStep;
 
                     @Override
-                    public boolean onScaleBegin(ScaleGestureDetector detector) {
-                        initialSpan = detector.getCurrentSpan();
-                        prevNbStep = 0;
-                        return super.onScaleBegin(detector);
-                    }
-
-                    @Override
-                    public boolean onScale(ScaleGestureDetector detector) {
-                        float spanDiff = initialSpan - detector.getCurrentSpan();
-                        int curNbStep = (int) (spanDiff/SPAN_STEP);
-                        if (curNbStep != prevNbStep) {
-                            int stepDiff = curNbStep - prevNbStep;
-                            if (stepDiff > 0) {
-                                for (int i = prevNbStep; i < curNbStep; i++) {
-                                    zoomOut();
-                                }
-                            } else {
-                                for (int i = prevNbStep; i > curNbStep; i--) {
-                                    zoomIn();
-                                }
-                            }
-                            prevNbStep = curNbStep;
+                    public void onZoomIn(int steps) {
+                        for (int i = 0; i < steps; i++) {
+                            zoomIn();
                         }
-                        return true;
+                    }
+
+                    @Override
+                    public void onZoomOut(int steps) {
+                        for (int i = 0; i < steps; i++) {
+                            zoomOut();
+                        }
                     }
                 });
-
-        mWebView.setOnTouchListener((view, motionEvent) -> {
-            detector.onTouchEvent(motionEvent);
-            scaleDetector.onTouchEvent(motionEvent);
-            return false;
-        });
 
         mTextView = new TextView(this);
         mTextView.setBackgroundColor(Color.DKGRAY);
