@@ -121,6 +121,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         @JavascriptInterface
         public void setNumPages(int numPages) {
             mNumPages = numPages;
+            runOnUiThread(PdfViewer.this::invalidateOptionsMenu);
         }
 
         @JavascriptInterface
@@ -371,11 +372,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     private static void enableDisableMenuItem(MenuItem item, boolean enable) {
         if (enable) {
-            if (!item.isEnabled()) {
-                item.setEnabled(true);
-                item.getIcon().setAlpha(ALPHA_HIGH);
-            }
-        } else if (item.isEnabled()) {
+            item.setEnabled(true);
+            item.getIcon().setAlpha(ALPHA_HIGH);
+        } else {
             item.setEnabled(false);
             item.getIcon().setAlpha(ALPHA_LOW);
         }
@@ -386,6 +385,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mPage = selected_page;
             renderPage(0);
             showPageNumber();
+            invalidateOptionsMenu();
         }
     }
 
@@ -475,6 +475,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
         enableDisableMenuItem(menu.findItem(R.id.action_zoom_in), mZoomRatio != MAX_ZOOM_RATIO);
         enableDisableMenuItem(menu.findItem(R.id.action_zoom_out), mZoomRatio != MIN_ZOOM_RATIO);
+        enableDisableMenuItem(menu.findItem(R.id.action_next), mPage < mNumPages);
+        enableDisableMenuItem(menu.findItem(R.id.action_previous), mPage > 1);
 
         return true;
     }
