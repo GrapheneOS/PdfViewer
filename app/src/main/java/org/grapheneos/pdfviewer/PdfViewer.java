@@ -123,6 +123,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         @JavascriptInterface
         public void setNumPages(int numPages) {
             mNumPages = numPages;
+            invalidateOptionsMenu();
         }
 
         @JavascriptInterface
@@ -342,11 +343,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     private static void enableDisableMenuItem(MenuItem item, boolean enable) {
         if (enable) {
-            if (!item.isEnabled()) {
-                item.setEnabled(true);
-                item.getIcon().setAlpha(ALPHA_HIGH);
-            }
-        } else if (item.isEnabled()) {
+            item.setEnabled(true);
+            item.getIcon().setAlpha(ALPHA_HIGH);
+        } else {
             item.setEnabled(false);
             item.getIcon().setAlpha(ALPHA_LOW);
         }
@@ -357,6 +356,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mPage = selected_page;
             renderPage(false);
             showPageNumber();
+            invalidateOptionsMenu();
         }
     }
 
@@ -442,18 +442,12 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mDocumentState = STATE_END;
         }
 
-        switch (mZoomLevel) {
-            case MAX_ZOOM_LEVEL:
-                enableDisableMenuItem(menu.findItem(R.id.action_zoom_in), false);
-                return true;
-            case MIN_ZOOM_LEVEL:
-                enableDisableMenuItem(menu.findItem(R.id.action_zoom_out), false);
-                return true;
-            default:
-                enableDisableMenuItem(menu.findItem(R.id.action_zoom_in), true);
-                enableDisableMenuItem(menu.findItem(R.id.action_zoom_out), true);
-                return true;
-        }
+        enableDisableMenuItem(menu.findItem(R.id.action_zoom_in), mZoomLevel < MAX_ZOOM_LEVEL);
+        enableDisableMenuItem(menu.findItem(R.id.action_zoom_out), mZoomLevel > MIN_ZOOM_LEVEL);
+        enableDisableMenuItem(menu.findItem(R.id.action_next), mPage < mNumPages);
+        enableDisableMenuItem(menu.findItem(R.id.action_previous), mPage > 1);
+
+        return true;
     }
 
     @Override
