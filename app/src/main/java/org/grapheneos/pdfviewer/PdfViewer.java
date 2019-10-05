@@ -388,6 +388,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent resultData) {
+        super.onActivityResult(requestCode, resultCode, resultData);
+
         if (requestCode == ACTION_OPEN_DOCUMENT_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
             if (resultData != null) {
                 mUri = resultData.getData();
