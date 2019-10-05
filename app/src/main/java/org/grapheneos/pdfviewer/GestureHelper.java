@@ -1,7 +1,8 @@
 package org.grapheneos.pdfviewer;
 
 import android.annotation.SuppressLint;
-import android.content.Context;
+import android.app.Activity;
+import android.util.DisplayMetrics;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -17,10 +18,16 @@ class GestureHelper {
         // Can be replaced with ratio when supported
         void onZoomIn(int steps);
         void onZoomOut(int steps);
+        void onSwipeEdgeLeft();
+        void onSwipeEdgeRight();
     }
 
+    private static final int SPAN_STEP = 150;
+
     @SuppressLint("ClickableViewAccessibility")
-    static void attach(Context context, View gestureView, GestureListener listener) {
+    static void attach(Activity context, View gestureView, GestureListener listener) {
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        context.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
 
         final GestureDetector detector = new GestureDetector(context,
                 new GestureDetector.SimpleOnGestureListener() {
@@ -28,12 +35,24 @@ class GestureHelper {
                     public boolean onSingleTapUp(MotionEvent motionEvent) {
                         return listener.onTapUp();
                     }
+
+                    @Override
+                    public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+                        float diffX = e2.getX() - e1.getX();
+                        if (diffX > 0 && e1.getX() < 10.0) {
+                            listener.onSwipeEdgeRight();
+                        } else if (diffX < 0 && e1.getX() > displayMetrics.widthPixels - 10.0) {
+                            listener.onSwipeEdgeLeft();
+                        } else {
+                            return false;
+                        }
+                        return true;
+                    }
                 });
 
         final ScaleGestureDetector scaleDetector = new ScaleGestureDetector(context,
                 new ScaleGestureDetector.SimpleOnScaleGestureListener() {
                     // As the zoom value is discrete we listen to scaling step and not scaling ratio
-                    float SPAN_STEP = 150;
                     float initialSpan;
                     int prevNbStep;
 
