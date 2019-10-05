@@ -265,6 +265,22 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                             zoomOut();
                         }
                     }
+
+
+                    @Override
+                    public void onSwipeEdgeRight() {
+                        if (mPage > 0) {
+                            onJumpToPageInDocument(mPage - 1);
+                        }
+                    }
+
+
+                    @Override
+                    public void onSwipeEdgeLeft() {
+                        if (mPage < mNumPages) {
+                            onJumpToPageInDocument(mPage + 1);
+                        }
+                    }
                 });
 
         mTextView = new TextView(this);
