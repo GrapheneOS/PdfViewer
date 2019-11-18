@@ -41,7 +41,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     private static final String STATE_URI = "uri";
     private static final String STATE_PAGE = "page";
-    private static final String STATE_ZOOM_LEVEL = "zoomLevel";
+    private static final String STATE_ZOOM_RATIO = "zoomRatio";
     private static final String STATE_DOCUMENT_ORIENTATION_DEGREES = "documentOrientationDegrees";
     private static final String KEY_PROPERTIES = "properties";
 
@@ -74,8 +74,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         "usb 'none'; " +
         "vr 'none'";
 
-    private static final int MIN_ZOOM_LEVEL = 0;
-    private static final int MAX_ZOOM_LEVEL = 4;
+    private static final float MIN_ZOOM_RATIO = 0.5f;
+    private static final float MAX_ZOOM_RATIO = 1.5f;
     private static final int ALPHA_LOW = 130;
     private static final int ALPHA_HIGH = 255;
     private static final int ACTION_OPEN_DOCUMENT_REQUEST_CODE = 1;
@@ -86,7 +86,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private Uri mUri;
     public int mPage;
     public int mNumPages;
-    private int mZoomLevel = 2;
+    private float mZoomRatio = 1f;
     private int mDocumentOrientationDegrees;
     private int mDocumentState;
     private int windowInsetTop;
@@ -109,8 +109,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
 
         @JavascriptInterface
-        public int getZoomLevel() {
-            return mZoomLevel;
+        public float getZoomRatio() {
+            return mZoomRatio;
         }
 
         @JavascriptInterface
@@ -308,7 +308,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         if (savedInstanceState != null) {
             mUri = savedInstanceState.getParcelable(STATE_URI);
             mPage = savedInstanceState.getInt(STATE_PAGE);
-            mZoomLevel = savedInstanceState.getInt(STATE_ZOOM_LEVEL);
+            mZoomRatio = savedInstanceState.getFloat(STATE_ZOOM_RATIO);
             mDocumentOrientationDegrees = savedInstanceState.getInt(STATE_DOCUMENT_ORIENTATION_DEGREES);
         }
 
@@ -365,16 +365,16 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     private void zoomIn() {
-        if (mZoomLevel < MAX_ZOOM_LEVEL) {
-            mZoomLevel++;
+        if (mZoomRatio < MAX_ZOOM_RATIO) {
+            mZoomRatio+=0.25f;
             renderPage(true);
             invalidateOptionsMenu();
         }
     }
 
     private void zoomOut() {
-        if (mZoomLevel > 0) {
-            mZoomLevel--;
+        if (mZoomRatio > MIN_ZOOM_RATIO) {
+            mZoomRatio-=0.25f;
             renderPage(true);
             invalidateOptionsMenu();
         }
@@ -422,7 +422,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         super.onSaveInstanceState(savedInstanceState);
         savedInstanceState.putParcelable(STATE_URI, mUri);
         savedInstanceState.putInt(STATE_PAGE, mPage);
-        savedInstanceState.putInt(STATE_ZOOM_LEVEL, mZoomLevel);
+        savedInstanceState.putFloat(STATE_ZOOM_RATIO, mZoomRatio);
         savedInstanceState.putInt(STATE_DOCUMENT_ORIENTATION_DEGREES, mDocumentOrientationDegrees);
     }
 
@@ -484,18 +484,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mDocumentState = STATE_END;
         }
 
-        switch (mZoomLevel) {
-            case MAX_ZOOM_LEVEL:
-                enableDisableMenuItem(menu.findItem(R.id.action_zoom_in), false);
-                return true;
-            case MIN_ZOOM_LEVEL:
-                enableDisableMenuItem(menu.findItem(R.id.action_zoom_out), false);
-                return true;
-            default:
-                enableDisableMenuItem(menu.findItem(R.id.action_zoom_in), true);
-                enableDisableMenuItem(menu.findItem(R.id.action_zoom_out), true);
-                return true;
-        }
+        enableDisableMenuItem(menu.findItem(R.id.action_zoom_in), mZoomRatio != MAX_ZOOM_RATIO);
+        enableDisableMenuItem(menu.findItem(R.id.action_zoom_out), mZoomRatio != MIN_ZOOM_RATIO);
+
+        return true;
     }
 
     @Override
