@@ -123,7 +123,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         @JavascriptInterface
         public void setNumPages(int numPages) {
             mNumPages = numPages;
-            invalidateOptionsMenu();
+            runOnUiThread(PdfViewer.this::invalidateOptionsMenu);
         }
 
         @JavascriptInterface
