@@ -33,10 +33,9 @@ class GestureHelper {
 
         final ScaleGestureDetector scaleDetector = new ScaleGestureDetector(context,
                 new ScaleGestureDetector.SimpleOnScaleGestureListener() {
-                    // As the zoom value is discrete we listen to scaling step and not scaling ratio
-                    float SPAN_STEP = 150;
+                    float SPAN_RATIO = 600;
                     float initialSpan;
-                    int prevNbStep;
+                    float prevNbStep;
 
                     @Override
                     public boolean onScaleBegin(ScaleGestureDetector detector) {
@@ -48,16 +47,16 @@ class GestureHelper {
                     @Override
                     public boolean onScale(ScaleGestureDetector detector) {
                         float spanDiff = initialSpan - detector.getCurrentSpan();
-                        int curNbStep = (int) (spanDiff/SPAN_STEP);
-                        if (curNbStep != prevNbStep) {
-                            int stepDiff = curNbStep - prevNbStep;
-                            if (stepDiff > 0) {
-                                listener.onZoomOut(stepDiff * 0.25f);
-                            } else {
-                                listener.onZoomIn(Math.abs(stepDiff * 0.25f));
-                            }
-                            prevNbStep = curNbStep;
+                        float curNbStep = spanDiff / SPAN_RATIO;
+
+                        float stepDiff = curNbStep - prevNbStep;
+                        if (stepDiff > 0) {
+                            listener.onZoomOut(stepDiff);
+                        } else {
+                            listener.onZoomIn(Math.abs(stepDiff));
                         }
+                        prevNbStep = curNbStep;
+
                         return true;
                     }
 
