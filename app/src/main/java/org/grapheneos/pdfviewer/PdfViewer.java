@@ -261,6 +261,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     public void onZoomOut(int steps) {
                         zoomOut(steps);
                     }
+
+                    @Override
+                    public void onZoomEnd() {
+                        zoomEnd();
+                    }
                 });
 
         mTextView = new TextView(this);
@@ -358,6 +363,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             renderPage(true);
             invalidateOptionsMenu();
         }
+    }
+
+    private void zoomEnd() {
+        renderPage(true);
     }
 
     private static void enableDisableMenuItem(MenuItem item, boolean enable) {

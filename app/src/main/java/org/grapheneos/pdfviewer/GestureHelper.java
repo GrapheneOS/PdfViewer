@@ -17,6 +17,7 @@ class GestureHelper {
         // Can be replaced with ratio when supported
         void onZoomIn(int steps);
         void onZoomOut(int steps);
+        void onZoomEnd();
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -58,6 +59,11 @@ class GestureHelper {
                             prevNbStep = curNbStep;
                         }
                         return true;
+                    }
+
+                    @Override
+                    public void onScaleEnd(ScaleGestureDetector detector) {
+                        listener.onZoomEnd();
                     }
                 });
 
