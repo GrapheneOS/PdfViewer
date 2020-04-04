@@ -351,7 +351,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     private void zoomIn(float value, boolean end) {
         if (mZoomRatio < MAX_ZOOM_RATIO) {
-            mZoomRatio += value;
+            mZoomRatio = Math.min(mZoomRatio + value, MAX_ZOOM_RATIO);
             renderPage(end ? 1 : 2);
             invalidateOptionsMenu();
         }
@@ -359,7 +359,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     private void zoomOut(float value, boolean end) {
         if (mZoomRatio > MIN_ZOOM_RATIO) {
-            mZoomRatio -= value;
+            mZoomRatio = Math.max(mZoomRatio - value, MIN_ZOOM_RATIO);
             renderPage(end ? 1 : 2);
             invalidateOptionsMenu();
         }
