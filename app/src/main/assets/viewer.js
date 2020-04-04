@@ -171,7 +171,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
 
 function onRenderPage(zoom) {
     if (pageRendering) {
-        if (newPageNumber === channel.getPage() && getZoomRatio === channel.getZoomRatio() &&
+        if (newPageNumber === channel.getPage() && newZoomRatio === channel.getZoomRatio() &&
                 orientationDegrees === channel.getDocumentOrientationDegrees()) {
             useRender = true;
             return;
