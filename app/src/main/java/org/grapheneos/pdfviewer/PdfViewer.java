@@ -329,8 +329,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         mWebView.loadUrl("https://localhost/viewer.html");
     }
 
-    private void renderPage(final boolean lazy) {
-        mWebView.evaluateJavascript(lazy ? "onRenderPage(true)" : "onRenderPage(false)", null);
+    private void renderPage(final boolean zoom) {
+        mWebView.evaluateJavascript(zoom ? "onRenderPage(true)" : "onRenderPage(false)", null);
     }
 
     private void documentOrientationChanged(final int orientationDegreesOffset) {

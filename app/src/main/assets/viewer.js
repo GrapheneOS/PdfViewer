@@ -4,7 +4,7 @@ const padding = document.getElementById("padding");
 let pdfDoc = null;
 let pageRendering = false;
 let renderPending = false;
-let renderPendingLazy = false;
+let renderPendingZoom = false;
 const canvas = document.getElementById('content');
 let orientationDegrees = 0;
 let zoomRatio = 1;
@@ -22,7 +22,7 @@ function maybeRenderNextPage() {
     if (renderPending) {
         pageRendering = false;
         renderPending = false;
-        renderPage(channel.getPage(), renderPendingLazy, false);
+        renderPage(channel.getPage(), renderPendingZoom, false);
         return true;
     }
     return false;
@@ -49,17 +49,19 @@ function doPrerender(pageNumber, prerenderTrigger) {
     }
 }
 
-function display(newCanvas) {
+function display(newCanvas, zoom) {
     canvas.height = newCanvas.height;
     canvas.width = newCanvas.width;
     canvas.style.height = newCanvas.style.height;
     canvas.style.width = newCanvas.style.width;
     padding.style.width = canvas.style.width;
     canvas.getContext("2d", { alpha: false }).drawImage(newCanvas, 0, 0);
-    scrollTo(0, 0);
+    if (!zoom) {
+        scrollTo(0, 0);
+    }
 }
 
-function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
+function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
     pageRendering = true;
     useRender = !prerender;
 
@@ -76,7 +78,7 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
                 cache.splice(i, 1);
                 cache.push(cached);
 
-                display(cached.canvas);
+                display(cached.canvas, zoom);
 
                 textLayerDiv.replaceWith(cached.textLayerDiv);
                 textLayerDiv = cached.textLayerDiv;
@@ -124,7 +126,7 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
                 if (!useRender || rendered) {
                     return;
                 }
-                display(newCanvas);
+                display(newCanvas, zoom);
                 rendered = true;
             }
             render();
@@ -167,7 +169,7 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
     });
 }
 
-function onRenderPage(lazy) {
+function onRenderPage(zoom) {
     if (pageRendering) {
         if (newPageNumber === channel.getPage() && getZoomRatio === channel.getZoomRatio() &&
                 orientationDegrees === channel.getDocumentOrientationDegrees()) {
@@ -176,13 +178,13 @@ function onRenderPage(lazy) {
         }
 
         renderPending = true;
-        renderPendingLazy = lazy;
+        renderPendingZoom = zoom;
         if (task !== null) {
             task.cancel();
             task = null;
         }
     } else {
-        renderPage(channel.getPage(), lazy, false);
+        renderPage(channel.getPage(), zoom, false);
     }
 }
 
