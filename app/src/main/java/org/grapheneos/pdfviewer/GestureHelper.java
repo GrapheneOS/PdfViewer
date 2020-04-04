@@ -41,7 +41,7 @@ class GestureHelper {
                     public boolean onScaleBegin(ScaleGestureDetector detector) {
                         initialSpan = detector.getCurrentSpan();
                         prevNbStep = 0;
-                        return super.onScaleBegin(detector);
+                        return true;
                     }
 
                     @Override
