@@ -4,7 +4,7 @@ const padding = document.getElementById("padding");
 let pdfDoc = null;
 let pageRendering = false;
 let renderPending = false;
-let renderPendingZoom = false;
+let renderPendingZoom = 0;
 const canvas = document.getElementById('content');
 let orientationDegrees = 0;
 let zoomRatio = 1;
@@ -95,15 +95,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
             return;
         }
 
-        const newCanvas = document.createElement("canvas");
         const viewport = page.getViewport({scale: newZoomRatio, rotation: orientationDegrees})
-        const ratio = window.devicePixelRatio;
-        newCanvas.height = viewport.height * ratio;
-        newCanvas.width = viewport.width * ratio;
-        newCanvas.style.height = viewport.height + "px";
-        newCanvas.style.width = viewport.width + "px";
-        const newContext = newCanvas.getContext("2d", { alpha: false });
-        newContext.scale(ratio, ratio);
 
         if (useRender) {
             if (newZoomRatio !== zoomRatio) {
@@ -112,6 +104,20 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
             }
             zoomRatio = newZoomRatio;
         }
+
+        if (zoom == 2) {
+            pageRendering = false;
+            return;
+        }
+
+        const newCanvas = document.createElement("canvas");
+        const ratio = window.devicePixelRatio;
+        newCanvas.height = viewport.height * ratio;
+        newCanvas.width = viewport.width * ratio;
+        newCanvas.style.height = viewport.height + "px";
+        newCanvas.style.width = viewport.width + "px";
+        const newContext = newCanvas.getContext("2d", { alpha: false });
+        newContext.scale(ratio, ratio);
 
         task = page.render({
             canvasContext: newContext,

@@ -330,8 +330,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         mWebView.loadUrl("https://localhost/viewer.html");
     }
 
-    private void renderPage(final boolean zoom) {
-        mWebView.evaluateJavascript(zoom ? "onRenderPage(true)" : "onRenderPage(false)", null);
+    private void renderPage(final int zoom) {
+        mWebView.evaluateJavascript("onRenderPage(" + zoom + ")", null);
     }
 
     private void documentOrientationChanged(final int orientationDegreesOffset) {
@@ -339,7 +339,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         if (mDocumentOrientationDegrees < 0) {
             mDocumentOrientationDegrees += 360;
         }
-        renderPage(false);
+        renderPage(0);
     }
 
     private void openDocument() {
@@ -352,7 +352,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private void zoomIn(float value) {
         if (mZoomRatio < MAX_ZOOM_RATIO) {
             mZoomRatio += value;
-            renderPage(true);
+            renderPage(2);
             invalidateOptionsMenu();
         }
     }
@@ -360,13 +360,13 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private void zoomOut(float value) {
         if (mZoomRatio > MIN_ZOOM_RATIO) {
             mZoomRatio -= value;
-            renderPage(true);
+            renderPage(2);
             invalidateOptionsMenu();
         }
     }
 
     private void zoomEnd() {
-        renderPage(true);
+        renderPage(1);
     }
 
     private static void enableDisableMenuItem(MenuItem item, boolean enable) {
@@ -384,7 +384,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     public void onJumpToPageInDocument(final int selected_page) {
         if (selected_page >= 1 && selected_page <= mNumPages && mPage != selected_page) {
             mPage = selected_page;
-            renderPage(false);
+            renderPage(0);
             showPageNumber();
         }
     }
