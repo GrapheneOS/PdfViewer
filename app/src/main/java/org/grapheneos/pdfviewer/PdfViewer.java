@@ -253,13 +253,13 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     }
 
                     @Override
-                    public void onZoomIn(int steps) {
-                        zoomIn(steps);
+                    public void onZoomIn(float value) {
+                        zoomIn(value);
                     }
 
                     @Override
-                    public void onZoomOut(int steps) {
-                        zoomOut(steps);
+                    public void onZoomOut(float value) {
+                        zoomOut(value);
                     }
 
                     @Override
@@ -349,17 +349,17 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         startActivityForResult(intent, ACTION_OPEN_DOCUMENT_REQUEST_CODE);
     }
 
-    private void zoomIn(int steps) {
+    private void zoomIn(float value) {
         if (mZoomRatio < MAX_ZOOM_RATIO) {
-            mZoomRatio += 0.25f * steps;
+            mZoomRatio += value;
             renderPage(true);
             invalidateOptionsMenu();
         }
     }
 
-    private void zoomOut(int steps) {
+    private void zoomOut(float value) {
         if (mZoomRatio > MIN_ZOOM_RATIO) {
-            mZoomRatio -= 0.25f * steps;
+            mZoomRatio -= value;
             renderPage(true);
             invalidateOptionsMenu();
         }
@@ -503,11 +503,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 return super.onOptionsItemSelected(item);
 
             case R.id.action_zoom_out:
-                zoomOut(1);
+                zoomOut(0.25f);
                 return true;
 
             case R.id.action_zoom_in:
-                zoomIn(1);
+                zoomIn(0.25f);
                 return true;
 
             case R.id.action_rotate_clockwise:
