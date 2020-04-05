@@ -4,16 +4,15 @@ const padding = document.getElementById("padding");
 let pdfDoc = null;
 let pageRendering = false;
 let renderPending = false;
-let renderPendingLazy = false;
+let renderPendingZoom = 0;
 const canvas = document.getElementById('content');
 let orientationDegrees = 0;
-let zoomLevel = 100;
+let zoomRatio = 1;
 let textLayerDiv = document.getElementById("text");
-const zoomLevels = [50, 75, 100, 125, 150];
 let task = null;
 
 let newPageNumber = 0;
-let newZoomLevel = 0;
+let newZoomRatio = 1;
 let useRender;
 
 const cache = [];
@@ -23,7 +22,7 @@ function maybeRenderNextPage() {
     if (renderPending) {
         pageRendering = false;
         renderPending = false;
-        renderPage(channel.getPage(), renderPendingLazy, false);
+        renderPage(channel.getPage(), renderPendingZoom, false);
         return true;
     }
     return false;
@@ -50,34 +49,36 @@ function doPrerender(pageNumber, prerenderTrigger) {
     }
 }
 
-function display(newCanvas) {
+function display(newCanvas, zoom) {
     canvas.height = newCanvas.height;
     canvas.width = newCanvas.width;
     canvas.style.height = newCanvas.style.height;
     canvas.style.width = newCanvas.style.width;
     padding.style.width = canvas.style.width;
     canvas.getContext("2d", { alpha: false }).drawImage(newCanvas, 0, 0);
-    scrollTo(0, 0);
+    if (!zoom) {
+        scrollTo(0, 0);
+    }
 }
 
-function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
+function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
     pageRendering = true;
     useRender = !prerender;
 
     newPageNumber = pageNumber;
-    newZoomLevel = zoomLevels[channel.getZoomLevel()];
+    newZoomRatio = channel.getZoomRatio();
     orientationDegrees = channel.getDocumentOrientationDegrees();
-    console.log("page: " + pageNumber + ", zoom: " + newZoomLevel +
+    console.log("page: " + pageNumber + ", zoom: " + newZoomRatio +
                 ", orientationDegrees: " + orientationDegrees + ", prerender: " + prerender);
     for (let i = 0; i < cache.length; i++) {
         const cached = cache[i];
-        if (cached.pageNumber === pageNumber && cached.zoomLevel === newZoomLevel &&
+        if (cached.pageNumber === pageNumber && cached.zoomRatio === newZoomRatio &&
                 cache.orientationDegrees === orientationDegrees) {
             if (useRender) {
                 cache.splice(i, 1);
                 cache.push(cached);
 
-                display(cached.canvas);
+                display(cached.canvas, zoom);
 
                 textLayerDiv.replaceWith(cached.textLayerDiv);
                 textLayerDiv = cached.textLayerDiv;
@@ -94,8 +95,22 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
             return;
         }
 
+        const viewport = page.getViewport({scale: newZoomRatio, rotation: orientationDegrees})
+
+        if (useRender) {
+            if (newZoomRatio !== zoomRatio) {
+                canvas.style.height = viewport.height + "px";
+                canvas.style.width = viewport.width + "px";
+            }
+            zoomRatio = newZoomRatio;
+        }
+
+        if (zoom == 2) {
+            pageRendering = false;
+            return;
+        }
+
         const newCanvas = document.createElement("canvas");
-        const viewport = page.getViewport({scale: newZoomLevel / 100, rotation: orientationDegrees})
         const ratio = window.devicePixelRatio;
         newCanvas.height = viewport.height * ratio;
         newCanvas.width = viewport.width * ratio;
@@ -103,14 +118,6 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
         newCanvas.style.width = viewport.width + "px";
         const newContext = newCanvas.getContext("2d", { alpha: false });
         newContext.scale(ratio, ratio);
-
-        if (useRender) {
-            if (newZoomLevel !== zoomLevel) {
-                canvas.style.height = viewport.height + "px";
-                canvas.style.width = viewport.width + "px";
-            }
-            zoomLevel = newZoomLevel;
-        }
 
         task = page.render({
             canvasContext: newContext,
@@ -125,7 +132,7 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
                 if (!useRender || rendered) {
                     return;
                 }
-                display(newCanvas);
+                display(newCanvas, zoom);
                 rendered = true;
             }
             render();
@@ -155,7 +162,7 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
                 }
                 cache.push({
                     pageNumber: pageNumber,
-                    zoomLevel: newZoomLevel,
+                    zoomRatio: newZoomRatio,
                     orientationDegrees: orientationDegrees,
                     canvas: newCanvas,
                     textLayerDiv: newTextLayerDiv
@@ -168,22 +175,22 @@ function renderPage(pageNumber, lazy, prerender, prerenderTrigger=0) {
     });
 }
 
-function onRenderPage(lazy) {
+function onRenderPage(zoom) {
     if (pageRendering) {
-        if (newPageNumber === channel.getPage() && newZoomLevel === zoomLevels[channel.getZoomLevel()] &&
+        if (newPageNumber === channel.getPage() && newZoomRatio === channel.getZoomRatio() &&
                 orientationDegrees === channel.getDocumentOrientationDegrees()) {
             useRender = true;
             return;
         }
 
         renderPending = true;
-        renderPendingLazy = lazy;
+        renderPendingZoom = zoom;
         if (task !== null) {
             task.cancel();
             task = null;
         }
     } else {
-        renderPage(channel.getPage(), lazy, false);
+        renderPage(channel.getPage(), zoom, false);
     }
 }
 

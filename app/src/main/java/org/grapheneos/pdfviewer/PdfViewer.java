@@ -8,12 +8,10 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
@@ -43,7 +41,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     private static final String STATE_URI = "uri";
     private static final String STATE_PAGE = "page";
-    private static final String STATE_ZOOM_LEVEL = "zoomLevel";
+    private static final String STATE_ZOOM_RATIO = "zoomRatio";
     private static final String STATE_DOCUMENT_ORIENTATION_DEGREES = "documentOrientationDegrees";
     private static final String KEY_PROPERTIES = "properties";
 
@@ -76,8 +74,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         "usb 'none'; " +
         "vr 'none'";
 
-    private static final int MIN_ZOOM_LEVEL = 0;
-    private static final int MAX_ZOOM_LEVEL = 4;
+    private static final float MIN_ZOOM_RATIO = 0.5f;
+    private static final float MAX_ZOOM_RATIO = 1.5f;
     private static final int ALPHA_LOW = 130;
     private static final int ALPHA_HIGH = 255;
     private static final int ACTION_OPEN_DOCUMENT_REQUEST_CODE = 1;
@@ -88,7 +86,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private Uri mUri;
     public int mPage;
     public int mNumPages;
-    private int mZoomLevel = 2;
+    private float mZoomRatio = 1f;
     private int mDocumentOrientationDegrees;
     private int mDocumentState;
     private int windowInsetTop;
@@ -111,8 +109,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
 
         @JavascriptInterface
-        public int getZoomLevel() {
-            return mZoomLevel;
+        public float getZoomRatio() {
+            return mZoomRatio;
         }
 
         @JavascriptInterface
@@ -235,10 +233,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
         showSystemUi();
 
-        final GestureDetector detector = new GestureDetector(PdfViewer.this,
-                new GestureDetector.SimpleOnGestureListener() {
+        GestureHelper.attach(PdfViewer.this, mWebView,
+                new GestureHelper.GestureListener() {
                     @Override
-                    public boolean onSingleTapUp(MotionEvent motionEvent) {
+                    public boolean onTapUp() {
                         if (mUri != null) {
                             mWebView.evaluateJavascript("isTextSelected()", selection -> {
                                 if (!Boolean.valueOf(selection)) {
@@ -254,11 +252,22 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                         }
                         return false;
                     }
+
+                    @Override
+                    public void onZoomIn(float value) {
+                        zoomIn(value, false);
+                    }
+
+                    @Override
+                    public void onZoomOut(float value) {
+                        zoomOut(value, false);
+                    }
+
+                    @Override
+                    public void onZoomEnd() {
+                        zoomEnd();
+                    }
                 });
-        mWebView.setOnTouchListener((view, motionEvent) -> {
-            detector.onTouchEvent(motionEvent);
-            return false;
-        });
 
         mTextView = new TextView(this);
         mTextView.setBackgroundColor(Color.DKGRAY);
@@ -285,7 +294,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         if (savedInstanceState != null) {
             mUri = savedInstanceState.getParcelable(STATE_URI);
             mPage = savedInstanceState.getInt(STATE_PAGE);
-            mZoomLevel = savedInstanceState.getInt(STATE_ZOOM_LEVEL);
+            mZoomRatio = savedInstanceState.getFloat(STATE_ZOOM_RATIO);
             mDocumentOrientationDegrees = savedInstanceState.getInt(STATE_DOCUMENT_ORIENTATION_DEGREES);
         }
 
@@ -322,8 +331,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         mWebView.loadUrl("https://localhost/viewer.html");
     }
 
-    private void renderPage(final boolean lazy) {
-        mWebView.evaluateJavascript(lazy ? "onRenderPage(true)" : "onRenderPage(false)", null);
+    private void renderPage(final int zoom) {
+        mWebView.evaluateJavascript("onRenderPage(" + zoom + ")", null);
     }
 
     private void documentOrientationChanged(final int orientationDegreesOffset) {
@@ -331,7 +340,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         if (mDocumentOrientationDegrees < 0) {
             mDocumentOrientationDegrees += 360;
         }
-        renderPage(false);
+        renderPage(0);
     }
 
     private void openDocument() {
@@ -339,6 +348,26 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("application/pdf");
         startActivityForResult(intent, ACTION_OPEN_DOCUMENT_REQUEST_CODE);
+    }
+
+    private void zoomIn(float value, boolean end) {
+        if (mZoomRatio < MAX_ZOOM_RATIO) {
+            mZoomRatio = Math.min(mZoomRatio + value, MAX_ZOOM_RATIO);
+            renderPage(end ? 1 : 2);
+            invalidateOptionsMenu();
+        }
+    }
+
+    private void zoomOut(float value, boolean end) {
+        if (mZoomRatio > MIN_ZOOM_RATIO) {
+            mZoomRatio = Math.max(mZoomRatio - value, MIN_ZOOM_RATIO);
+            renderPage(end ? 1 : 2);
+            invalidateOptionsMenu();
+        }
+    }
+
+    private void zoomEnd() {
+        renderPage(1);
     }
 
     private static void enableDisableMenuItem(MenuItem item, boolean enable) {
@@ -354,7 +383,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     public void onJumpToPageInDocument(final int selected_page) {
         if (selected_page >= 1 && selected_page <= mNumPages && mPage != selected_page) {
             mPage = selected_page;
-            renderPage(false);
+            renderPage(0);
             showPageNumber();
             invalidateOptionsMenu();
         }
@@ -382,12 +411,14 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         super.onSaveInstanceState(savedInstanceState);
         savedInstanceState.putParcelable(STATE_URI, mUri);
         savedInstanceState.putInt(STATE_PAGE, mPage);
-        savedInstanceState.putInt(STATE_ZOOM_LEVEL, mZoomLevel);
+        savedInstanceState.putFloat(STATE_ZOOM_RATIO, mZoomRatio);
         savedInstanceState.putInt(STATE_DOCUMENT_ORIENTATION_DEGREES, mDocumentOrientationDegrees);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent resultData) {
+        super.onActivityResult(requestCode, resultCode, resultData);
+
         if (requestCode == ACTION_OPEN_DOCUMENT_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
             if (resultData != null) {
                 mUri = resultData.getData();
@@ -442,8 +473,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mDocumentState = STATE_END;
         }
 
-        enableDisableMenuItem(menu.findItem(R.id.action_zoom_in), mZoomLevel < MAX_ZOOM_LEVEL);
-        enableDisableMenuItem(menu.findItem(R.id.action_zoom_out), mZoomLevel > MIN_ZOOM_LEVEL);
+        enableDisableMenuItem(menu.findItem(R.id.action_zoom_in), mZoomRatio != MAX_ZOOM_RATIO);
+        enableDisableMenuItem(menu.findItem(R.id.action_zoom_out), mZoomRatio != MIN_ZOOM_RATIO);
         enableDisableMenuItem(menu.findItem(R.id.action_next), mPage < mNumPages);
         enableDisableMenuItem(menu.findItem(R.id.action_previous), mPage > 1);
 
@@ -474,19 +505,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 return super.onOptionsItemSelected(item);
 
             case R.id.action_zoom_out:
-                if (mZoomLevel > 0) {
-                    mZoomLevel--;
-                    renderPage(true);
-                    invalidateOptionsMenu();
-                }
+                zoomOut(0.25f, true);
                 return true;
 
             case R.id.action_zoom_in:
-                if (mZoomLevel < MAX_ZOOM_LEVEL) {
-                    mZoomLevel++;
-                    renderPage(true);
-                    invalidateOptionsMenu();
-                }
+                zoomIn(0.25f, true);
                 return true;
 
             case R.id.action_rotate_clockwise:
@@ -505,7 +528,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
             case R.id.action_jump_to_page:
                 new JumpToPageFragment()
-                    .show(getSupportFragmentManager(), JumpToPageFragment.TAG);
+                        .show(getSupportFragmentManager(), JumpToPageFragment.TAG);
                 return true;
 
             default:

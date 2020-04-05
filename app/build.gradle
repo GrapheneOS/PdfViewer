@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 29
-    buildToolsVersion "29.0.2"
+    buildToolsVersion "29.0.3"
     defaultConfig {
         applicationId "org.grapheneos.pdfviewer"
         minSdkVersion 24
@@ -34,7 +34,7 @@ android {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'androidx.appcompat:appcompat:1.0.2'
+    implementation 'androidx.appcompat:appcompat:1.1.0'
 }
 
 def props = new Properties()
