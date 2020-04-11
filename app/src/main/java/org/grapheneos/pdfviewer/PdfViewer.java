@@ -326,6 +326,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             }
             mInputStream = getContentResolver().openInputStream(mUri);
         } catch (IOException e) {
+            Log.e(TAG, "failed to open URI: " + mUri);
             return;
         }
         mWebView.loadUrl("https://localhost/viewer.html");
