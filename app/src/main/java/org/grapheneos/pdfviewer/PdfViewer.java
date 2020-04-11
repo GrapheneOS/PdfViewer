@@ -27,6 +27,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
 
+import com.google.android.material.snackbar.Snackbar;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
@@ -96,6 +98,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private WebView mWebView;
     private TextView mTextView;
     private Toast mToast;
+    private Snackbar snackbar;
 
     private class Channel {
         @JavascriptInterface
@@ -280,18 +283,15 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         // loader manager impl so that the result will be delivered.
         LoaderManager.getInstance(this);
 
+        snackbar = Snackbar.make(findViewById(R.id.webview), "", Snackbar.LENGTH_LONG);
+
         final Intent intent = getIntent();
         if (Intent.ACTION_VIEW.equals(intent.getAction())) {
             if (!"application/pdf".equals(intent.getType())) {
-                Log.e(TAG, "invalid mime type");
-                finish();
+                snackbar.setText(R.string.invalid_mime_type).show();
                 return;
             }
             mUri = intent.getData();
-            if ("file".equals(mUri.getScheme())) {
-                Log.e(TAG, "invalid legacy file URI: " + mUri);
-                return;
-            }
             mPage = 1;
         }
 
@@ -300,6 +300,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mPage = savedInstanceState.getInt(STATE_PAGE);
             mZoomRatio = savedInstanceState.getFloat(STATE_ZOOM_RATIO);
             mDocumentOrientationDegrees = savedInstanceState.getInt(STATE_DOCUMENT_ORIENTATION_DEGREES);
+        }
+
+        if ("file".equals(mUri.getScheme())) {
+            snackbar.setText(R.string.legacy_file_uri).show();
+            return;
         }
 
         if (mUri != null) {
@@ -330,7 +335,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             }
             mInputStream = getContentResolver().openInputStream(mUri);
         } catch (IOException e) {
-            Log.e(TAG, "failed to open URI: " + mUri);
+            snackbar.setText(R.string.io_error).show();
             return;
         }
         mWebView.loadUrl("https://localhost/viewer.html");
