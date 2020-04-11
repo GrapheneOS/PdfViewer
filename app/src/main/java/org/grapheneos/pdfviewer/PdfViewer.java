@@ -288,6 +288,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 return;
             }
             mUri = intent.getData();
+            if ("file".equals(mUri.getScheme())) {
+                Log.e(TAG, "invalid legacy file URI: " + mUri);
+                return;
+            }
             mPage = 1;
         }
 
