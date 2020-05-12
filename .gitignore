@@ -5,3 +5,4 @@ build/
 signing.properties
 *.keystore
 /.idea
+/releases
