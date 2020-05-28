@@ -283,7 +283,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         // loader manager impl so that the result will be delivered.
         LoaderManager.getInstance(this);
 
-        snackbar = Snackbar.make(findViewById(R.id.webview), "", Snackbar.LENGTH_LONG);
+        snackbar = Snackbar.make(mWebView, "", Snackbar.LENGTH_LONG);
 
         final Intent intent = getIntent();
         if (Intent.ACTION_VIEW.equals(intent.getAction())) {
