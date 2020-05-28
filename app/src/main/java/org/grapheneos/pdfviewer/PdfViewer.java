@@ -302,12 +302,12 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mDocumentOrientationDegrees = savedInstanceState.getInt(STATE_DOCUMENT_ORIENTATION_DEGREES);
         }
 
-        if ("file".equals(mUri.getScheme())) {
-            snackbar.setText(R.string.legacy_file_uri).show();
-            return;
-        }
-
         if (mUri != null) {
+            if ("file".equals(mUri.getScheme())) {
+                snackbar.setText(R.string.legacy_file_uri).show();
+                return;
+            }
+
             loadPdf();
         }
     }
