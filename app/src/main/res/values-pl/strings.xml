@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PDF Viewer</string>
+    <!--<string name="action_settings">Ustawienia</string>-->
+    <string name="action_previous">Poprzednia strona</string>
+    <string name="action_next">Następna strona</string>
+    <string name="action_open">Otwórz dokument</string>
+    <string name="action_first">Pierwsza strona</string>
+    <string name="action_last">Ostatnia strona</string>
+    <string name="action_zoom_out">Pomniejsz</string>
+    <string name="action_zoom_in">Powiększ</string>
+    <string name="action_rotate_clockwise">Obróć zgodznie z ruchem wskazówek zegara</string>
+    <string name="action_rotate_counterclockwise">Obróć przeciwnie do ruchu wskazówek zegara</string>
+    <string name="action_jump_to_page">Przejdź do strony</string>
+    <string name="action_view_document_properties">Właściwości</string>
+
+    <string name="document_properties_invalid_date">Nieprawidłowa data</string>
+    <string name="document_properties_retrieval_failed">Nie udało się uzyskać metadanych dokumentu</string>
+
+    <string name="invalid_mime_type">Nie można otworzyć pliku z nieprawidłowym typem MIME</string>
+    <string name="legacy_file_uri">Nie można otworzyć starych ścieżek dostępu do plików pochodzących od niezabezpieczonych aplikacji</string>
+    <string name="io_error">Błąd I/O podczas otwierania zawartości</string>
+</resources>
