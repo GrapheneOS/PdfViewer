@@ -59,6 +59,7 @@ function display(newCanvas, zoom) {
     if (!zoom) {
         scrollTo(0, 0);
     }
+    channel.hideProgressBar();
 }
 
 function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {

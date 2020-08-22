@@ -20,23 +20,27 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
 
 import com.google.android.material.snackbar.Snackbar;
 
+import org.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
+import org.grapheneos.pdfviewer.fragment.JumpToPageFragment;
+import org.grapheneos.pdfviewer.loader.DocumentPropertiesLoader;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
-
-import org.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
-import org.grapheneos.pdfviewer.fragment.JumpToPageFragment;
-import org.grapheneos.pdfviewer.loader.DocumentPropertiesLoader;
 
 public class PdfViewer extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<CharSequence>> {
     public static final String TAG = "PdfViewer";
@@ -85,6 +89,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final int STATE_END = 2;
     private static final int PADDING = 10;
 
+    private boolean mIsProgressBarVisible;
+
     private Uri mUri;
     public int mPage;
     public int mNumPages;
@@ -95,6 +101,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private List<CharSequence> mDocumentProperties;
     private InputStream mInputStream;
 
+    private CoordinatorLayout mCoordinatorLayout;
+    private Toolbar mToolbar;
+    private ProgressBar mProgressBar;
     private WebView mWebView;
     private TextView mTextView;
     private Toast mToast;
@@ -128,6 +137,16 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
 
         @JavascriptInterface
+        public void hideProgressBar() {
+            if (mIsProgressBarVisible) {
+                mIsProgressBarVisible = false;
+                runOnUiThread(() -> {
+                    mProgressBar.setVisibility(View.INVISIBLE);
+                });
+            }
+        }
+
+        @JavascriptInterface
         public void setDocumentProperties(final String properties) {
             if (mDocumentProperties != null) {
                 throw new SecurityException("mDocumentProperties not null");
@@ -154,10 +173,22 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
         setContentView(R.layout.webview);
 
+        mCoordinatorLayout = findViewById(R.id.appCoordinatorLayout);
+
+        mIsProgressBarVisible = false;
+        mProgressBar = findViewById(R.id.progressBar);
+
+        mToolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(mToolbar);
+        mToolbar.inflateMenu(R.menu.pdf_viewer);
+        mToolbar.setTitle(R.string.app_name);
+
         mWebView = findViewById(R.id.webview);
 
         mWebView.setOnApplyWindowInsetsListener((view, insets) -> {
-            windowInsetTop = insets.getSystemWindowInsetTop();
+            // The ActionBar is no longer a part of the system, so we have to
+            // add in its height for the inset.
+            windowInsetTop = insets.getSystemWindowInsetTop() + mToolbar.getMinimumHeight();
             mWebView.evaluateJavascript("updateInset()", null);
             return insets;
         });
@@ -234,7 +265,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             }
         });
 
-        showSystemUi();
+        showSystemUiAndActionBar();
 
         GestureHelper.attach(PdfViewer.this, mWebView,
                 new GestureHelper.GestureListener() {
@@ -245,9 +276,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                                 if (!Boolean.valueOf(selection)) {
                                     if ((getWindow().getDecorView().getSystemUiVisibility() &
                                             View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
-                                        hideSystemUi();
+                                        hideSystemUiAndActionBar();
                                     } else {
-                                        showSystemUi();
+                                        showSystemUiAndActionBar();
                                     }
                                 }
                             });
@@ -283,7 +314,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         // loader manager impl so that the result will be delivered.
         LoaderManager.getInstance(this);
 
-        snackbar = Snackbar.make(mWebView, "", Snackbar.LENGTH_LONG);
+        snackbar = Snackbar.make(mCoordinatorLayout, "", Snackbar.LENGTH_LONG);
 
         final Intent intent = getIntent();
         if (Intent.ACTION_VIEW.equals(intent.getAction())) {
@@ -328,12 +359,20 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         mDocumentProperties = null;
     }
 
+    private void showProgressBar(final int zoom) {
+        if (zoom == 0) {
+            mIsProgressBarVisible = true;
+            mProgressBar.setVisibility(View.VISIBLE);
+        }
+    }
+
     private void loadPdf() {
         try {
             if (mInputStream != null) {
                 mInputStream.close();
             }
             mInputStream = getContentResolver().openInputStream(mUri);
+            showProgressBar(0);
         } catch (IOException e) {
             snackbar.setText(R.string.io_error).show();
             return;
@@ -342,6 +381,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     private void renderPage(final int zoom) {
+        showProgressBar(zoom);
         mWebView.evaluateJavascript("onRenderPage(" + zoom + ")", null);
     }
 
@@ -399,14 +439,19 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
     }
 
-    private void showSystemUi() {
+    private void showSystemUiAndActionBar() {
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
                 View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
                 View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+
+        final ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null && !actionBar.isShowing()) {
+            actionBar.show();
+        }
     }
 
-    private void hideSystemUi() {
+    private void hideSystemUiAndActionBar() {
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
                 View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
@@ -414,6 +459,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
                 View.SYSTEM_UI_FLAG_FULLSCREEN |
                 View.SYSTEM_UI_FLAG_IMMERSIVE);
+
+        final ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null && actionBar.isShowing()) {
+            actionBar.hide();
+        }
     }
 
     @Override
