@@ -3,11 +3,13 @@ package org.grapheneos.pdfviewer.fragment;
 import android.app.Activity;
 import android.app.Dialog;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.ArrayAdapter;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 
 import org.grapheneos.pdfviewer.R;
@@ -21,6 +23,7 @@ public class DocumentPropertiesFragment extends DialogFragment {
 
     private ArrayAdapter<CharSequence> mAdapter;
     private PdfViewerViewModel mModel;
+    private Observer<List<CharSequence>> mPropertiesObserver;
 
     public static DocumentPropertiesFragment newInstance() {
         return new DocumentPropertiesFragment();
@@ -29,12 +32,12 @@ public class DocumentPropertiesFragment extends DialogFragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+    }
 
-        mModel = new ViewModelProvider(requireActivity()).get(PdfViewerViewModel.class);
-
-        List<CharSequence> list = mModel.getDocumentProperties().getValue();
-        mAdapter = new ArrayAdapter<>(requireActivity(), android.R.layout.simple_list_item_1,
-                list != null ? list : Collections.emptyList());
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mModel.getDocumentProperties().removeObserver(mPropertiesObserver);
     }
 
     @NonNull
@@ -43,16 +46,25 @@ public class DocumentPropertiesFragment extends DialogFragment {
         final Activity activity = requireActivity();
         final AlertDialog.Builder dialog = new AlertDialog.Builder(activity)
                 .setPositiveButton(android.R.string.ok, null);
+
+        mModel = new ViewModelProvider(requireActivity()).get(PdfViewerViewModel.class);
+        final List<CharSequence> list = mModel.getDocumentProperties().getValue();
+        mAdapter = new ArrayAdapter<>(requireActivity(), android.R.layout.simple_list_item_1,
+                list != null ? list : Collections.emptyList());
         dialog.setAdapter(mAdapter, null);
 
-        final List<CharSequence> list = mModel.getDocumentProperties().getValue();
         dialog.setTitle(getTitleStringIdForPropertiesState(list));
 
         final AlertDialog alertDialog = dialog.create();
-        mModel.getDocumentProperties().observe(requireActivity(), charSequences -> {
-            alertDialog.setTitle(getTitleStringIdForPropertiesState(charSequences));
-            mAdapter.notifyDataSetChanged();
-        });
+        mPropertiesObserver = new Observer<List<CharSequence>>() {
+            @Override
+            public void onChanged(List<CharSequence> charSequences) {
+                Log.d(TAG, "Properties changed!");
+                alertDialog.setTitle(getTitleStringIdForPropertiesState(charSequences));
+                mAdapter.notifyDataSetChanged();
+            }
+        };
+        mModel.getDocumentProperties().observe(requireActivity(), mPropertiesObserver);
 
         return alertDialog;
     }

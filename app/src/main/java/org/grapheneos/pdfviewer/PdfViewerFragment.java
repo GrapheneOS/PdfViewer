@@ -44,7 +44,7 @@ import java.util.HashMap;
 import java.util.List;
 
 public class PdfViewerFragment extends Fragment {
-    public static final String TAG = "PdfViewer";
+    public static final String TAG = PdfViewerFragment.class.getSimpleName();
 
     private static final String CONTENT_SECURITY_POLICY =
             "default-src 'none'; " +
@@ -125,9 +125,10 @@ public class PdfViewerFragment extends Fragment {
         public void setDocumentProperties(final String properties) {
             final List<CharSequence> list = mViewModel.getDocumentProperties().getValue();
             if (list != null && list.isEmpty()) {
-                mViewModel.loadProperties(properties);
+                mViewModel.loadProperties(properties, requireActivity().getApplicationContext());
             } else {
-                Log.d(TAG, "setDocumentProperties: did not load in properties");
+                Log.d(TAG, "setDocumentProperties: did not load in properties, since "
+                        + (list == null ? "list is null" : "list is not empty"));
             }
         }
     }
@@ -164,10 +165,14 @@ public class PdfViewerFragment extends Fragment {
     }
 
     @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        mViewModel.saveState();
+    }
+
+    @Override
     @SuppressLint({"SetJavaScriptEnabled", "ClickableViewAccessibility"})
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-
-
         mViewModel = new ViewModelProvider(requireActivity()).get(PdfViewerViewModel.class);
 
         mWebView = view.findViewById(R.id.webview);
@@ -295,7 +300,7 @@ public class PdfViewerFragment extends Fragment {
         mSnackbar = Snackbar.make(mWebView, "", Snackbar.LENGTH_LONG);
 
         final Intent intent = requireActivity().getIntent();
-        if (savedInstanceState == null && Intent.ACTION_VIEW.equals(intent.getAction())) {
+        if (Intent.ACTION_VIEW.equals(intent.getAction())) {
             if (!"application/pdf".equals(intent.getType())) {
                 mSnackbar.setText(R.string.invalid_mime_type).show();
                 return;
@@ -303,6 +308,10 @@ public class PdfViewerFragment extends Fragment {
 
             mViewModel.setUri(intent.getData());
             mViewModel.setPage(1);
+        }
+
+        if (savedInstanceState != null) {
+            mViewModel.restoreState();
         }
 
         final Uri uri = mViewModel.getUri();
@@ -359,9 +368,11 @@ public class PdfViewerFragment extends Fragment {
             new ActivityResultContracts.GetContent(), new ActivityResultCallback<Uri>() {
                 @Override
                 public void onActivityResult(Uri uri) {
-                    mViewModel.setUri(uri);
-                    mViewModel.setPage(1);
-                    loadPdf(true);
+                    if (uri != null) {
+                        mViewModel.setUri(uri);
+                        mViewModel.setPage(1);
+                        loadPdf(true);
+                    }
                 }
             });
 
