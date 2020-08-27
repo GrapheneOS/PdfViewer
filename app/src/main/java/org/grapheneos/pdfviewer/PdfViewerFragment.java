@@ -1,6 +1,7 @@
 package org.grapheneos.pdfviewer;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -21,6 +22,7 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -91,8 +93,21 @@ public class PdfViewerFragment extends Fragment {
     private Toast mToast;
     private TextView mTextView;
     private Snackbar mSnackbar;
+    private FrameLayout mWebViewContainer;
 
     private PdfViewerViewModel mViewModel;
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        Log.d(TAG, "onDestroy()");
+        if (mWebView != null && mWebViewContainer != null) {
+            //mWebViewContainer.removeView(mWebView);
+            //mWebView.removeAllViews();
+            //mWebView.destroy();
+        }
+
+    }
 
     private class Channel {
         @JavascriptInterface
@@ -118,17 +133,16 @@ public class PdfViewerFragment extends Fragment {
         @JavascriptInterface
         public void setNumPages(int numPages) {
             mViewModel.setNumPages(numPages);
-            requireActivity().runOnUiThread(() -> requireActivity().invalidateOptionsMenu());
+            if (getActivity() != null) {
+                requireActivity().runOnUiThread(requireActivity()::invalidateOptionsMenu);
+            }
         }
 
         @JavascriptInterface
         public void setDocumentProperties(final String properties) {
             final List<CharSequence> list = mViewModel.getDocumentProperties().getValue();
-            if (list != null && list.isEmpty()) {
+            if (list != null && list.isEmpty() && getActivity() != null) {
                 mViewModel.loadProperties(properties, requireActivity().getApplicationContext());
-            } else {
-                Log.d(TAG, "setDocumentProperties: did not load in properties, since "
-                        + (list == null ? "list is null" : "list is not empty"));
             }
         }
     }
@@ -140,6 +154,7 @@ public class PdfViewerFragment extends Fragment {
     public static PdfViewerFragment newInstance() {
         return new PdfViewerFragment();
     }
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -175,6 +190,7 @@ public class PdfViewerFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         mViewModel = new ViewModelProvider(requireActivity()).get(PdfViewerViewModel.class);
 
+        mWebViewContainer = view.findViewById(R.id.webview_container);
         mWebView = view.findViewById(R.id.webview);
 
         mWebView.setOnApplyWindowInsetsListener((v, insets) -> {
@@ -196,6 +212,10 @@ public class PdfViewerFragment extends Fragment {
 
         mWebView.setWebViewClient(new WebViewClient() {
             private WebResourceResponse fromAsset(final String mime, final String path) {
+                if (getActivity() == null) {
+                    return null;
+                }
+
                 try {
                     InputStream inputStream = requireActivity().getAssets().open(path.substring(1));
                     return new WebResourceResponse(mime, null, inputStream);
@@ -224,6 +244,10 @@ public class PdfViewerFragment extends Fragment {
 
                 if ("/viewer.html".equals(path)) {
                     final WebResourceResponse response = fromAsset("text/html", path);
+                    if (response == null) {
+                        return null;
+                    }
+
                     HashMap<String, String> headers = new HashMap<String, String>();
                     headers.put("Content-Security-Policy", CONTENT_SECURITY_POLICY);
                     headers.put("Feature-Policy", FEATURE_POLICY);
@@ -251,7 +275,10 @@ public class PdfViewerFragment extends Fragment {
             @Override
             public void onPageFinished(WebView view, String url) {
                 mDocumentState = STATE_LOADED;
-                requireActivity().invalidateOptionsMenu();
+
+                if (getActivity() != null) {
+                    requireActivity().invalidateOptionsMenu();
+                }
             }
         });
 
@@ -261,7 +288,7 @@ public class PdfViewerFragment extends Fragment {
                     public boolean onTapUp() {
                         if (mViewModel.getUri() != null) {
                             mWebView.evaluateJavascript("isTextSelected()", selection -> {
-                                if (!Boolean.valueOf(selection)) {
+                                if (!Boolean.valueOf(selection) && getActivity() != null) {
                                     if ((requireActivity().getWindow().getDecorView().getSystemUiVisibility() &
                                             View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
                                         hideSystemUi();
