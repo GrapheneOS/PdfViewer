@@ -1,7 +1,6 @@
 package org.grapheneos.pdfviewer;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -9,10 +8,12 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
@@ -23,122 +24,137 @@ import android.webkit.WebViewClient;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.loader.app.LoaderManager;
-import androidx.loader.content.Loader;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.snackbar.Snackbar;
 
 import org.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
 import org.grapheneos.pdfviewer.fragment.JumpToPageFragment;
-import org.grapheneos.pdfviewer.loader.DocumentPropertiesLoader;
+import org.grapheneos.pdfviewer.viewmodel.PdfViewerViewModel;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 
-public class PdfViewer extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<CharSequence>> {
+public class PdfViewerFragment extends Fragment {
     public static final String TAG = "PdfViewer";
 
-    private static final String STATE_URI = "uri";
-    private static final String STATE_PAGE = "page";
-    private static final String STATE_ZOOM_RATIO = "zoomRatio";
-    private static final String STATE_DOCUMENT_ORIENTATION_DEGREES = "documentOrientationDegrees";
-    private static final String KEY_PROPERTIES = "properties";
-
     private static final String CONTENT_SECURITY_POLICY =
-        "default-src 'none'; " +
-        "form-action 'none'; " +
-        "connect-src https://localhost/placeholder.pdf; " +
-        "img-src blob: 'self'; " +
-        "script-src 'self' 'resource://pdf.js'; " +
-        "style-src 'self'; " +
-        "frame-ancestors 'none'; " +
-        "base-uri 'none'";
+            "default-src 'none'; " +
+                    "form-action 'none'; " +
+                    "connect-src https://localhost/placeholder.pdf; " +
+                    "img-src blob: 'self'; " +
+                    "script-src 'self' 'resource://pdf.js'; " +
+                    "style-src 'self'; " +
+                    "frame-ancestors 'none'; " +
+                    "base-uri 'none'";
 
     private static final String FEATURE_POLICY =
-        "accelerometer 'none'; " +
-        "ambient-light-sensor 'none'; " +
-        "autoplay 'none'; " +
-        "camera 'none'; " +
-        "encrypted-media 'none'; " +
-        "fullscreen 'none'; " +
-        "geolocation 'none'; " +
-        "gyroscope 'none'; " +
-        "magnetometer 'none'; " +
-        "microphone 'none'; " +
-        "midi 'none'; " +
-        "payment 'none'; " +
-        "picture-in-picture 'none'; " +
-        "speaker 'none'; " +
-        "sync-xhr 'none'; " +
-        "usb 'none'; " +
-        "vr 'none'";
+            "accelerometer 'none'; " +
+                    "ambient-light-sensor 'none'; " +
+                    "autoplay 'none'; " +
+                    "camera 'none'; " +
+                    "encrypted-media 'none'; " +
+                    "fullscreen 'none'; " +
+                    "geolocation 'none'; " +
+                    "gyroscope 'none'; " +
+                    "magnetometer 'none'; " +
+                    "microphone 'none'; " +
+                    "midi 'none'; " +
+                    "payment 'none'; " +
+                    "picture-in-picture 'none'; " +
+                    "speaker 'none'; " +
+                    "sync-xhr 'none'; " +
+                    "usb 'none'; " +
+                    "vr 'none'";
 
     private static final float MIN_ZOOM_RATIO = 0.5f;
     private static final float MAX_ZOOM_RATIO = 1.5f;
     private static final int ALPHA_LOW = 130;
     private static final int ALPHA_HIGH = 255;
-    private static final int ACTION_OPEN_DOCUMENT_REQUEST_CODE = 1;
     private static final int STATE_LOADED = 1;
     private static final int STATE_END = 2;
     private static final int PADDING = 10;
 
-    private Uri mUri;
-    public int mPage;
-    public int mNumPages;
-    private float mZoomRatio = 1f;
-    private int mDocumentOrientationDegrees;
     private int mDocumentState;
-    private int windowInsetTop;
-    private List<CharSequence> mDocumentProperties;
+    private WebView mWebView;
+    private int mWindowInsetsTop;
     private InputStream mInputStream;
 
-    private WebView mWebView;
-    private TextView mTextView;
     private Toast mToast;
-    private Snackbar snackbar;
+    private TextView mTextView;
+    private Snackbar mSnackbar;
+
+    private PdfViewerViewModel mViewModel;
 
     private class Channel {
         @JavascriptInterface
         public int getWindowInsetTop() {
-            return windowInsetTop;
+            return mWindowInsetsTop;
         }
 
         @JavascriptInterface
         public int getPage() {
-            return mPage;
+            return mViewModel.getPage();
         }
 
         @JavascriptInterface
         public float getZoomRatio() {
-            return mZoomRatio;
+            return mViewModel.getZoomRatio();
         }
 
         @JavascriptInterface
         public int getDocumentOrientationDegrees() {
-            return mDocumentOrientationDegrees;
+            return mViewModel.getDocumentOrientationDegrees();
         }
 
         @JavascriptInterface
         public void setNumPages(int numPages) {
-            mNumPages = numPages;
-            runOnUiThread(PdfViewer.this::invalidateOptionsMenu);
+            mViewModel.setNumPages(numPages);
+            requireActivity().runOnUiThread(() -> requireActivity().invalidateOptionsMenu());
         }
 
         @JavascriptInterface
         public void setDocumentProperties(final String properties) {
-            if (mDocumentProperties != null) {
-                throw new SecurityException("mDocumentProperties not null");
+            final List<CharSequence> list = mViewModel.getDocumentProperties().getValue();
+            if (list != null && list.isEmpty()) {
+                mViewModel.loadProperties(properties);
+            } else {
+                Log.d(TAG, "setDocumentProperties: did not load in properties");
             }
-
-            final Bundle args = new Bundle();
-            args.putString(KEY_PROPERTIES, properties);
-            runOnUiThread(() -> {
-                LoaderManager.getInstance(PdfViewer.this).restartLoader(DocumentPropertiesLoader.ID, args, PdfViewer.this);
-            });
         }
+    }
+
+    public PdfViewerFragment() {
+        // Required empty public constructor
+    }
+
+    public static PdfViewerFragment newInstance() {
+        return new PdfViewerFragment();
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true);
+        getParentFragmentManager().setFragmentResultListener(JumpToPageFragment.REQUEST_KEY,
+                this, (requestKey, result) -> {
+                    final int newPage = result.getInt(JumpToPageFragment.BUNDLE_KEY);
+                    onJumpToPageInDocument(newPage);
+                });
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_webview, container, false);
     }
 
     // Can be removed once minSdkVersion >= 26
@@ -149,15 +165,15 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     @Override
     @SuppressLint({"SetJavaScriptEnabled", "ClickableViewAccessibility"})
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
 
-        setContentView(R.layout.webview);
 
-        mWebView = findViewById(R.id.webview);
+        mViewModel = new ViewModelProvider(requireActivity()).get(PdfViewerViewModel.class);
 
-        mWebView.setOnApplyWindowInsetsListener((view, insets) -> {
-            windowInsetTop = insets.getSystemWindowInsetTop();
+        mWebView = view.findViewById(R.id.webview);
+
+        mWebView.setOnApplyWindowInsetsListener((v, insets) -> {
+            mWindowInsetsTop = insets.getSystemWindowInsetTop();
             mWebView.evaluateJavascript("updateInset()", null);
             return insets;
         });
@@ -176,7 +192,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         mWebView.setWebViewClient(new WebViewClient() {
             private WebResourceResponse fromAsset(final String mime, final String path) {
                 try {
-                    InputStream inputStream = getAssets().open(path.substring(1));
+                    InputStream inputStream = requireActivity().getAssets().open(path.substring(1));
                     return new WebResourceResponse(mime, null, inputStream);
                 } catch (IOException e) {
                     return null;
@@ -230,18 +246,18 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             @Override
             public void onPageFinished(WebView view, String url) {
                 mDocumentState = STATE_LOADED;
-                invalidateOptionsMenu();
+                requireActivity().invalidateOptionsMenu();
             }
         });
 
-        GestureHelper.attach(PdfViewer.this, mWebView,
+        GestureHelper.attach(getContext(), mWebView,
                 new GestureHelper.GestureListener() {
                     @Override
                     public boolean onTapUp() {
-                        if (mUri != null) {
+                        if (mViewModel.getUri() != null) {
                             mWebView.evaluateJavascript("isTextSelected()", selection -> {
                                 if (!Boolean.valueOf(selection)) {
-                                    if ((getWindow().getDecorView().getSystemUiVisibility() &
+                                    if ((requireActivity().getWindow().getDecorView().getSystemUiVisibility() &
                                             View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
                                         hideSystemUi();
                                     } else {
@@ -270,71 +286,55 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     }
                 });
 
-        mTextView = new TextView(this);
+        mTextView = new TextView(getContext());
         mTextView.setBackgroundColor(Color.DKGRAY);
         mTextView.setTextColor(ColorStateList.valueOf(Color.WHITE));
         mTextView.setTextSize(18);
         mTextView.setPadding(PADDING, 0, PADDING, 0);
 
-        // If loaders are not being initialized in onCreate(), the result will not be delivered
-        // after orientation change (See FragmentHostCallback), thus initialize the
-        // loader manager impl so that the result will be delivered.
-        LoaderManager.getInstance(this);
+        mSnackbar = Snackbar.make(mWebView, "", Snackbar.LENGTH_LONG);
 
-        snackbar = Snackbar.make(mWebView, "", Snackbar.LENGTH_LONG);
-
-        final Intent intent = getIntent();
-        if (Intent.ACTION_VIEW.equals(intent.getAction())) {
+        final Intent intent = requireActivity().getIntent();
+        if (savedInstanceState == null && Intent.ACTION_VIEW.equals(intent.getAction())) {
             if (!"application/pdf".equals(intent.getType())) {
-                snackbar.setText(R.string.invalid_mime_type).show();
-                return;
-            }
-            mUri = intent.getData();
-            mPage = 1;
-        }
-
-        if (savedInstanceState != null) {
-            mUri = savedInstanceState.getParcelable(STATE_URI);
-            mPage = savedInstanceState.getInt(STATE_PAGE);
-            mZoomRatio = savedInstanceState.getFloat(STATE_ZOOM_RATIO);
-            mDocumentOrientationDegrees = savedInstanceState.getInt(STATE_DOCUMENT_ORIENTATION_DEGREES);
-        }
-
-        if (mUri != null) {
-            if ("file".equals(mUri.getScheme())) {
-                snackbar.setText(R.string.legacy_file_uri).show();
+                mSnackbar.setText(R.string.invalid_mime_type).show();
                 return;
             }
 
-            loadPdf();
+            mViewModel.setUri(intent.getData());
+            mViewModel.setPage(1);
+        }
+
+        final Uri uri = mViewModel.getUri();
+        if (uri != null) {
+            if ("file".equals(uri.getScheme())) {
+                mSnackbar.setText(R.string.legacy_file_uri).show();
+                return;
+            }
+
+            loadPdf(savedInstanceState == null);
         }
     }
 
-    @Override
-    public Loader<List<CharSequence>> onCreateLoader(int id, Bundle args) {
-        return new DocumentPropertiesLoader(this, args.getString(KEY_PROPERTIES), mNumPages, mUri);
-    }
+    private void loadPdf(boolean isLoadingNewPdf) {
+        final Uri uri = mViewModel.getUri();
+        if (uri == null) {
+            return;
+        }
 
-    @Override
-    public void onLoadFinished(Loader<List<CharSequence>> loader, List<CharSequence> data) {
-        mDocumentProperties = data;
-        LoaderManager.getInstance(this).destroyLoader(DocumentPropertiesLoader.ID);
-    }
-
-    @Override
-    public void onLoaderReset(Loader<List<CharSequence>> loader) {
-        mDocumentProperties = null;
-    }
-
-    private void loadPdf() {
         try {
             if (mInputStream != null) {
                 mInputStream.close();
             }
-            mInputStream = getContentResolver().openInputStream(mUri);
+            mInputStream = requireActivity().getContentResolver().openInputStream(uri);
         } catch (IOException e) {
-            snackbar.setText(R.string.io_error).show();
+            mSnackbar.setText(R.string.io_error).show();
+            mViewModel.clearDocumentProperties();
             return;
+        }
+
+        if (isLoadingNewPdf) {
+            mViewModel.clearDocumentProperties();
         }
 
         showSystemUi();
@@ -346,33 +346,44 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     private void documentOrientationChanged(final int orientationDegreesOffset) {
-        mDocumentOrientationDegrees = (mDocumentOrientationDegrees + orientationDegreesOffset) % 360;
-        if (mDocumentOrientationDegrees < 0) {
-            mDocumentOrientationDegrees += 360;
+        int newOrientation = (mViewModel.getDocumentOrientationDegrees()
+                + orientationDegreesOffset) % 360;
+        if (newOrientation < 0) {
+            newOrientation += 360;
         }
+        mViewModel.setDocumentOrientationDegrees(newOrientation);
         renderPage(0);
     }
 
+    private ActivityResultLauncher<String> mGetDocumentUriLauncher = registerForActivityResult(
+            new ActivityResultContracts.GetContent(), new ActivityResultCallback<Uri>() {
+                @Override
+                public void onActivityResult(Uri uri) {
+                    mViewModel.setUri(uri);
+                    mViewModel.setPage(1);
+                    loadPdf(true);
+                }
+            });
+
     private void openDocument() {
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("application/pdf");
-        startActivityForResult(intent, ACTION_OPEN_DOCUMENT_REQUEST_CODE);
+        mGetDocumentUriLauncher.launch("application/pdf");
     }
 
     private void zoomIn(float value, boolean end) {
-        if (mZoomRatio < MAX_ZOOM_RATIO) {
-            mZoomRatio = Math.min(mZoomRatio + value, MAX_ZOOM_RATIO);
+        final float zoomRatio = mViewModel.getZoomRatio();
+        if (zoomRatio < MAX_ZOOM_RATIO) {
+            mViewModel.setZoomRatio(Math.min(zoomRatio + value, MAX_ZOOM_RATIO));
             renderPage(end ? 1 : 2);
-            invalidateOptionsMenu();
+            requireActivity().invalidateOptionsMenu();
         }
     }
 
     private void zoomOut(float value, boolean end) {
-        if (mZoomRatio > MIN_ZOOM_RATIO) {
-            mZoomRatio = Math.max(mZoomRatio - value, MIN_ZOOM_RATIO);
+        final float zoomRatio = mViewModel.getZoomRatio();
+        if (zoomRatio > MIN_ZOOM_RATIO) {
+            mViewModel.setZoomRatio(Math.max(zoomRatio - value, MIN_ZOOM_RATIO));
             renderPage(end ? 1 : 2);
-            invalidateOptionsMenu();
+            requireActivity().invalidateOptionsMenu();
         }
     }
 
@@ -391,61 +402,39 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     public void onJumpToPageInDocument(final int selected_page) {
-        if (selected_page >= 1 && selected_page <= mNumPages && mPage != selected_page) {
-            mPage = selected_page;
+        if (selected_page >= 1
+                && selected_page <= mViewModel.getNumPages()
+                && mViewModel.getPage() != selected_page) {
+            mViewModel.setPage(selected_page);
             renderPage(0);
             showPageNumber();
-            invalidateOptionsMenu();
+            requireActivity().invalidateOptionsMenu();
         }
     }
 
     private void showSystemUi() {
-        getWindow().getDecorView().setSystemUiVisibility(
+        requireActivity().getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+                        View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                        View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
     }
 
     private void hideSystemUi() {
-        getWindow().getDecorView().setSystemUiVisibility(
+        requireActivity().getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                View.SYSTEM_UI_FLAG_FULLSCREEN |
-                View.SYSTEM_UI_FLAG_IMMERSIVE);
-    }
-
-    @Override
-    public void onSaveInstanceState(Bundle savedInstanceState) {
-        super.onSaveInstanceState(savedInstanceState);
-        savedInstanceState.putParcelable(STATE_URI, mUri);
-        savedInstanceState.putInt(STATE_PAGE, mPage);
-        savedInstanceState.putFloat(STATE_ZOOM_RATIO, mZoomRatio);
-        savedInstanceState.putInt(STATE_DOCUMENT_ORIENTATION_DEGREES, mDocumentOrientationDegrees);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent resultData) {
-        super.onActivityResult(requestCode, resultCode, resultData);
-
-        if (requestCode == ACTION_OPEN_DOCUMENT_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
-            if (resultData != null) {
-                mUri = resultData.getData();
-                mPage = 1;
-                mDocumentProperties = null;
-                loadPdf();
-                invalidateOptionsMenu();
-            }
-        }
+                        View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                        View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                        View.SYSTEM_UI_FLAG_FULLSCREEN |
+                        View.SYSTEM_UI_FLAG_IMMERSIVE);
     }
 
     private void showPageNumber() {
         if (mToast != null) {
             mToast.cancel();
         }
-        mTextView.setText(String.format("%s/%s", mPage, mNumPages));
-        mToast = new Toast(getApplicationContext());
+        mTextView.setText(String.format("%s/%s", mViewModel.getPage(), mViewModel.getNumPages()));
+        mToast = new Toast(getContext());
         mToast.setGravity(Gravity.BOTTOM | Gravity.END, PADDING, PADDING);
         mToast.setDuration(Toast.LENGTH_SHORT);
         mToast.setView(mTextView);
@@ -453,19 +442,17 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        super.onCreateOptionsMenu(menu);
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.pdf_viewer, menu);
-        return true;
+    public void onCreateOptionsMenu(@NonNull Menu menu, MenuInflater inflater) {
+        inflater.inflate(R.menu.menu_pdf_viewer, menu);
+        super.onCreateOptionsMenu(menu, inflater);
     }
 
     @Override
-    public boolean onPrepareOptionsMenu(Menu menu) {
-        final int ids[] = { R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
+    public void onPrepareOptionsMenu(@NonNull Menu menu) {
+        final int ids[] = {R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
                 R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
                 R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
-                R.id.action_view_document_properties };
+                R.id.action_view_document_properties};
         if (mDocumentState < STATE_LOADED) {
             for (final int id : ids) {
                 final MenuItem item = menu.findItem(id);
@@ -483,23 +470,25 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mDocumentState = STATE_END;
         }
 
-        enableDisableMenuItem(menu.findItem(R.id.action_zoom_in), mZoomRatio != MAX_ZOOM_RATIO);
-        enableDisableMenuItem(menu.findItem(R.id.action_zoom_out), mZoomRatio != MIN_ZOOM_RATIO);
-        enableDisableMenuItem(menu.findItem(R.id.action_next), mPage < mNumPages);
-        enableDisableMenuItem(menu.findItem(R.id.action_previous), mPage > 1);
-
-        return true;
+        enableDisableMenuItem(menu.findItem(R.id.action_zoom_in),
+                mViewModel.getZoomRatio() != MAX_ZOOM_RATIO);
+        enableDisableMenuItem(menu.findItem(R.id.action_zoom_out),
+                mViewModel.getZoomRatio() != MIN_ZOOM_RATIO);
+        enableDisableMenuItem(menu.findItem(R.id.action_next),
+                mViewModel.getPage() < mViewModel.getNumPages());
+        enableDisableMenuItem(menu.findItem(R.id.action_previous),
+                mViewModel.getPage() > 1);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_previous:
-                onJumpToPageInDocument(mPage - 1);
+                onJumpToPageInDocument(mViewModel.getPage() - 1);
                 return true;
 
             case R.id.action_next:
-                onJumpToPageInDocument(mPage + 1);
+                onJumpToPageInDocument(mViewModel.getPage() + 1);
                 return true;
 
             case R.id.action_first:
@@ -507,7 +496,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 return true;
 
             case R.id.action_last:
-                onJumpToPageInDocument(mNumPages);
+                onJumpToPageInDocument(mViewModel.getNumPages());
                 return true;
 
             case R.id.action_open:
@@ -532,13 +521,13 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
             case R.id.action_view_document_properties:
                 DocumentPropertiesFragment
-                        .newInstance(mDocumentProperties)
-                        .show(getSupportFragmentManager(), DocumentPropertiesFragment.TAG);
+                        .newInstance()
+                        .show(getParentFragmentManager(), DocumentPropertiesFragment.TAG);
                 return true;
 
             case R.id.action_jump_to_page:
                 new JumpToPageFragment()
-                        .show(getSupportFragmentManager(), JumpToPageFragment.TAG);
+                        .show(getParentFragmentManager(), JumpToPageFragment.TAG);
                 return true;
 
             default:

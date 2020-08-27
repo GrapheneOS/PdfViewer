@@ -9,11 +9,15 @@ import android.widget.NumberPicker;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
+import androidx.lifecycle.ViewModelProvider;
 
-import org.grapheneos.pdfviewer.PdfViewer;
+import org.grapheneos.pdfviewer.viewmodel.PdfViewerViewModel;
 
 public class JumpToPageFragment extends DialogFragment {
     public static final String TAG = "JumpToPageFragment";
+
+    public static final String REQUEST_KEY = "jumpToPage";
+    public static final String BUNDLE_KEY = "jumpToPageBundle";
 
     private final static String STATE_PICKER_CUR = "picker_cur";
     private final static String STATE_PICKER_MIN = "picker_min";
@@ -33,24 +37,30 @@ public class JumpToPageFragment extends DialogFragment {
 
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
+        final PdfViewerViewModel model =
+                new ViewModelProvider(requireActivity()).get(PdfViewerViewModel.class);
+
         mPicker = new NumberPicker(getActivity());
         mPicker.setMinValue(1);
-        mPicker.setMaxValue(((PdfViewer)getActivity()).mNumPages);
-        mPicker.setValue(((PdfViewer)getActivity()).mPage);
+        mPicker.setMaxValue(model.getNumPages());
+        mPicker.setValue(model.getPage());
 
-        final FrameLayout layout = new FrameLayout(getActivity());
+        final FrameLayout layout = new FrameLayout(requireActivity());
         layout.addView(mPicker, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.CENTER));
 
-        return new AlertDialog.Builder(getActivity())
+        return new AlertDialog.Builder(requireActivity())
                 .setView(layout)
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
                         mPicker.clearFocus();
-                        ((PdfViewer)getActivity()).onJumpToPageInDocument(mPicker.getValue());
+
+                        Bundle result = new Bundle();
+                        result.putInt(BUNDLE_KEY, mPicker.getValue());
+                        getParentFragmentManager().setFragmentResult(REQUEST_KEY, result);
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
