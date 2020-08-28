@@ -1,7 +1,9 @@
 package org.grapheneos.pdfviewer.fragment;
 
+import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.widget.FrameLayout;
@@ -16,8 +18,8 @@ import org.grapheneos.pdfviewer.viewmodel.PdfViewerViewModel;
 public class JumpToPageFragment extends DialogFragment {
     public static final String TAG = "JumpToPageFragment";
 
-    public static final String REQUEST_KEY = "jumpToPage";
-    public static final String BUNDLE_KEY = "jumpToPageBundle";
+    public static final int REQUEST_CODE = 1000;
+    public static final String INTENT_KEY = "jumpToPageBundle";
 
     private final static String STATE_PICKER_CUR = "picker_cur";
     private final static String STATE_PICKER_MIN = "picker_min";
@@ -57,10 +59,15 @@ public class JumpToPageFragment extends DialogFragment {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
                         mPicker.clearFocus();
+                        if (getTargetFragment() == null) {
+                            return;
+                        }
 
-                        Bundle result = new Bundle();
-                        result.putInt(BUNDLE_KEY, mPicker.getValue());
-                        getParentFragmentManager().setFragmentResult(REQUEST_KEY, result);
+                        Intent data = new Intent();
+                        data.putExtra(INTENT_KEY, mPicker.getValue());
+
+                        getTargetFragment().onActivityResult(REQUEST_CODE, Activity.RESULT_OK,
+                                data);
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
