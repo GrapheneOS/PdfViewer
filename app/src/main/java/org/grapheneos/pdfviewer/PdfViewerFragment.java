@@ -1,7 +1,6 @@
 package org.grapheneos.pdfviewer;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -85,6 +84,8 @@ public class PdfViewerFragment extends Fragment {
     private static final int STATE_END = 2;
     private static final int PADDING = 10;
 
+    private static final String JAVASCRIPT_INTERFACE_NAME = "channel";
+
     private int mDocumentState;
     private WebView mWebView;
     private int mWindowInsetsTop;
@@ -98,15 +99,34 @@ public class PdfViewerFragment extends Fragment {
     private PdfViewerViewModel mViewModel;
 
     @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (mWebViewContainer != null) {
+            mWebViewContainer.removeAllViews();
+            if (mWebView != null) {
+                mWebView.removeJavascriptInterface(JAVASCRIPT_INTERFACE_NAME);
+
+                // Load about:blank to reset the view state and release page resources.
+                mWebView.loadUrl("about:blank");
+                mWebView.onPause();
+
+                // Note: This pauses JS, layout, parsing timers for all WebViews.
+                // Need to resume timers when creating again.
+                mWebView.pauseTimers();
+                mWebView.getSettings().setJavaScriptEnabled(false);
+                mWebView.removeAllViews();
+            }
+        }
+    }
+
+    @Override
     public void onDestroy() {
         super.onDestroy();
-        Log.d(TAG, "onDestroy()");
-        if (mWebView != null && mWebViewContainer != null) {
-            //mWebViewContainer.removeView(mWebView);
-            //mWebView.removeAllViews();
-            //mWebView.destroy();
+        if (mWebView != null) {
+            // TODO: Figure out how to call mWebView.destroy() without getting an exception in
+            //  logcat of application calling on a destroyed WebView
+            mWebView = null;
         }
-
     }
 
     private class Channel {
@@ -143,6 +163,9 @@ public class PdfViewerFragment extends Fragment {
             final List<CharSequence> list = mViewModel.getDocumentProperties().getValue();
             if (list != null && list.isEmpty() && getActivity() != null) {
                 mViewModel.loadProperties(properties, requireActivity().getApplicationContext());
+            } else {
+                Log.d(TAG, "setDocumentProperties: not loading properties because " +
+                        (list == null ? "list is null" : "list is not empty"));
             }
         }
     }
@@ -192,6 +215,8 @@ public class PdfViewerFragment extends Fragment {
 
         mWebViewContainer = view.findViewById(R.id.webview_container);
         mWebView = view.findViewById(R.id.webview);
+        // Resume timers if onDestroyView was called
+        mWebView.resumeTimers();
 
         mWebView.setOnApplyWindowInsetsListener((v, insets) -> {
             mWindowInsetsTop = insets.getSystemWindowInsetTop();
@@ -208,7 +233,7 @@ public class PdfViewerFragment extends Fragment {
 
         CookieManager.getInstance().setAcceptCookie(false);
 
-        mWebView.addJavascriptInterface(new Channel(), "channel");
+        mWebView.addJavascriptInterface(new Channel(), JAVASCRIPT_INTERFACE_NAME);
 
         mWebView.setWebViewClient(new WebViewClient() {
             private WebResourceResponse fromAsset(final String mime, final String path) {
@@ -324,7 +349,7 @@ public class PdfViewerFragment extends Fragment {
         mTextView.setTextSize(18);
         mTextView.setPadding(PADDING, 0, PADDING, 0);
 
-        mSnackbar = Snackbar.make(mWebView, "", Snackbar.LENGTH_LONG);
+        mSnackbar = Snackbar.make(mWebViewContainer, "", Snackbar.LENGTH_LONG);
 
         final Intent intent = requireActivity().getIntent();
         if (Intent.ACTION_VIEW.equals(intent.getAction())) {
