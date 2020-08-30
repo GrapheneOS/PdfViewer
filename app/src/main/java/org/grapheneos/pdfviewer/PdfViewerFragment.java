@@ -1,7 +1,6 @@
 package org.grapheneos.pdfviewer;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -26,6 +25,9 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -73,9 +75,6 @@ public class PdfViewerFragment extends Fragment {
                     "sync-xhr 'none'; " +
                     "usb 'none'; " +
                     "vr 'none'";
-
-    private static final int REQUEST_CODE_JUMP_PAGE = 1000;
-    private static final int REQUEST_CODE_ACTION_OPEN_DOCUMENT = 1001;
 
     private static final float MIN_ZOOM_RATIO = 0.5f;
     private static final float MAX_ZOOM_RATIO = 1.5f;
@@ -184,25 +183,11 @@ public class PdfViewerFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
-    }
-
-    // Can be replaced when support for passing results between two Fragments
-    // via new APIs on FragmentManager arrive (Androidx Fragment 1.3.0)
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        if (requestCode ==  REQUEST_CODE_JUMP_PAGE) {
-            if (resultCode == Activity.RESULT_OK) {
-                final int newPage = data.getIntExtra(JumpToPageFragment.INTENT_KEY, -1);
-                onJumpToPageInDocument(newPage);
-            }
-        } else if (requestCode == REQUEST_CODE_ACTION_OPEN_DOCUMENT) {
-            if (resultCode == Activity.RESULT_OK && data != null) {
-                mViewModel.setUri(data.getData());
-                mViewModel.setPage(1);
-                loadPdf(true);
-                requireActivity().invalidateOptionsMenu();
-            }
-        }
+        getParentFragmentManager().setFragmentResultListener(JumpToPageFragment.REQUEST_KEY,
+                this, (requestKey, result) -> {
+                    final int newPage = result.getInt(JumpToPageFragment.BUNDLE_KEY);
+                    onJumpToPageInDocument(newPage);
+                });
     }
 
     @Override
@@ -431,11 +416,20 @@ public class PdfViewerFragment extends Fragment {
         renderPage(0);
     }
 
+    private ActivityResultLauncher<String> mGetDocumentUriLauncher = registerForActivityResult(
+            new ActivityResultContracts.GetContent(), new ActivityResultCallback<Uri>() {
+                @Override
+                public void onActivityResult(Uri uri) {
+                    if (uri != null) {
+                        mViewModel.setUri(uri);
+                        mViewModel.setPage(1);
+                        loadPdf(true);
+                    }
+                }
+            });
+
     private void openDocument() {
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("application/pdf");
-        startActivityForResult(intent, REQUEST_CODE_ACTION_OPEN_DOCUMENT);
+        mGetDocumentUriLauncher.launch("application/pdf");
     }
 
     private void zoomIn(float value, boolean end) {
@@ -595,9 +589,8 @@ public class PdfViewerFragment extends Fragment {
                 return true;
 
             case R.id.action_jump_to_page:
-                final JumpToPageFragment fragment = new JumpToPageFragment();
-                fragment.setTargetFragment(this, REQUEST_CODE_JUMP_PAGE);
-                fragment.show(getParentFragmentManager(), JumpToPageFragment.TAG);
+                new JumpToPageFragment()
+                        .show(getParentFragmentManager(), JumpToPageFragment.TAG);
                 return true;
 
             default:
