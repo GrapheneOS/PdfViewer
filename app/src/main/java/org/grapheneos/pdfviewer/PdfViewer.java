@@ -7,6 +7,9 @@ import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.print.PrintAttributes;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintManager;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.Menu;
@@ -22,6 +25,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.content.Context;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.loader.app.LoaderManager;
@@ -345,6 +349,14 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         mWebView.evaluateJavascript("onRenderPage(" + zoom + ")", null);
     }
 
+    private void printDocument() {
+        PrintManager printManager = (PrintManager)getSystemService(Context.PRINT_SERVICE);
+        String jobName = getString(R.string.print_job_base_name);
+        PrintDocumentAdapter printDocumentAdapter = new PdfDocumentAdapter(this, jobName, mUri);
+        PrintAttributes printAttributes = new PrintAttributes.Builder().build();
+        printManager.print(jobName, printDocumentAdapter, printAttributes);
+    }
+
     private void documentOrientationChanged(final int orientationDegreesOffset) {
         mDocumentOrientationDegrees = (mDocumentOrientationDegrees + orientationDegreesOffset) % 360;
         if (mDocumentOrientationDegrees < 0) {
@@ -465,6 +477,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         final int ids[] = { R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
                 R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
                 R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
+                R.id.action_print,
                 R.id.action_view_document_properties };
         if (mDocumentState < STATE_LOADED) {
             for (final int id : ids) {
@@ -539,6 +552,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             case R.id.action_jump_to_page:
                 new JumpToPageFragment()
                         .show(getSupportFragmentManager(), JumpToPageFragment.TAG);
+                return true;
+
+            case R.id.action_print:
+                printDocument();
                 return true;
 
             default:
