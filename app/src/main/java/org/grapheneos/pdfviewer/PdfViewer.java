@@ -465,7 +465,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         final int ids[] = { R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
                 R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
                 R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
-                R.id.action_view_document_properties };
+                R.id.action_share, R.id.action_view_document_properties };
         if (mDocumentState < STATE_LOADED) {
             for (final int id : ids) {
                 final MenuItem item = menu.findItem(id);
@@ -513,6 +513,14 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             case R.id.action_open:
                 openDocument();
                 return super.onOptionsItemSelected(item);
+
+            case R.id.action_share:
+                Intent shareIntent = new Intent();
+                shareIntent.setAction(Intent.ACTION_SEND);
+                shareIntent.putExtra(Intent.EXTRA_STREAM, mUri);
+                shareIntent.setType("application/pdf");
+                startActivity(Intent.createChooser(shareIntent, null));
+                return true;
 
             case R.id.action_zoom_out:
                 zoomOut(0.25f, true);
