@@ -4,12 +4,22 @@ body, canvas, #padding {
 }
 
 #padding {
-    min-width: 100%;
-    background: black;
+  min-width: 100%;
+  position: relative;
+  background: black;
 }
 
 body {
   background: #808080;
+}
+
+canvas {
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -ms-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
 }
 
 .textLayer {
