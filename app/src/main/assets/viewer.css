@@ -8,6 +8,10 @@ body, canvas, #padding {
     background: black;
 }
 
+body {
+  background: #808080;
+}
+
 .textLayer {
     position: absolute;
     left: 0;
