@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">পিডিএফ পাঠক</string>
+    <!--<string name="action_settings">পছন্দসমূহ</string>-->
+    <string name="action_previous">আগের পৃষ্ঠা</string>
+    <string name="action_next">পরের পৃষ্ঠা</string>
+    <string name="action_open">নথি খুলো</string>
+    <string name="action_first">প্রথম পৃষ্ঠা</string>
+    <string name="action_last">শেষ পৃষ্ঠা</string>
+    <string name="action_zoom_out">ছোটো করো</string>
+    <string name="action_zoom_in">বড় করো</string>
+    <string name="action_rotate_clockwise">ঘড়ির কাঁটার দিকে ঘুরাও</string>
+    <string name="action_rotate_counterclockwise">ঘড়ির কাঁটার বিপরীত দিকে ঘুরাও</string>
+    <string name="action_jump_to_page">পৃষ্ঠায় যাও</string>
+    <string name="action_view_document_properties">বৈশিষ্ট্য</string>
+
+    <string name="document_properties_invalid_date">ভুল তারিখ</string>
+    <string name="document_properties_retrieval_failed">নথি বিষয়ক তথ্য পেতে ব্যর্থ</string>
+
+    <string name="invalid_mime_type">ভুল এমআইএমই বিশিষ্ট নথি খুলা যায়না</string>
+    <string name="legacy_file_uri">অনিরাপদ অ্যাপ থেকে পুরোনো নথি শাখা খোলা যায়নি</string>
+    <string name="io_error">খোলার সময় ই/আ ত্রুটি হয়েছে</string>
+</resources>
