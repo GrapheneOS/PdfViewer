@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--<string name="action_settings">Ustawienia</string>-->
+    <string name="action_previous">Poprzednia strona</string>
+    <string name="action_next">Następna strona</string>
+    <string name="action_open">Otwórz dokument</string>
+    <string name="action_first">Pierwsza strona</string>
+    <string name="action_last">Ostatnia strona</string>
+    <string name="action_zoom_out">Pomniejsz</string>
+    <string name="action_zoom_in">Powiększ</string>
+    <string name="action_rotate_clockwise">Obróć zgodnie ze wskazówkami zegara</string>
+    <string name="action_rotate_counterclockwise">Obróć przeciwnie do wskazówek zegara</string>
+    <string name="action_jump_to_page">Przejdź na stronę</string>
+    <string name="action_view_document_properties">Właściwości</string>
+
+    <string name="document_properties_invalid_date">Niewłaściwa data</string>
+    <string name="document_properties_retrieval_failed">Nie udało się uzyskać metadanych dokumentu</string>
+
+    <string name="invalid_mime_type">Nie udało się utworzyć pliku z nieprawidłowym typem MIME</string>
+    <string name="legacy_file_uri">Nie można otworzyć nieobsługiwanych ścieżek do plików z niepewnych aplikacji</string>
+    <string name="io_error">Błąd I/O przy próbie otwarcia zawartości</string>
+</resources>
