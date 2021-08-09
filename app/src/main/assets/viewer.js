@@ -95,7 +95,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
             return;
         }
 
-        const viewport = page.getViewport({scale: newZoomRatio, rotation: orientationDegrees})
+        const viewport = page.getViewport({scale: window.screen.width / page.getViewport({scale: 1}).width * newZoomRatio, rotation: orientationDegrees})
 
         if (useRender) {
             if (newZoomRatio !== zoomRatio) {

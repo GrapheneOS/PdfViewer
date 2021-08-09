@@ -48,36 +48,36 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final String KEY_PROPERTIES = "properties";
 
     private static final String CONTENT_SECURITY_POLICY =
-        "default-src 'none'; " +
-        "form-action 'none'; " +
-        "connect-src https://localhost/placeholder.pdf; " +
-        "img-src blob: 'self'; " +
-        "script-src 'self' 'resource://pdf.js'; " +
-        "style-src 'self'; " +
-        "frame-ancestors 'none'; " +
-        "base-uri 'none'";
+            "default-src 'none'; " +
+                    "form-action 'none'; " +
+                    "connect-src https://localhost/placeholder.pdf; " +
+                    "img-src blob: 'self'; " +
+                    "script-src 'self' 'resource://pdf.js'; " +
+                    "style-src 'self'; " +
+                    "frame-ancestors 'none'; " +
+                    "base-uri 'none'";
 
     private static final String FEATURE_POLICY =
-        "accelerometer 'none'; " +
-        "ambient-light-sensor 'none'; " +
-        "autoplay 'none'; " +
-        "camera 'none'; " +
-        "encrypted-media 'none'; " +
-        "fullscreen 'none'; " +
-        "geolocation 'none'; " +
-        "gyroscope 'none'; " +
-        "magnetometer 'none'; " +
-        "microphone 'none'; " +
-        "midi 'none'; " +
-        "payment 'none'; " +
-        "picture-in-picture 'none'; " +
-        "speaker 'none'; " +
-        "sync-xhr 'none'; " +
-        "usb 'none'; " +
-        "vr 'none'";
+            "accelerometer 'none'; " +
+                    "ambient-light-sensor 'none'; " +
+                    "autoplay 'none'; " +
+                    "camera 'none'; " +
+                    "encrypted-media 'none'; " +
+                    "fullscreen 'none'; " +
+                    "geolocation 'none'; " +
+                    "gyroscope 'none'; " +
+                    "magnetometer 'none'; " +
+                    "microphone 'none'; " +
+                    "midi 'none'; " +
+                    "payment 'none'; " +
+                    "picture-in-picture 'none'; " +
+                    "speaker 'none'; " +
+                    "sync-xhr 'none'; " +
+                    "usb 'none'; " +
+                    "vr 'none'";
 
-    private static final float MIN_ZOOM_RATIO = 0.5f;
-    private static final float MAX_ZOOM_RATIO = 1.5f;
+    private static final float MIN_ZOOM_RATIO = 0.9f;
+    private static final float MAX_ZOOM_RATIO = 3f;
     private static final int ALPHA_LOW = 130;
     private static final int ALPHA_HIGH = 255;
     private static final int ACTION_OPEN_DOCUMENT_REQUEST_CODE = 1;
@@ -88,7 +88,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private Uri mUri;
     public int mPage;
     public int mNumPages;
-    private float mZoomRatio = 1f;
+    private float mZoomRatio = MIN_ZOOM_RATIO;
     private int mDocumentOrientationDegrees;
     private int mDocumentState;
     private int windowInsetTop;
@@ -155,6 +155,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         setContentView(R.layout.webview);
 
         mWebView = findViewById(R.id.webview);
+        mWebView.setBackgroundColor(Color.TRANSPARENT);
+
 
         mWebView.setOnApplyWindowInsetsListener((view, insets) -> {
             windowInsetTop = insets.getSystemWindowInsetTop();
@@ -274,7 +276,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         mTextView.setBackgroundColor(Color.DKGRAY);
         mTextView.setTextColor(ColorStateList.valueOf(Color.WHITE));
         mTextView.setTextSize(18);
-        mTextView.setPadding(PADDING, 0, PADDING, 0);
+        mTextView.setPadding(PADDING, PADDING, PADDING, PADDING);
 
         // If loaders are not being initialized in onCreate(), the result will not be delivered
         // after orientation change (See FragmentHostCallback), thus initialize the
@@ -331,7 +333,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             if (mInputStream != null) {
                 mInputStream.close();
             }
+
             mInputStream = getContentResolver().openInputStream(mUri);
+//            mWebView.evaluateJavascript("const viewport = page.getViewport({scale: canvas.width / page.getViewport({scale: 1}).width});", null);
         } catch (IOException e) {
             snackbar.setText(R.string.io_error).show();
             return;
@@ -402,18 +406,18 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private void showSystemUi() {
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+                        View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                        View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
     }
 
     private void hideSystemUi() {
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                View.SYSTEM_UI_FLAG_FULLSCREEN |
-                View.SYSTEM_UI_FLAG_IMMERSIVE);
+                        View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                        View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                        View.SYSTEM_UI_FLAG_FULLSCREEN |
+                        View.SYSTEM_UI_FLAG_IMMERSIVE);
     }
 
     @Override
