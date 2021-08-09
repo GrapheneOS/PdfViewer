@@ -1,6 +1,5 @@
 "use strict";
 
-const padding = document.getElementById("padding");
 let pdfDoc = null;
 let pageRendering = false;
 let renderPending = false;
@@ -54,7 +53,6 @@ function display(newCanvas, zoom) {
     canvas.width = newCanvas.width;
     canvas.style.height = newCanvas.style.height;
     canvas.style.width = newCanvas.style.width;
-    padding.style.width = canvas.style.width;
     canvas.getContext("2d", { alpha: false }).drawImage(newCanvas, 0, 0);
     if (!zoom) {
         scrollTo(0, 0);
@@ -95,7 +93,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
             return;
         }
 
-        const viewport = page.getViewport({scale: newZoomRatio, rotation: orientationDegrees})
+        const viewport = page.getViewport({scale: window.screen.width / page.getViewport({scale: 1}).width * newZoomRatio, rotation: orientationDegrees})
 
         if (useRender) {
             if (newZoomRatio !== zoomRatio) {
@@ -200,7 +198,9 @@ function isTextSelected() {
 
 function updateInset() {
     const windowInsetTop = channel.getWindowInsetTop() / window.devicePixelRatio + "px";
-    padding.style.paddingTop = windowInsetTop;
+    canvas.style.paddingTop = windowInsetTop;
+    // bottom insets was added to ensure that the PDF is in center
+    canvas.style.paddingBottom = windowInsetTop;
     textLayerDiv.style.top = windowInsetTop;
 }
 

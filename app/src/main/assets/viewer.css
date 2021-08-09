@@ -68,3 +68,17 @@ body, canvas, #padding {
 .textLayer .endOfContent.active {
     top: 0px;
 }
+
+html, body {
+  display: table;
+  height: 100%;
+  width: 100%;
+  text-align:center;
+}
+
+#content-wrapper {
+	display: flex;
+	justify-content: center; /* center horizontally */
+	align-items: center;
+	height: 100%;
+}

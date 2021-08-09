@@ -76,8 +76,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         "usb 'none'; " +
         "vr 'none'";
 
-    private static final float MIN_ZOOM_RATIO = 0.5f;
-    private static final float MAX_ZOOM_RATIO = 1.5f;
+    private static final float MIN_ZOOM_RATIO = 0.9f;
+    private static final float MAX_ZOOM_RATIO = 3f;
     private static final int ALPHA_LOW = 130;
     private static final int ALPHA_HIGH = 255;
     private static final int ACTION_OPEN_DOCUMENT_REQUEST_CODE = 1;
@@ -88,7 +88,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private Uri mUri;
     public int mPage;
     public int mNumPages;
-    private float mZoomRatio = 1f;
+    private float mZoomRatio = MIN_ZOOM_RATIO;
     private int mDocumentOrientationDegrees;
     private int mDocumentState;
     private int windowInsetTop;
