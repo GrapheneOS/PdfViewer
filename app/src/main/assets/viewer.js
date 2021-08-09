@@ -198,6 +198,28 @@ function isTextSelected() {
     return window.getSelection().toString() !== "";
 }
 
+var loading_bar = document.getElementById("loading-bar");
+var loading_bar_container = document.getElementById("loading-bar-container");
+
+function show_progress_bar()
+{
+  loading_bar.style.display = "block";
+  loading_bar_container.style.display = "block";
+}
+
+function hide_progress_bar()
+{
+    loading_bar.style.display = "none";
+    loading_bar_container.style.display = "none";
+}
+
+function set_progress(value)
+{
+  if(value==0) show_progress_bar();
+  else if(value==100) hide_progress_bar();
+  else loading_bar.style.width = value + "%";
+}
+
 function updateInset() {
     const windowInsetTop = channel.getWindowInsetTop() / window.devicePixelRatio + "px";
     padding.style.paddingTop = windowInsetTop;
@@ -206,7 +228,17 @@ function updateInset() {
 
 updateInset();
 
-pdfjsLib.getDocument("https://localhost/placeholder.pdf").promise.then(function(newDoc) {
+var loadingTask = pdfjsLib.getDocument("https://localhost/placeholder.pdf");
+
+loadingTask.onProgress = function(data){
+  var progress = Math.ceil((data.loaded/data.total)*100);
+
+  set_progress(progress);
+}
+
+show_progress_bar();
+
+loadingTask.promise.then(function(newDoc) {
     pdfDoc = newDoc;
     channel.setNumPages(pdfDoc.numPages);
     pdfDoc.getMetadata().then(function(data) {
@@ -215,6 +247,8 @@ pdfjsLib.getDocument("https://localhost/placeholder.pdf").promise.then(function(
         console.log("getMetadata error: " + error);
     });
     renderPage(channel.getPage(), false, false);
+    hide_progress_bar();
 }).catch(function(error) {
     console.log("getDocument error: " + error);
+    hide_progress_bar();
 });

@@ -89,3 +89,14 @@ html, body {
 
   box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
+
+#loading-bar-container {
+  width: 100%;
+  background-color: #bbdefb;
+}
+
+#loading-bar {
+  width: 0%;
+  height: 4px;
+  background-color: #106cc8;
+}
