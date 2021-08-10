@@ -20,4 +20,6 @@
     <string name="invalid_mime_type">Cannot open file with invalid MIME type</string>
     <string name="legacy_file_uri">Cannot open legacy file paths from insecure apps</string>
     <string name="io_error">Received I/O error trying to open content</string>
+
+    <string name="print_document">Print document</string>
 </resources>

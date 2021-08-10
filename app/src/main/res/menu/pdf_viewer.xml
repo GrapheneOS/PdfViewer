@@ -68,6 +68,12 @@
         app:showAsAction="ifRoom" />
 
     <item
+        android:id="@+id/print_document"
+        android:icon="@drawable/ic_baseline_print_24"
+        android:title="@string/print_document"
+        app:showAsAction="ifRoom" />
+
+    <item
         android:id="@+id/action_view_document_properties"
         android:title="@string/action_view_document_properties"
         app:showAsAction="never" />

@@ -2,11 +2,15 @@ package org.grapheneos.pdfviewer;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.print.PrintAttributes;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintManager;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.Menu;
@@ -469,7 +473,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         final int ids[] = { R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
                 R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
                 R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
-                R.id.action_view_document_properties };
+                R.id.print_document, R.id.action_view_document_properties};
         if (mDocumentState < STATE_LOADED) {
             for (final int id : ids) {
                 final MenuItem item = menu.findItem(id);
@@ -493,6 +497,22 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         enableDisableMenuItem(menu.findItem(R.id.action_previous), mPage > 1);
 
         return true;
+    }
+
+    private void print_document()
+    {
+        PrintManager printManager=(PrintManager) getSystemService(Context.PRINT_SERVICE);
+        try
+        {
+            InputStream inputStream = getContentResolver().openInputStream(mUri);
+
+            PrintDocumentAdapter printAdapter = new PdfDocumentAdapter(this, inputStream);
+            printManager.print("Document", printAdapter,new PrintAttributes.Builder().build());
+        }
+        catch (Exception e)
+        {
+            Log.d("PDFDocumentAdapter", e.getMessage());
+        }
     }
 
     @Override
@@ -532,6 +552,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
             case R.id.action_rotate_counterclockwise:
                 documentOrientationChanged(-90);
+                return true;
+
+            case R.id.print_document:
+                print_document();
                 return true;
 
             case R.id.action_view_document_properties:
