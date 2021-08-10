@@ -10,8 +10,6 @@ import android.print.PrintDocumentAdapter;
 import android.print.PrintDocumentInfo;
 import android.util.Log;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,12 +17,11 @@ import java.io.OutputStream;
 
 public class PdfDocumentAdapter extends PrintDocumentAdapter {
 
-    Context context = null;
-//    String pathName = "";
+    Context context;
     InputStream in;
 
-    public PdfDocumentAdapter(Context ctxt, InputStream inputStream) {
-        context = ctxt;
+    public PdfDocumentAdapter(Context context, InputStream inputStream) {
+        this.context = context;
         in = inputStream;
     }
 
@@ -48,8 +45,6 @@ public class PdfDocumentAdapter extends PrintDocumentAdapter {
     public void onWrite(PageRange[] pageRanges, ParcelFileDescriptor parcelFileDescriptor, CancellationSignal cancellationSignal, WriteResultCallback writeResultCallback) {
         OutputStream out=null;
         try {
-//            File file = new File(pathName);
-//            in = new FileInputStream(file);
             out = new FileOutputStream(parcelFileDescriptor.getFileDescriptor());
 
             byte[] buf=new byte[16384];
@@ -74,7 +69,7 @@ public class PdfDocumentAdapter extends PrintDocumentAdapter {
         finally {
             try {
                 in.close();
-                out.close();
+                if(out!=null) out.close();
             }
             catch (IOException e) {
                 Log.d("PDFDocumentAdapter", e.getMessage());

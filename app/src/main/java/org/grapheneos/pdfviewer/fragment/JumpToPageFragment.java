@@ -1,12 +1,14 @@
 package org.grapheneos.pdfviewer.fragment;
 
 import android.app.Dialog;
-import android.content.DialogInterface;
 import android.os.Bundle;
 import android.view.Gravity;
+import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.NumberPicker;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 
@@ -22,8 +24,8 @@ public class JumpToPageFragment extends DialogFragment {
     private NumberPicker mPicker;
 
     @Override
-    public void onActivityCreated(Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
         if (savedInstanceState != null) {
             mPicker.setMinValue(savedInstanceState.getInt(STATE_PICKER_MIN));
             mPicker.setMaxValue(savedInstanceState.getInt(STATE_PICKER_MAX));
@@ -31,8 +33,14 @@ public class JumpToPageFragment extends DialogFragment {
         }
     }
 
+    @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
+
+        if(getActivity()==null) {
+            throw new RuntimeException("An unexpected error occurred. getActivity() was null in fragment DialogFragment.");
+        }
+
         mPicker = new NumberPicker(getActivity());
         mPicker.setMinValue(1);
         mPicker.setMaxValue(((PdfViewer)getActivity()).mNumPages);
@@ -46,12 +54,9 @@ public class JumpToPageFragment extends DialogFragment {
 
         return new AlertDialog.Builder(getActivity())
                 .setView(layout)
-                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        mPicker.clearFocus();
-                        ((PdfViewer)getActivity()).onJumpToPageInDocument(mPicker.getValue());
-                    }
+                .setPositiveButton(android.R.string.ok, (dialogInterface, i) -> {
+                    mPicker.clearFocus();
+                    ((PdfViewer)getActivity()).onJumpToPageInDocument(mPicker.getValue());
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();

@@ -23,4 +23,6 @@
 
     <string name="print_document">Print document</string>
     <string name="password">Password</string>
+
+    <string name="unexpected_error">An unexpected error occurred</string>
 </resources>

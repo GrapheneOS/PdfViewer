@@ -29,6 +29,9 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.loader.app.LoaderManager;
@@ -47,7 +50,7 @@ import java.util.HashMap;
 import java.util.List;
 
 public class PdfViewer extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<CharSequence>> {
-    public static final String TAG = "PdfViewer";
+//    public static final String TAG = "PdfViewer";
 
     private static final String STATE_URI = "uri";
     private static final String STATE_PAGE = "page";
@@ -174,9 +177,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     });
 
             alertDialog.setNegativeButton("Cancel",
-                    (dialog, which) -> {
-                        finish();
-                    });
+                    (dialog, which) -> finish());
 
             alertDialog.show();
             input.requestFocus();
@@ -190,9 +191,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
             final Bundle args = new Bundle();
             args.putString(KEY_PROPERTIES, properties);
-            runOnUiThread(() -> {
-                LoaderManager.getInstance(PdfViewer.this).restartLoader(DocumentPropertiesLoader.ID, args, PdfViewer.this);
-            });
+            runOnUiThread(() -> LoaderManager.getInstance(PdfViewer.this).restartLoader(DocumentPropertiesLoader.ID, args, PdfViewer.this));
         }
     }
 
@@ -259,11 +258,14 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
                 if ("/viewer.html".equals(path)) {
                     final WebResourceResponse response = fromAsset("text/html", path);
-                    HashMap<String, String> headers = new HashMap<String, String>();
+                    if(response==null) return null;
+
+                    HashMap<String, String> headers = new HashMap<>();
                     headers.put("Content-Security-Policy", CONTENT_SECURITY_POLICY);
                     headers.put("Feature-Policy", FEATURE_POLICY);
                     headers.put("X-Content-Type-Options", "nosniff");
                     response.setResponseHeaders(headers);
+
                     return response;
                 }
 
@@ -297,7 +299,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     public boolean onTapUp() {
                         if (mUri != null) {
                             mWebView.evaluateJavascript("isTextSelected()", selection -> {
-                                if (!Boolean.valueOf(selection)) {
+                                if (!Boolean.parseBoolean(selection)) {
                                     if ((getWindow().getDecorView().getSystemUiVisibility() &
                                             View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
                                         hideSystemUi();
@@ -367,19 +369,21 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
     }
 
+    @NonNull
     @Override
     public Loader<List<CharSequence>> onCreateLoader(int id, Bundle args) {
+        assert args != null;
         return new DocumentPropertiesLoader(this, args.getString(KEY_PROPERTIES), mNumPages, mUri);
     }
 
     @Override
-    public void onLoadFinished(Loader<List<CharSequence>> loader, List<CharSequence> data) {
+    public void onLoadFinished(@NonNull Loader<List<CharSequence>> loader, List<CharSequence> data) {
         mDocumentProperties = data;
         LoaderManager.getInstance(this).destroyLoader(DocumentPropertiesLoader.ID);
     }
 
     @Override
-    public void onLoaderReset(Loader<List<CharSequence>> loader) {
+    public void onLoaderReset(@NonNull Loader<List<CharSequence>> loader) {
         mDocumentProperties = null;
     }
 
@@ -412,13 +416,31 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         renderPage(0);
     }
 
+    final ActivityResultLauncher<Intent> aRL = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                final Intent resultData = result.getData();
+
+                if (result.getResultCode() == Activity.RESULT_OK) {
+                    if (resultData != null) {
+                        mUri = resultData.getData();
+                        mPage = 1;
+                        mDocumentProperties = null;
+                        loadPdf();
+                        invalidateOptionsMenu();
+                    }
+                }
+            });
+
     private void openDocument() {
         mPassword = "";
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("application/pdf");
-        startActivityForResult(intent, ACTION_OPEN_DOCUMENT_REQUEST_CODE);
+//        startActivityForResult(intent, ACTION_OPEN_DOCUMENT_REQUEST_CODE);
+        aRL.launch(intent);
     }
+
 
     private void zoomIn(float value, boolean end) {
         if (mZoomRatio < MAX_ZOOM_RATIO) {
@@ -477,7 +499,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     @Override
-    public void onSaveInstanceState(Bundle savedInstanceState) {
+    public void onSaveInstanceState(@NonNull Bundle savedInstanceState) {
         super.onSaveInstanceState(savedInstanceState);
         savedInstanceState.putParcelable(STATE_URI, mUri);
         savedInstanceState.putInt(STATE_PAGE, mPage);
@@ -522,7 +544,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
-        final int ids[] = { R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
+        final int[] ids = { R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
                 R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
                 R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
                 R.id.print_document, R.id.action_view_document_properties};
@@ -567,6 +589,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
     }
 
+    @SuppressLint("NonConstantResourceId")
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {

@@ -10,7 +10,7 @@ import java.util.Calendar;
 
 public class Utils {
     public static String parseFileSize(long fileSize) {
-        final double kb = fileSize / 1000;
+        final double kb = fileSize / 1000.0;
 
         if (kb == 0) {
             return fileSize + " Bytes";
@@ -46,7 +46,7 @@ public class Utils {
         if (!TextUtils.isDigitsOnly(field)) {
             throw new ParseException("Invalid year", position);
         }
-        year = Integer.valueOf(field);
+        year = Integer.parseInt(field);
         if (year > currentYear) {
             year = currentYear;
         }
@@ -67,7 +67,7 @@ public class Utils {
             if (!TextUtils.isDigitsOnly(field)) {
                 throw new ParseException("Invalid month", position);
             }
-            month = Integer.valueOf(field) - 1;
+            month = Integer.parseInt(field) - 1;
             if (month > 11) {
                 throw new ParseException("Invalid month", position);
             }
@@ -78,7 +78,7 @@ public class Utils {
             if (!TextUtils.isDigitsOnly(field)) {
                 throw new ParseException("Invalid day", position);
             }
-            day = Integer.valueOf(field);
+            day = Integer.parseInt(field);
             if (day > 31) {
                 throw new ParseException("Invalid day", position);
             }
@@ -89,7 +89,7 @@ public class Utils {
             if (!TextUtils.isDigitsOnly(field)) {
                 throw new ParseException("Invalid hours", position);
             }
-            hours = Integer.valueOf(field);
+            hours = Integer.parseInt(field);
             if (hours > 23) {
                 throw new ParseException("Invalid hours", position);
             }
@@ -100,7 +100,7 @@ public class Utils {
             if (!TextUtils.isDigitsOnly(field)) {
                 throw new ParseException("Invalid minutes", position);
             }
-            minutes = Integer.valueOf(field);
+            minutes = Integer.parseInt(field);
             if (minutes > 59) {
                 throw new ParseException("Invalid minutes", position);
             }
@@ -111,7 +111,7 @@ public class Utils {
             if (!TextUtils.isDigitsOnly(field)) {
                 throw new ParseException("Invalid seconds", position);
             }
-            seconds = Integer.valueOf(field);
+            seconds = Integer.parseInt(field);
             if (seconds > 59) {
                 throw new ParseException("Invalid seconds", position);
             }
