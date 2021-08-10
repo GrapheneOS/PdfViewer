@@ -24,14 +24,18 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
 
 import com.google.android.material.snackbar.Snackbar;
+import com.google.android.material.textfield.TextInputLayout;
 
 import org.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
 import org.grapheneos.pdfviewer.fragment.JumpToPageFragment;
@@ -92,6 +96,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private Uri mUri;
     public int mPage;
     public int mNumPages;
+    private String mPassword;
     private float mZoomRatio = MIN_ZOOM_RATIO;
     private int mDocumentOrientationDegrees;
     private int mDocumentState;
@@ -129,6 +134,52 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         public void setNumPages(int numPages) {
             mNumPages = numPages;
             runOnUiThread(PdfViewer.this::invalidateOptionsMenu);
+        }
+
+        @JavascriptInterface
+        public void onEncryptedPDF(boolean pwp){
+            // If password was passed
+            if(pwp)
+                Toast.makeText(PdfViewer.this, "Incorrect password",
+                        Toast.LENGTH_LONG).show();
+
+            AlertDialog.Builder alertDialog = new AlertDialog.Builder(PdfViewer.this);
+            alertDialog.setTitle("This file is protected");
+
+            final TextInputLayout tpl = new TextInputLayout(PdfViewer.this);
+            final EditText input = new EditText(PdfViewer.this);
+
+
+
+            final LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+
+            input.setHint(R.string.password);
+
+            tpl.setPadding(60,32,60,0);
+            tpl.setLayoutParams(lp);
+
+            input.setLayoutParams(lp);
+
+            alertDialog.setView(tpl);
+
+            tpl.addView(input);
+
+            alertDialog.setPositiveButton("Open",
+                    (dialog, which) -> {
+                        mPassword = input.getText().toString();
+                        runOnUiThread(PdfViewer.this::loadPdf);
+                    });
+
+            alertDialog.setNegativeButton("Cancel",
+                    (dialog, which) -> {
+                        finish();
+                    });
+
+            alertDialog.show();
+            input.requestFocus();
         }
 
         @JavascriptInterface
@@ -201,7 +252,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 }
 
                 final String path = url.getPath();
-                Log.d(TAG, "path " + path);
 
                 if ("/placeholder.pdf".equals(path)) {
                     return new WebResourceResponse("application/pdf", null, mInputStream);
@@ -236,6 +286,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             @Override
             public void onPageFinished(WebView view, String url) {
                 mDocumentState = STATE_LOADED;
+                mWebView.evaluateJavascript("openPDF(\""+mPassword+"\")", null);
                 invalidateOptionsMenu();
             }
         });
@@ -339,7 +390,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             }
 
             mInputStream = getContentResolver().openInputStream(mUri);
-//            mWebView.evaluateJavascript("const viewport = page.getViewport({scale: canvas.width / page.getViewport({scale: 1}).width});", null);
         } catch (IOException e) {
             snackbar.setText(R.string.io_error).show();
             return;
@@ -347,6 +397,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
         showSystemUi();
         mWebView.loadUrl("https://localhost/viewer.html");
+
     }
 
     private void renderPage(final int zoom) {
@@ -362,6 +413,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     private void openDocument() {
+        mPassword = "";
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("application/pdf");
@@ -561,12 +613,14 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             case R.id.action_view_document_properties:
                 DocumentPropertiesFragment
                         .newInstance(mDocumentProperties)
-                        .show(getSupportFragmentManager(), DocumentPropertiesFragment.TAG);
+                        .show(getSupportFragmentManager(),
+                                DocumentPropertiesFragment.TAG);
                 return true;
 
             case R.id.action_jump_to_page:
                 new JumpToPageFragment()
-                        .show(getSupportFragmentManager(), JumpToPageFragment.TAG);
+                        .show(getSupportFragmentManager(),
+                                JumpToPageFragment.TAG);
                 return true;
 
             default:

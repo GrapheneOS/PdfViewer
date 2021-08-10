@@ -228,27 +228,41 @@ function updateInset() {
 
 updateInset();
 
-var loadingTask = pdfjsLib.getDocument("https://localhost/placeholder.pdf");
+function openPDF(password){
 
-loadingTask.onProgress = function(data){
-  var progress = Math.ceil((data.loaded/data.total)*100);
+  var loadingTask = pdfjsLib.getDocument({
+    url: "https://localhost/placeholder.pdf",
+    password: password
+  });
 
-  set_progress(progress);
+  loadingTask.onProgress = function(data){
+    var progress = Math.ceil((data.loaded/data.total)*100);
+    set_progress(progress);
+  };
+
+  loadingTask.onPassword = function passwordNeeded(updateCallback, reason) {
+      loadingTask.destroy();
+      if (reason === 1) {
+        channel.onEncryptedPDF(false);
+      } else {
+        channel.onEncryptedPDF(true);
+      }
+  };
+
+  show_progress_bar();
+
+  loadingTask.promise.then(function(newDoc) {
+      pdfDoc = newDoc;
+      channel.setNumPages(pdfDoc.numPages);
+      pdfDoc.getMetadata().then(function(data) {
+          channel.setDocumentProperties(JSON.stringify(data.info));
+      }).catch(function(error) {
+          console.log("getMetadata error: " + error);
+      });
+      renderPage(channel.getPage(), false, false);
+      hide_progress_bar();
+  }).catch(function(error) {
+      hide_progress_bar();
+      console.log("getDocument error: " + error);
+  });
 }
-
-show_progress_bar();
-
-loadingTask.promise.then(function(newDoc) {
-    pdfDoc = newDoc;
-    channel.setNumPages(pdfDoc.numPages);
-    pdfDoc.getMetadata().then(function(data) {
-        channel.setDocumentProperties(JSON.stringify(data.info));
-    }).catch(function(error) {
-        console.log("getMetadata error: " + error);
-    });
-    renderPage(channel.getPage(), false, false);
-    hide_progress_bar();
-}).catch(function(error) {
-    console.log("getDocument error: " + error);
-    hide_progress_bar();
-});
