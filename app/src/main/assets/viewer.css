@@ -3,6 +3,10 @@ body, canvas, #padding {
     margin: 0;
 }
 
+body {
+    background-color: #c0c0c0;
+}
+
 #padding {
     min-width: 100%;
     background: black;
