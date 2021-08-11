@@ -8,6 +8,10 @@ canvas {
     display: block;
 }
 
+body {
+    background-color: #c0c0c0;
+}
+
 .textLayer {
     position: absolute;
     text-align: initial;
