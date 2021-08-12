@@ -158,6 +158,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         setContentView(R.layout.webview);
 
         mWebView = findViewById(R.id.webview);
+        mWebView.setBackgroundColor(Color.TRANSPARENT);
 
         if (BuildConfig.DEBUG) {
             WebView.setWebContentsDebuggingEnabled(true);
