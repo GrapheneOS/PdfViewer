@@ -5,3 +5,8 @@ updates:
   schedule:
     interval: daily
   target-branch: main
+- package-ecosystem: npm
+  directory: "/app"
+  schedule:
+    interval: daily
+  target-branch: main

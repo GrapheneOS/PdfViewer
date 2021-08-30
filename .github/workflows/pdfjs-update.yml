@@ -1,0 +1,34 @@
+name: Update pdf.js
+
+on:
+  pull_request_target:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+
+      - name: Update pdf.js
+        run: |
+            export ISPDF=$(git log -1 | grep pdf)
+            if [[ "$ISPDF" ]]
+            then
+              cd app
+              npm install
+              cp node_modules/pdfjs-dist/build/pdf.js src/main/assets/pdf.js
+              cp node_modules/pdfjs-dist/build/pdf.worker.js src/main/assets/pdf.worker.js
+              git checkout ${GITHUB_HEAD_REF}
+              git config --global user.name "github-actions"
+              git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+              git add src/main/assets/pdf.js src/main/assets/pdf.worker.js package.json package-lock.json
+              git commit -m "Update pdf.js assets"
+              git push --set-upstream origin ${GITHUB_HEAD_REF}
+            fi
