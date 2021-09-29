@@ -6,3 +6,4 @@ signing.properties
 *.keystore
 /.idea
 /releases
+.DS_Store
