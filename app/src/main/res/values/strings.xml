@@ -13,6 +13,11 @@
     <string name="action_rotate_counterclockwise">Rotate counterclockwise</string>
     <string name="action_jump_to_page">Jump to page</string>
     <string name="action_view_document_properties">Properties</string>
+    <string name="action_print">Print</string>
+
+    <string name="print_job_base_name">PDF Document</string>
+    <string name="toast_print_completed">Print job completed successfully</string>
+    <string name="toast_print_failed">Print job failed</string>
 
     <string name="document_properties_invalid_date">Invalid date</string>
     <string name="document_properties_retrieval_failed">Failed to obtain document metadata</string>
