@@ -1,5 +1,7 @@
 "use strict";
 
+pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.js";
+
 const padding = document.getElementById("padding");
 let pdfDoc = null;
 let pageRendering = false;
