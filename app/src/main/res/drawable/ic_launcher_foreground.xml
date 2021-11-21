@@ -1,16 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+Font: Montserrat Black
+Scale: 115%
+-->
+
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-        android:width="108dp"
-        android:height="108dp"
-        android:viewportWidth="31.16883"
-        android:viewportHeight="31.16883">
-    <group android:translateX="3.5844157"
-            android:translateY="3.5844157">
-        <path
-            android:pathData="M4.734,7.125h15.594v10.625h-15.594z"
-            android:fillAlpha="1"
-            android:fillColor="#ffffff"/>
-        <path
-            android:pathData="M7,11.5h1v-1L7,10.5v1zM19,3L5,3c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2L21,5c0,-1.1 -0.9,-2 -2,-2zM9.5,11.5c0,0.83 -0.67,1.5 -1.5,1.5L7,13v2L5.5,15L5.5,9L8,9c0.83,0 1.5,0.67 1.5,1.5v1zM19.5,10.5L17,10.5v1h1.5L18.5,13L17,13v2h-1.5L15.5,9h4v1.5zM14.5,13.5c0,0.83 -0.67,1.5 -1.5,1.5h-2.5L10.5,9L13,9c0.83,0 1.5,0.67 1.5,1.5v3zM12,13.5h1v-3h-1v3z"
-            android:fillColor="#000000"/>
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.17909718"
+        android:scaleY="0.17909718"
+        android:translateX="25.434"
+        android:translateY="38.280994">
+        <group android:translateY="139.39206">
+            <path
+                android:fillColor="@color/ic_launcher_foreground"
+                android:pathData="M56.734375,-101L8.203125,-101L8.203125,-0L42.1875,-0L42.1875,-24.78125L56.734375,-24.78125C84.8125,-24.78125,102.65625,-39.46875,102.65625,-62.890625C102.65625,-86.296875,84.8125,-101,56.734375,-101ZM54.5625,-51L42.1875,-51L42.1875,-74.78125L54.5625,-74.78125C63.921875,-74.78125,68.390625,-70.28125,68.390625,-62.890625C68.390625,-55.484375,63.921875,-51,54.5625,-51Z" />
+            <path
+                android:fillColor="@color/ic_launcher_foreground"
+                android:pathData="M115.203125,0L164.875,0C198.57812,0,221.76562,-19.140625,221.76562,-50.5C221.76562,-81.84375,198.57812,-101,164.875,-101L115.203125,-101L115.203125,0ZM149.1875,-26.484375L149.1875,-74.5L163.4375,-74.5C177.6875,-74.5,187.48438,-65.96875,187.48438,-50.5C187.48438,-35.015625,177.6875,-26.484375,163.4375,-26.484375L149.1875,-26.484375Z" />
+            <path
+                android:fillColor="@color/ic_launcher_foreground"
+                android:pathData="M316.14062,-75.359375L316.14062,-101L234.20312,-101L234.20312,0L268.1875,0L268.1875,-32.359375L310.23438,-32.359375L310.23438,-58L268.1875,-58L268.1875,-75.359375L316.14062,-75.359375Z" />
+        </group>
     </group>
 </vector>
