@@ -518,7 +518,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
             case R.id.action_open:
                 openDocument();
-                return super.onOptionsItemSelected(item);
+                return true;
 
             case R.id.action_zoom_out:
                 zoomOut(0.25f, true);
