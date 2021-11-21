@@ -2,7 +2,7 @@
 .gradle
 local.properties
 build/
-signing.properties
+keystore.properties
 *.keystore
 /.idea
 /releases
