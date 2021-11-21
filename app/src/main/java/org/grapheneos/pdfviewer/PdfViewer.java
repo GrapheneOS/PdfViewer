@@ -57,24 +57,33 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         "frame-ancestors 'none'; " +
         "base-uri 'none'";
 
-    private static final String FEATURE_POLICY =
-        "accelerometer 'none'; " +
-        "ambient-light-sensor 'none'; " +
-        "autoplay 'none'; " +
-        "camera 'none'; " +
-        "encrypted-media 'none'; " +
-        "fullscreen 'none'; " +
-        "geolocation 'none'; " +
-        "gyroscope 'none'; " +
-        "magnetometer 'none'; " +
-        "microphone 'none'; " +
-        "midi 'none'; " +
-        "payment 'none'; " +
-        "picture-in-picture 'none'; " +
-        "speaker 'none'; " +
-        "sync-xhr 'none'; " +
-        "usb 'none'; " +
-        "vr 'none'";
+    private static final String PERMISSIONS_POLICY =
+        "accelerometer=(), " +
+        "ambient-light-sensor=(), " +
+        "autoplay=(), " +
+        "battery=(), " +
+        "camera=(), " +
+        "clipboard-read=(), " +
+        "clipboard-write=(), " +
+        "display-capture=(), " +
+        "document-domain=(), " +
+        "encrypted-media=(), " +
+        "fullscreen=(), " +
+        "geolocation=(), " +
+        "gyroscope=(), " +
+        "hid=(), " +
+        "interest-cohort=(), " +
+        "magnetometer=(), " +
+        "microphone=(), " +
+        "midi=(), " +
+        "payment=(), " +
+        "picture-in-picture=(), " +
+        "publickey-credentials-get=(), " +
+        "screen-wake-lock=(), " +
+        "serial=(), " +
+        "sync-xhr=(), " +
+        "usb=(), " +
+        "xr-spatial-tracking=()";
 
     private static final float MIN_ZOOM_RATIO = 0.5f;
     private static final float MAX_ZOOM_RATIO = 1.5f;
@@ -205,7 +214,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     final WebResourceResponse response = fromAsset("text/html", path);
                     HashMap<String, String> headers = new HashMap<String, String>();
                     headers.put("Content-Security-Policy", CONTENT_SECURITY_POLICY);
-                    headers.put("Feature-Policy", FEATURE_POLICY);
+                    headers.put("Permissions-Policy", PERMISSIONS_POLICY);
                     headers.put("X-Content-Type-Options", "nosniff");
                     response.setResponseHeaders(headers);
                     return response;
