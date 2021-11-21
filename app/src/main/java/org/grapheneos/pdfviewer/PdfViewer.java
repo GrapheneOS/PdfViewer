@@ -499,56 +499,45 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.action_previous:
-                onJumpToPageInDocument(mPage - 1);
-                return true;
-
-            case R.id.action_next:
-                onJumpToPageInDocument(mPage + 1);
-                return true;
-
-            case R.id.action_first:
-                onJumpToPageInDocument(1);
-                return true;
-
-            case R.id.action_last:
-                onJumpToPageInDocument(mNumPages);
-                return true;
-
-            case R.id.action_open:
-                openDocument();
-                return true;
-
-            case R.id.action_zoom_out:
-                zoomOut(0.25f, true);
-                return true;
-
-            case R.id.action_zoom_in:
-                zoomIn(0.25f, true);
-                return true;
-
-            case R.id.action_rotate_clockwise:
-                documentOrientationChanged(90);
-                return true;
-
-            case R.id.action_rotate_counterclockwise:
-                documentOrientationChanged(-90);
-                return true;
-
-            case R.id.action_view_document_properties:
-                DocumentPropertiesFragment
-                        .newInstance(mDocumentProperties)
-                        .show(getSupportFragmentManager(), DocumentPropertiesFragment.TAG);
-                return true;
-
-            case R.id.action_jump_to_page:
-                new JumpToPageFragment()
-                        .show(getSupportFragmentManager(), JumpToPageFragment.TAG);
-                return true;
-
-            default:
-                return super.onOptionsItemSelected(item);
+        final int itemId = item.getItemId();
+        if (itemId == R.id.action_previous) {
+            onJumpToPageInDocument(mPage - 1);
+            return true;
+        } else if (itemId == R.id.action_next) {
+            onJumpToPageInDocument(mPage + 1);
+            return true;
+        } else if (itemId == R.id.action_first) {
+            onJumpToPageInDocument(1);
+            return true;
+        } else if (itemId == R.id.action_last) {
+            onJumpToPageInDocument(mNumPages);
+            return true;
+        } else if (itemId == R.id.action_open) {
+            openDocument();
+            return true;
+        } else if (itemId == R.id.action_zoom_out) {
+            zoomOut(0.25f, true);
+            return true;
+        } else if (itemId == R.id.action_zoom_in) {
+            zoomIn(0.25f, true);
+            return true;
+        } else if (itemId == R.id.action_rotate_clockwise) {
+            documentOrientationChanged(90);
+            return true;
+        } else if (itemId == R.id.action_rotate_counterclockwise) {
+            documentOrientationChanged(-90);
+            return true;
+        } else if (itemId == R.id.action_view_document_properties) {
+            DocumentPropertiesFragment
+                .newInstance(mDocumentProperties)
+                .show(getSupportFragmentManager(), DocumentPropertiesFragment.TAG);
+            return true;
+        } else if (itemId == R.id.action_jump_to_page) {
+            new JumpToPageFragment()
+                .show(getSupportFragmentManager(), JumpToPageFragment.TAG);
+            return true;
         }
+
+        return super.onOptionsItemSelected(item);
     }
 }
