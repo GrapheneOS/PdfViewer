@@ -52,7 +52,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         "form-action 'none'; " +
         "connect-src https://localhost/placeholder.pdf; " +
         "img-src blob: 'self'; " +
-        "script-src 'self' 'resource://pdf.js'; " +
+        "script-src 'self'; " +
         "style-src 'self'; " +
         "frame-ancestors 'none'; " +
         "base-uri 'none'";
