@@ -150,12 +150,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
     }
 
-    // Can be removed once minSdkVersion >= 26
-    @SuppressWarnings("deprecation")
-    private void disableSaveFormData(final WebSettings settings) {
-        settings.setSaveFormData(false);
-    }
-
     @Override
     @SuppressLint({"SetJavaScriptEnabled", "ClickableViewAccessibility"})
     protected void onCreate(Bundle savedInstanceState) {
@@ -180,7 +174,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         settings.setAllowFileAccess(false);
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         settings.setJavaScriptEnabled(true);
-        disableSaveFormData(settings);
 
         CookieManager.getInstance().setAcceptCookie(false);
 
