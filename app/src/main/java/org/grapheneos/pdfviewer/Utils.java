@@ -39,22 +39,18 @@ public class Utils {
 
         final Calendar calendar = Calendar.getInstance();
         final int currentYear = calendar.get(Calendar.YEAR);
-        int year;
 
         // Year is required
         String field = date.substring(position += 2, 6);
         if (!TextUtils.isDigitsOnly(field)) {
             throw new ParseException("Invalid year", position);
         }
-        year = Integer.valueOf(field);
-        if (year > currentYear) {
-            year = currentYear;
-        }
 
         position += 4;
 
         // Default value for month and day shall be 1 (calendar month starts at 0 in Java 7),
         // all others default to 0
+        int year = 0;
         int month = 0;
         int day = 1;
         int hours = 0;
@@ -62,6 +58,11 @@ public class Utils {
         int seconds = 0;
 
         // All succeeding fields are optional, but each preceding field must be present
+        year = Integer.valueOf(field);
+        if (year > currentYear) {
+            year = currentYear;
+        }
+
         if (date.length() > 8) {
             field = date.substring(position, 8);
             if (!TextUtils.isDigitsOnly(field)) {

@@ -107,7 +107,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
             zoomRatio = newZoomRatio;
         }
 
-        if (zoom == 2) {
+        if (zoom === 2) {
             pageRendering = false;
             return;
         }
