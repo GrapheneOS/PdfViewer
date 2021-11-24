@@ -72,6 +72,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         "geolocation=(), " +
         "gyroscope=(), " +
         "hid=(), " +
+        "idle-detection=(), " +
         "interest-cohort=(), " +
         "magnetometer=(), " +
         "microphone=(), " +
