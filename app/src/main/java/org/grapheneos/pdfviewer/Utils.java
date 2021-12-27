@@ -10,9 +10,9 @@ import java.util.Calendar;
 
 public class Utils {
     public static String parseFileSize(long fileSize) {
-        final double kb = fileSize / 1000;
+        final double kb = fileSize / 1000d;
 
-        if (kb == 0) {
+        if (kb == 0d) {
             return fileSize + " Bytes";
         }
 
@@ -39,14 +39,14 @@ public class Utils {
 
         final Calendar calendar = Calendar.getInstance();
         final int currentYear = calendar.get(Calendar.YEAR);
-        int year;
 
         // Year is required
         String field = date.substring(position += 2, 6);
         if (!TextUtils.isDigitsOnly(field)) {
             throw new ParseException("Invalid year", position);
         }
-        year = Integer.valueOf(field);
+
+        int year = Integer.valueOf(field);
         if (year > currentYear) {
             year = currentYear;
         }
