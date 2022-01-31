@@ -33,7 +33,7 @@ class GestureHelper {
 
         final ScaleGestureDetector scaleDetector = new ScaleGestureDetector(context,
                 new ScaleGestureDetector.SimpleOnScaleGestureListener() {
-                    float SPAN_RATIO = 600;
+                    final float SPAN_RATIO = 600;
                     float initialSpan;
                     float prevNbStep;
 
