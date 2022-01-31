@@ -59,7 +59,7 @@ public class DocumentPropertiesLoader extends AsyncTaskLoader<List<CharSequence>
 
             final int indexSize = mCursor.getColumnIndex(OpenableColumns.SIZE);
             if (indexSize >= 0) {
-                final long fileSize = Long.valueOf(mCursor.getString(indexSize));
+                final long fileSize = Long.parseLong(mCursor.getString(indexSize));
                 properties.add(getProperty(null, names[1], Utils.parseFileSize(fileSize)));
             }
 
