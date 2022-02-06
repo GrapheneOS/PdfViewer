@@ -1,12 +1,12 @@
 package org.grapheneos.pdfviewer.fragment;
 
 import android.app.Dialog;
-import android.content.DialogInterface;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.widget.FrameLayout;
 import android.widget.NumberPicker;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 
@@ -31,12 +31,13 @@ public class JumpToPageFragment extends DialogFragment {
         }
     }
 
+    @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         mPicker = new NumberPicker(getActivity());
         mPicker.setMinValue(1);
-        mPicker.setMaxValue(((PdfViewer)getActivity()).mNumPages);
-        mPicker.setValue(((PdfViewer)getActivity()).mPage);
+        mPicker.setMaxValue(((PdfViewer)requireActivity()).mNumPages);
+        mPicker.setValue(((PdfViewer)requireActivity()).mPage);
 
         final FrameLayout layout = new FrameLayout(getActivity());
         layout.addView(mPicker, new FrameLayout.LayoutParams(
@@ -44,14 +45,11 @@ public class JumpToPageFragment extends DialogFragment {
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.CENTER));
 
-        return new AlertDialog.Builder(getActivity())
+        return new AlertDialog.Builder(requireActivity())
                 .setView(layout)
-                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        mPicker.clearFocus();
-                        ((PdfViewer)getActivity()).onJumpToPageInDocument(mPicker.getValue());
-                    }
+                .setPositiveButton(android.R.string.ok, (dialogInterface, i) -> {
+                    mPicker.clearFocus();
+                    ((PdfViewer)requireActivity()).onJumpToPageInDocument(mPicker.getValue());
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
