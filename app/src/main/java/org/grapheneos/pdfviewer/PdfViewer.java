@@ -214,7 +214,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
                 if ("/viewer.html".equals(path)) {
                     final WebResourceResponse response = fromAsset("text/html", path);
-                    HashMap<String, String> headers = new HashMap<String, String>();
+                    HashMap<String, String> headers = new HashMap<>();
                     headers.put("Content-Security-Policy", CONTENT_SECURITY_POLICY);
                     headers.put("Permissions-Policy", PERMISSIONS_POLICY);
                     headers.put("X-Content-Type-Options", "nosniff");
@@ -251,7 +251,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     public boolean onTapUp() {
                         if (mUri != null) {
                             mWebView.evaluateJavascript("isTextSelected()", selection -> {
-                                if (!Boolean.valueOf(selection)) {
+                                if (!Boolean.parseBoolean(selection)) {
                                     if ((getWindow().getDecorView().getSystemUiVisibility() &
                                             View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
                                         hideSystemUi();
@@ -473,7 +473,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
-        final int ids[] = { R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
+        final int[] ids = { R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
                 R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
                 R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
                 R.id.action_view_document_properties };
