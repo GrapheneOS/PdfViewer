@@ -145,9 +145,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
             final Bundle args = new Bundle();
             args.putString(KEY_PROPERTIES, properties);
-            runOnUiThread(() -> {
-                LoaderManager.getInstance(PdfViewer.this).restartLoader(DocumentPropertiesLoader.ID, args, PdfViewer.this);
-            });
+            runOnUiThread(() -> LoaderManager.getInstance(PdfViewer.this).restartLoader(DocumentPropertiesLoader.ID, args, PdfViewer.this));
         }
     }
 
