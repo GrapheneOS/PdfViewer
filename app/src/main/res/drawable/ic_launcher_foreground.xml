@@ -1,30 +1,27 @@
-<?xml version="1.0" encoding="utf-8"?>
-
 <!--
-Font: Montserrat Black
-Scale: 115%
--->
-
+  Copyright (C) 2021 Google Inc.
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <group
-        android:scaleX="0.17909718"
-        android:scaleY="0.17909718"
-        android:translateX="25.434"
-        android:translateY="38.280994">
-        <group android:translateY="139.39206">
-            <path
-                android:fillColor="@color/ic_launcher_foreground"
-                android:pathData="M56.734375,-101L8.203125,-101L8.203125,-0L42.1875,-0L42.1875,-24.78125L56.734375,-24.78125C84.8125,-24.78125,102.65625,-39.46875,102.65625,-62.890625C102.65625,-86.296875,84.8125,-101,56.734375,-101ZM54.5625,-51L42.1875,-51L42.1875,-74.78125L54.5625,-74.78125C63.921875,-74.78125,68.390625,-70.28125,68.390625,-62.890625C68.390625,-55.484375,63.921875,-51,54.5625,-51Z" />
-            <path
-                android:fillColor="@color/ic_launcher_foreground"
-                android:pathData="M115.203125,0L164.875,0C198.57812,0,221.76562,-19.140625,221.76562,-50.5C221.76562,-81.84375,198.57812,-101,164.875,-101L115.203125,-101L115.203125,0ZM149.1875,-26.484375L149.1875,-74.5L163.4375,-74.5C177.6875,-74.5,187.48438,-65.96875,187.48438,-50.5C187.48438,-35.015625,177.6875,-26.484375,163.4375,-26.484375L149.1875,-26.484375Z" />
-            <path
-                android:fillColor="@color/ic_launcher_foreground"
-                android:pathData="M316.14062,-75.359375L316.14062,-101L234.20312,-101L234.20312,0L268.1875,0L268.1875,-32.359375L310.23438,-32.359375L310.23438,-58L268.1875,-58L268.1875,-75.359375L316.14062,-75.359375Z" />
-        </group>
-    </group>
+  android:width="108dp"
+  android:height="108dp"
+  android:viewportWidth="108"
+  android:viewportHeight="108"
+  android:tint="?attr/colorControlNormal">
+<group android:scaleX="2.25"
+    android:scaleY="2.25"
+    android:translateX="27"
+    android:translateY="27">
+  <path
+      android:fillColor="@android:color/black"
+      android:pathData="M22,2L6,2v16h16L22,2zM11.5,11L9,11v2L7.5,13L7.5,7h4v4zM16.5,11.5c0,0.83 -0.67,1.5 -1.5,1.5h-2.5L12.5,7L15,7c0.83,0 1.5,0.67 1.5,1.5v3zM20.5,8.5L19,8.5v1h1.5L20.5,11L19,11v2h-1.5L17.5,7h3v1.5zM9,9.5h1v-1L9,8.5v1zM4,6L2,6v16h16v-2L4,20L4,6zM14,11.5h1v-3h-1v3z"/>
+</group>
 </vector>
