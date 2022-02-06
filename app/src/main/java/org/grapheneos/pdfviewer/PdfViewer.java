@@ -162,7 +162,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         mWebView = findViewById(R.id.webview);
 
         if (BuildConfig.DEBUG) {
-            mWebView.setWebContentsDebuggingEnabled(true);
+            WebView.setWebContentsDebuggingEnabled(true);
         }
 
         mWebView.setOnApplyWindowInsetsListener((view, insets) -> {
