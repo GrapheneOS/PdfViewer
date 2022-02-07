@@ -2,7 +2,6 @@
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.js";
 
-const padding = document.getElementById("padding");
 let pdfDoc = null;
 let pageRendering = false;
 let renderPending = false;
@@ -56,7 +55,6 @@ function display(newCanvas, zoom) {
     canvas.width = newCanvas.width;
     canvas.style.height = newCanvas.style.height;
     canvas.style.width = newCanvas.style.width;
-    padding.style.width = canvas.style.width;
     canvas.getContext("2d", { alpha: false }).drawImage(newCanvas, 0, 0);
     if (!zoom) {
         scrollTo(0, 0);
@@ -199,14 +197,6 @@ function onRenderPage(zoom) {
 function isTextSelected() {
     return window.getSelection().toString() !== "";
 }
-
-function updateInset() {
-    const windowInsetTop = channel.getWindowInsetTop() / window.devicePixelRatio + "px";
-    padding.style.paddingTop = windowInsetTop;
-    textLayerDiv.style.top = windowInsetTop;
-}
-
-updateInset();
 
 pdfjsLib.getDocument("https://localhost/placeholder.pdf").promise.then(function(newDoc) {
     pdfDoc = newDoc;

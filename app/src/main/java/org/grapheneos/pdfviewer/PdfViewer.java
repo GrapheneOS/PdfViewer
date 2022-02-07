@@ -30,7 +30,7 @@ import androidx.loader.content.Loader;
 
 import com.google.android.material.snackbar.Snackbar;
 
-import org.grapheneos.pdfviewer.databinding.WebviewBinding;
+import org.grapheneos.pdfviewer.databinding.PdfviewerBinding;
 import org.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
 import org.grapheneos.pdfviewer.fragment.JumpToPageFragment;
 import org.grapheneos.pdfviewer.loader.DocumentPropertiesLoader;
@@ -103,21 +103,15 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private float mZoomRatio = 1f;
     private int mDocumentOrientationDegrees;
     private int mDocumentState;
-    private int windowInsetTop;
     private List<CharSequence> mDocumentProperties;
     private InputStream mInputStream;
 
-    private WebviewBinding binding;
+    private PdfviewerBinding binding;
     private TextView mTextView;
     private Toast mToast;
     private Snackbar snackbar;
 
     private class Channel {
-        @JavascriptInterface
-        public int getWindowInsetTop() {
-            return windowInsetTop;
-        }
-
         @JavascriptInterface
         public int getPage() {
             return mPage;
@@ -155,20 +149,15 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     @SuppressLint({"SetJavaScriptEnabled", "ClickableViewAccessibility"})
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        binding = WebviewBinding.inflate(getLayoutInflater());
+        binding = PdfviewerBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        setSupportActionBar(binding.toolbar);
 
         binding.webview.setBackgroundColor(Color.TRANSPARENT);
 
         if (BuildConfig.DEBUG) {
             WebView.setWebContentsDebuggingEnabled(true);
         }
-
-        binding.webview.setOnApplyWindowInsetsListener((view, insets) -> {
-            windowInsetTop = insets.getSystemWindowInsetTop();
-            binding.webview.evaluateJavascript("updateInset()", null);
-            return insets;
-        });
 
         final WebSettings settings = binding.webview.getSettings();
         settings.setAllowContentAccess(false);
@@ -412,6 +401,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
                 View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
                 View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+        getSupportActionBar().show();
     }
 
     private void hideSystemUi() {
@@ -422,6 +412,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
                 View.SYSTEM_UI_FLAG_FULLSCREEN |
                 View.SYSTEM_UI_FLAG_IMMERSIVE);
+        getSupportActionBar().hide();
     }
 
     @Override
