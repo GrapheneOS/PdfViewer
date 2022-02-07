@@ -1,11 +1,6 @@
-body, canvas, #padding {
+body, canvas {
     padding: 0;
     margin: 0;
-}
-
-#padding {
-    min-width: 100%;
-    background: black;
 }
 
 .textLayer {
