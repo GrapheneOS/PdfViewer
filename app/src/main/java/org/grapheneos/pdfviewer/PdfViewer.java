@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
@@ -13,6 +14,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.WindowInsets;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
@@ -164,7 +166,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
 
         mWebView.setOnApplyWindowInsetsListener((view, insets) -> {
-            windowInsetTop = insets.getSystemWindowInsetTop();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+                windowInsetTop = insets.getInsets(WindowInsets.Type.systemBars()).top;
+            else
+                windowInsetTop = insets.getSystemWindowInsetTop();
             mWebView.evaluateJavascript("updateInset()", null);
             return insets;
         });
