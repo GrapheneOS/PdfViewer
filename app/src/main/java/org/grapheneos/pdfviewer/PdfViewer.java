@@ -30,6 +30,7 @@ import androidx.loader.content.Loader;
 
 import com.google.android.material.snackbar.Snackbar;
 
+import org.grapheneos.pdfviewer.databinding.WebviewBinding;
 import org.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
 import org.grapheneos.pdfviewer.fragment.JumpToPageFragment;
 import org.grapheneos.pdfviewer.loader.DocumentPropertiesLoader;
@@ -106,7 +107,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private List<CharSequence> mDocumentProperties;
     private InputStream mInputStream;
 
-    private WebView mWebView;
+    private WebviewBinding binding;
     private TextView mTextView;
     private Toast mToast;
     private Snackbar snackbar;
@@ -154,23 +155,22 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     @SuppressLint({"SetJavaScriptEnabled", "ClickableViewAccessibility"})
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        binding = WebviewBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
-        setContentView(R.layout.webview);
-
-        mWebView = findViewById(R.id.webview);
-        mWebView.setBackgroundColor(Color.TRANSPARENT);
+        binding.webview.setBackgroundColor(Color.TRANSPARENT);
 
         if (BuildConfig.DEBUG) {
             WebView.setWebContentsDebuggingEnabled(true);
         }
 
-        mWebView.setOnApplyWindowInsetsListener((view, insets) -> {
+        binding.webview.setOnApplyWindowInsetsListener((view, insets) -> {
             windowInsetTop = insets.getSystemWindowInsetTop();
-            mWebView.evaluateJavascript("updateInset()", null);
+            binding.webview.evaluateJavascript("updateInset()", null);
             return insets;
         });
 
-        final WebSettings settings = mWebView.getSettings();
+        final WebSettings settings = binding.webview.getSettings();
         settings.setAllowContentAccess(false);
         settings.setAllowFileAccess(false);
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
@@ -178,9 +178,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
         CookieManager.getInstance().setAcceptCookie(false);
 
-        mWebView.addJavascriptInterface(new Channel(), "channel");
+        binding.webview.addJavascriptInterface(new Channel(), "channel");
 
-        mWebView.setWebViewClient(new WebViewClient() {
+        binding.webview.setWebViewClient(new WebViewClient() {
             private WebResourceResponse fromAsset(final String mime, final String path) {
                 try {
                     InputStream inputStream = getAssets().open(path.substring(1));
@@ -241,12 +241,12 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             }
         });
 
-        GestureHelper.attach(PdfViewer.this, mWebView,
+        GestureHelper.attach(PdfViewer.this, binding.webview,
                 new GestureHelper.GestureListener() {
                     @Override
                     public boolean onTapUp() {
                         if (mUri != null) {
-                            mWebView.evaluateJavascript("isTextSelected()", selection -> {
+                            binding.webview.evaluateJavascript("isTextSelected()", selection -> {
                                 if (!Boolean.parseBoolean(selection)) {
                                     if ((getWindow().getDecorView().getSystemUiVisibility() &
                                             View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
@@ -288,7 +288,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         // loader manager impl so that the result will be delivered.
         LoaderManager.getInstance(this);
 
-        snackbar = Snackbar.make(mWebView, "", Snackbar.LENGTH_LONG);
+        snackbar = Snackbar.make(binding.webview, "", Snackbar.LENGTH_LONG);
 
         final Intent intent = getIntent();
         if (Intent.ACTION_VIEW.equals(intent.getAction())) {
@@ -346,11 +346,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
 
         showSystemUi();
-        mWebView.loadUrl("https://localhost/viewer.html");
+        binding.webview.loadUrl("https://localhost/viewer.html");
     }
 
     private void renderPage(final int zoom) {
-        mWebView.evaluateJavascript("onRenderPage(" + zoom + ")", null);
+        binding.webview.evaluateJavascript("onRenderPage(" + zoom + ")", null);
     }
 
     private void documentOrientationChanged(final int orientationDegreesOffset) {
