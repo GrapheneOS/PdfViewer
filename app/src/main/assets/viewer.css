@@ -3,6 +3,11 @@ body, canvas {
     margin: 0;
 }
 
+canvas {
+    margin: auto;
+    display: block;
+}
+
 .textLayer {
     position: absolute;
     text-align: initial;
