@@ -6,13 +6,14 @@ import android.os.Bundle;
 import android.widget.ArrayAdapter;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import org.grapheneos.pdfviewer.R;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import org.grapheneos.pdfviewer.R;
 
 public class DocumentPropertiesFragment extends DialogFragment {
     public static final String TAG = "DocumentPropertiesFragment";
@@ -44,7 +45,7 @@ public class DocumentPropertiesFragment extends DialogFragment {
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         final Activity activity = requireActivity();
-        final AlertDialog.Builder dialog = new AlertDialog.Builder(activity)
+        final MaterialAlertDialogBuilder dialog = new MaterialAlertDialogBuilder(activity)
                 .setPositiveButton(android.R.string.ok, null);
 
         if (mDocumentProperties != null) {
