@@ -7,8 +7,9 @@ import android.widget.FrameLayout;
 import android.widget.NumberPicker;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.grapheneos.pdfviewer.PdfViewer;
 
@@ -45,7 +46,7 @@ public class JumpToPageFragment extends DialogFragment {
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.CENTER));
 
-        return new AlertDialog.Builder(requireActivity())
+        return new MaterialAlertDialogBuilder(requireActivity())
                 .setView(layout)
                 .setPositiveButton(android.R.string.ok, (dialogInterface, i) -> {
                     mPicker.clearFocus();
