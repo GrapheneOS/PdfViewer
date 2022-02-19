@@ -4,7 +4,6 @@
     <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- Customize your theme here. -->
         <item name="colorPrimary">#DEFFFFFF</item>
-        <item name="android:windowBackground">#000000</item>
         <item name="android:statusBarColor">#212121</item>
     </style>
 
