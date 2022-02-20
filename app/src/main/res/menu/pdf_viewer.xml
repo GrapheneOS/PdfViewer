@@ -9,61 +9,61 @@
 
     <item
         android:id="@+id/action_previous"
-        android:icon="@drawable/ic_navigate_before_white_24dp"
+        android:icon="@drawable/ic_navigate_before_24dp"
         android:title="@string/action_previous"
         app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_next"
-        android:icon="@drawable/ic_navigate_next_white_24dp"
+        android:icon="@drawable/ic_navigate_next_24dp"
         android:title="@string/action_next"
         app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_open"
-        android:icon="@drawable/ic_insert_drive_file_white_24dp"
+        android:icon="@drawable/ic_insert_drive_file_24dp"
         android:title="@string/action_open"
         app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_zoom_out"
-        android:icon="@drawable/ic_zoom_out_white_24dp"
+        android:icon="@drawable/ic_zoom_out_24dp"
         android:title="@string/action_zoom_out"
         app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_zoom_in"
-        android:icon="@drawable/ic_zoom_in_white_24dp"
+        android:icon="@drawable/ic_zoom_in_24dp"
         android:title="@string/action_zoom_in"
         app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_first"
-        android:icon="@drawable/baseline_first_page_24"
+        android:icon="@drawable/ic_first_page_24dp"
         android:title="@string/action_first"
         app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_last"
-        android:icon="@drawable/baseline_last_page_24"
+        android:icon="@drawable/ic_last_page_24dp"
         android:title="@string/action_last"
         app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_jump_to_page"
-        android:icon="@drawable/ic_pageview_white_24dp"
+        android:icon="@drawable/ic_pageview_24dp"
         android:title="@string/action_jump_to_page"
         app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_rotate_clockwise"
-        android:icon="@drawable/ic_rotate_right_white_24dp"
+        android:icon="@drawable/ic_rotate_right_24dp"
         android:title="@string/action_rotate_clockwise"
         app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_rotate_counterclockwise"
-        android:icon="@drawable/ic_rotate_left_white_24dp"
+        android:icon="@drawable/ic_rotate_left_24dp"
         android:title="@string/action_rotate_counterclockwise"
         app:showAsAction="ifRoom" />
 
