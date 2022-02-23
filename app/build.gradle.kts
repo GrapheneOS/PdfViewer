@@ -29,7 +29,7 @@ android {
     buildToolsVersion = "32.0.0"
 
     defaultConfig {
-        applicationId = "org.grapheneos.pdfviewer"
+        applicationId = "app.grapheneos.pdfviewer"
         minSdk = 26
         targetSdk = 31
         versionCode = 10
