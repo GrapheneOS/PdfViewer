@@ -3,6 +3,7 @@ package org.grapheneos.pdfviewer;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.net.Uri;
@@ -53,6 +54,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final String STATE_ZOOM_RATIO = "zoomRatio";
     private static final String STATE_DOCUMENT_ORIENTATION_DEGREES = "documentOrientationDegrees";
     private static final String KEY_PROPERTIES = "properties";
+    private static final int MIN_WEBVIEW_RELEASE = 89;
 
     private static final String CONTENT_SECURITY_POLICY =
         "default-src 'none'; " +
@@ -324,6 +326,28 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        // The user could have left the activity to update the WebView
+        invalidateOptionsMenu();
+        if (getWebViewRelease() >= MIN_WEBVIEW_RELEASE) {
+            binding.webviewOutOfDateLayout.setVisibility(View.GONE);
+            binding.webview.setVisibility(View.VISIBLE);
+        } else {
+            binding.webview.setVisibility(View.GONE);
+            binding.webviewOutOfDateMessage.setText(getString(R.string.webview_out_of_date_message, getWebViewRelease(), MIN_WEBVIEW_RELEASE));
+            binding.webviewOutOfDateLayout.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private int getWebViewRelease() {
+        PackageInfo webViewPackage = WebView.getCurrentWebViewPackage();
+        String webViewVersionName = webViewPackage.versionName;
+        return Integer.parseInt(webViewVersionName.substring(0, webViewVersionName.indexOf(".")));
+    }
+
     @NonNull
     @Override
     public Loader<List<CharSequence>> onCreateLoader(int id, Bundle args) {
@@ -500,6 +524,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mDocumentState = STATE_END;
         }
 
+        enableDisableMenuItem(menu.findItem(R.id.action_open), getWebViewRelease() >= MIN_WEBVIEW_RELEASE);
         enableDisableMenuItem(menu.findItem(R.id.action_zoom_in), mZoomRatio != MAX_ZOOM_RATIO);
         enableDisableMenuItem(menu.findItem(R.id.action_zoom_out), mZoomRatio != MIN_ZOOM_RATIO);
         enableDisableMenuItem(menu.findItem(R.id.action_next), mPage < mNumPages);

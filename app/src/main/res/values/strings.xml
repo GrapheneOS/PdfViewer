@@ -20,4 +20,7 @@
     <string name="invalid_mime_type">Cannot open file with invalid MIME type</string>
     <string name="legacy_file_uri">Cannot open legacy file paths from insecure apps</string>
     <string name="io_error">Received I/O error trying to open content</string>
+
+    <string name="webview_out_of_date_title">WebView out-of-date</string>
+    <string name="webview_out_of_date_message">Your current WebView version is %d. The WebView should be at least version %d for the PDF Viewer to work.</string>
 </resources>
