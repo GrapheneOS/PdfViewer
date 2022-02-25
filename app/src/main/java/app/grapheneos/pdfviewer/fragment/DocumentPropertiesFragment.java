@@ -1,4 +1,4 @@
-package org.grapheneos.pdfviewer.fragment;
+package app.grapheneos.pdfviewer.fragment;
 
 import android.app.Activity;
 import android.app.Dialog;
@@ -10,7 +10,7 @@ import androidx.fragment.app.DialogFragment;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import org.grapheneos.pdfviewer.R;
+import app.grapheneos.pdfviewer.R;
 
 import java.util.ArrayList;
 import java.util.List;

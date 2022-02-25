@@ -1,4 +1,4 @@
-package org.grapheneos.pdfviewer;
+package app.grapheneos.pdfviewer;
 
 import android.text.TextUtils;
 
