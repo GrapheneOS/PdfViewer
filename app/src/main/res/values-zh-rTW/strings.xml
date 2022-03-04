@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PDF Viewer</string>
+    <!--<string name="action_settings">Settings</string>-->
+    <string name="action_previous">上一頁</string>
+    <string name="action_next">下一頁</string>
+    <string name="action_open">開啟文件</string>
+    <string name="action_first">第一頁</string>
+    <string name="action_last">最後一頁</string>
+    <string name="action_zoom_out">縮小</string>
+    <string name="action_zoom_in">放大</string>
+    <string name="action_rotate_clockwise">順時鐘旋轉</string>
+    <string name="action_rotate_counterclockwise">逆時鐘旋轉</string>
+    <string name="action_jump_to_page">跳轉到</string>
+    <string name="action_view_document_properties">屬性</string>
+
+    <string name="document_properties_invalid_date">失效日期</string>
+    <string name="document_properties_retrieval_failed">無法獲取檔案 metadata</string>
+
+    <string name="invalid_mime_type">無法打開具有無效 MIME 類型的文件</string>
+    <string name="legacy_file_uri">無法從不安全的應用程式打開舊文件路徑</string>
+    <string name="io_error">嘗試打開內容時收到 I/O 錯誤</string>
+
+    <string name="webview_out_of_date_title"WebView 過期</string>
+    <string name="webview_out_of_date_message">您當前的 WebView 版本是 %d。 WebView 應至少為 %d 版本，PDF Viewer 才能工作。</string>
+</resources>
