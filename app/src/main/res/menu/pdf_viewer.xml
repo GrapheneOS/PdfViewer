@@ -38,6 +38,12 @@
         app:showAsAction="ifRoom" />
 
     <item
+        android:id="@+id/action_share"
+        android:icon="@drawable/ic_share_24dp"
+        android:title="@string/action_share"
+        app:showAsAction="ifRoom" />
+
+    <item
         android:id="@+id/action_first"
         android:icon="@drawable/ic_first_page_24dp"
         android:title="@string/action_first"
