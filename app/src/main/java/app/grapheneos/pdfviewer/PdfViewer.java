@@ -399,6 +399,18 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         startActivityForResult(intent, ACTION_OPEN_DOCUMENT_REQUEST_CODE);
     }
 
+    private void shareDocument() {
+        if (mUri != null) {
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setDataAndTypeAndNormalize(mUri, "application/pdf");
+            shareIntent.putExtra(Intent.EXTRA_STREAM, mUri);
+            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(Intent.createChooser(shareIntent, getString(R.string.action_share)));
+        } else {
+            Log.w(TAG, "Cannot share unexpected null URI");
+        }
+    }
+
     private void zoomIn(float value, boolean end) {
         if (mZoomRatio < MAX_ZOOM_RATIO) {
             mZoomRatio = Math.min(mZoomRatio + value, MAX_ZOOM_RATIO);
@@ -506,7 +518,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         final int[] ids = { R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
                 R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
                 R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
-                R.id.action_view_document_properties };
+                R.id.action_view_document_properties, R.id.action_share };
         if (mDocumentState < STATE_LOADED) {
             for (final int id : ids) {
                 final MenuItem item = menu.findItem(id);
@@ -527,6 +539,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         enableDisableMenuItem(menu.findItem(R.id.action_open), getWebViewRelease() >= MIN_WEBVIEW_RELEASE);
         enableDisableMenuItem(menu.findItem(R.id.action_zoom_in), mZoomRatio != MAX_ZOOM_RATIO);
         enableDisableMenuItem(menu.findItem(R.id.action_zoom_out), mZoomRatio != MIN_ZOOM_RATIO);
+        enableDisableMenuItem(menu.findItem(R.id.action_share), mUri != null);
         enableDisableMenuItem(menu.findItem(R.id.action_next), mPage < mNumPages);
         enableDisableMenuItem(menu.findItem(R.id.action_previous), mPage > 1);
 
@@ -571,6 +584,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         } else if (itemId == R.id.action_jump_to_page) {
             new JumpToPageFragment()
                 .show(getSupportFragmentManager(), JumpToPageFragment.TAG);
+            return true;
+        } else if (itemId == R.id.action_share) {
+            shareDocument();
             return true;
         }
 
