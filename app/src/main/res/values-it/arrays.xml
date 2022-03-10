@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="property_names">
+        <item>Nome file</item>
+        <item>Dimensione file</item>
+        <item>Titolo</item>
+        <item>Autore</item>
+        <item>Oggetto</item>
+        <item>Parole chiave</item>
+        <item>Data di creazione</item>
+        <item>Data di modifica</item>
+        <item>Produttore</item>
+        <item>Creatore</item>
+        <item>Versione PDF</item>
+        <item>Pagine</item>
+    </string-array>
+</resources>
