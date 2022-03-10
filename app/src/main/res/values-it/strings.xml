@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Visualizzatore PDF</string>
+    <!--<string name="action_settings">Impostazioni</string>-->
+    <string name="action_previous">Pagina precedente</string>
+    <string name="action_next">Pagina successiva</string>
+    <string name="action_open">Apri documento</string>
+    <string name="action_first">Prima pagina</string>
+    <string name="action_last">Ultima pagina</string>
+    <string name="action_zoom_out">Zoom -</string>
+    <string name="action_zoom_in">Zoom +</string>
+    <string name="action_rotate_clockwise">Ruota in senso orario</string>
+    <string name="action_rotate_counterclockwise">Ruota in senso antiorario</string>
+    <string name="action_jump_to_page">Salta alla pagina</string>
+    <string name="action_view_document_properties">Proprietà</string>
+
+    <string name="document_properties_invalid_date">Data non valida</string>
+    <string name="document_properties_retrieval_failed">Lettura dei metadati del documento fallita</string>
+
+    <string name="invalid_mime_type">Impossibile aprire il file con tipo MIME non valido</string>
+    <string name="legacy_file_uri">Impossibile aprire percorsi di file obsoleti da app non sicure</string>
+    <string name="io_error">Ricevuto errore di I/O tentando di aprire il contenuto</string>
+
+    <string name="webview_out_of_date_title">WebView obsoleto</string>
+    <string name="webview_out_of_date_message">La versione del tuo WebView è %d. WebView deve essere almeno alla versione %d per fare funzionare il Visualizzatore PDF.</string>
+</resources>
