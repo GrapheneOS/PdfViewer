@@ -74,6 +74,12 @@
         app:showAsAction="ifRoom" />
 
     <item
+        android:id="@+id/action_save_as"
+        android:icon="@drawable/ic_save_24dp"
+        android:title="@string/action_save_as"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_view_document_properties"
         android:title="@string/action_view_document_properties"
         app:showAsAction="never" />
