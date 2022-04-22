@@ -1,7 +1,6 @@
 package app.grapheneos.pdfviewer;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.res.ColorStateList;
@@ -25,6 +24,8 @@ import android.webkit.WebViewClient;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
@@ -99,7 +100,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final float MAX_ZOOM_RATIO = 1.5f;
     private static final int ALPHA_LOW = 130;
     private static final int ALPHA_HIGH = 255;
-    private static final int ACTION_OPEN_DOCUMENT_REQUEST_CODE = 1;
     private static final int STATE_LOADED = 1;
     private static final int STATE_END = 2;
     private static final int PADDING = 10;
@@ -117,6 +117,20 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private TextView mTextView;
     private Toast mToast;
     private Snackbar snackbar;
+
+    private final ActivityResultLauncher<Intent> openDocumentLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result == null) return;
+                if (result.getResultCode() != RESULT_OK) return;
+                Intent resultData = result.getData();
+                if (resultData != null) {
+                    mUri = result.getData().getData();
+                    mPage = 1;
+                    mDocumentProperties = null;
+                    loadPdf();
+                    invalidateOptionsMenu();
+                }
+            });
 
     private class Channel {
         @JavascriptInterface
@@ -396,7 +410,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("application/pdf");
-        startActivityForResult(intent, ACTION_OPEN_DOCUMENT_REQUEST_CODE);
+        openDocumentLauncher.launch(intent);
     }
 
     private void shareDocument() {
@@ -476,21 +490,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         savedInstanceState.putInt(STATE_PAGE, mPage);
         savedInstanceState.putFloat(STATE_ZOOM_RATIO, mZoomRatio);
         savedInstanceState.putInt(STATE_DOCUMENT_ORIENTATION_DEGREES, mDocumentOrientationDegrees);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent resultData) {
-        super.onActivityResult(requestCode, resultCode, resultData);
-
-        if (requestCode == ACTION_OPEN_DOCUMENT_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
-            if (resultData != null) {
-                mUri = resultData.getData();
-                mPage = 1;
-                mDocumentProperties = null;
-                loadPdf();
-                invalidateOptionsMenu();
-            }
-        }
     }
 
     private void showPageNumber() {
