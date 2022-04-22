@@ -132,6 +132,19 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 }
             });
 
+    private final ActivityResultLauncher<Intent> saveAsLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result == null) return;
+                if (result.getResultCode() != RESULT_OK) return;
+                Intent resultData = result.getData();
+                if (resultData != null) {
+                    Uri path = resultData.getData();
+                    if (path != null) {
+                        saveDocumentAs(path);
+                    }
+                }
+            });
+
     private class Channel {
         @JavascriptInterface
         public int getPage() {
@@ -514,10 +527,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
-        final int[] ids = { R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
+        final int[] ids = {R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
                 R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
                 R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
-                R.id.action_view_document_properties, R.id.action_share };
+                R.id.action_view_document_properties, R.id.action_share, R.id.saveAs};
         if (mDocumentState < STATE_LOADED) {
             for (final int id : ids) {
                 final MenuItem item = menu.findItem(id);
@@ -541,6 +554,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         enableDisableMenuItem(menu.findItem(R.id.action_share), mUri != null);
         enableDisableMenuItem(menu.findItem(R.id.action_next), mPage < mNumPages);
         enableDisableMenuItem(menu.findItem(R.id.action_previous), mPage > 1);
+        enableDisableMenuItem(menu.findItem(R.id.saveAs), mUri != null);
 
         return true;
     }
@@ -587,8 +601,43 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         } else if (itemId == R.id.action_share) {
             shareDocument();
             return true;
+        } else if (itemId == R.id.saveAs) {
+            saveDocument();
         }
 
         return super.onOptionsItemSelected(item);
     }
+
+    private void saveDocument() {
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/pdf");
+        intent.putExtra(Intent.EXTRA_TITLE, getCurrentDocumentName());
+        saveAsLauncher.launch(intent);
+    }
+
+    private String getCurrentDocumentName() {
+        if (mDocumentProperties == null || mDocumentProperties.isEmpty()) return "";
+        String fileName = "";
+        String title = "";
+        for (CharSequence property : mDocumentProperties) {
+            if (property.toString().startsWith("File name:")) {
+                fileName = property.toString().replace("File name:", "");
+            }
+            if (property.toString().startsWith("Title:-")) {
+                title = property.toString().replace("Title:-", "");
+            }
+        }
+        return fileName.length() > 2 ? fileName : title;
+    }
+
+    private void saveDocumentAs(Uri uri) {
+        try {
+            KtUtilsKt.saveAs(this, mUri, uri);
+        } catch (IOException e) {
+            e.printStackTrace();
+            Snackbar.make(binding.getRoot(), "Error encountered while saving", Snackbar.LENGTH_SHORT).show();
+        }
+    }
+
 }

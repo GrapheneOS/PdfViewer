@@ -78,4 +78,10 @@
         android:title="@string/action_view_document_properties"
         app:showAsAction="never" />
 
+    <item
+        android:id="@+id/saveAs"
+        android:icon="@drawable/ic_save"
+        android:title="@string/saveAs"
+        app:showAsAction="never" />
+
 </menu>
