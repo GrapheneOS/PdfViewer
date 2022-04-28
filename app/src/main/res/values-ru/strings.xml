@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Просмотр PDF</string>
+    <!--<string name="action_settings">Settings</string>-->
+    <string name="action_previous">Предыдущая страница</string>
+    <string name="action_next">Следующая страница</string>
+    <string name="action_open">Открыть файл</string>
+    <string name="action_first">Первая страница</string>
+    <string name="action_last">Последняя страница</string>
+    <string name="action_zoom_out">Уменьшить</string>
+    <string name="action_zoom_in">Приблизить</string>
+    <string name="action_rotate_clockwise">Повернуть по часовой стрелке</string>
+    <string name="action_rotate_counterclockwise">Повернуть против часовой стрелки</string>
+    <string name="action_jump_to_page">Перейти на страницу</string>
+    <string name="action_view_document_properties">Сведения</string>
+
+    <string name="document_properties_invalid_date">Недопустимая дата</string>
+    <string name="document_properties_retrieval_failed">Не удалось получить метаданные документа</string>
+
+    <string name="invalid_mime_type">Не удается открыть файл с неверным MIME-типом</string>
+    <string name="legacy_file_uri">Не удается открыть устаревшие файлы из небезопасных приложений</string>
+    <string name="io_error">Ошибка ввода-вывода при попытке открыть содержимое</string>
+
+    <string name="webview_out_of_date_title">Устаревший WebView</string>
+    <string name="webview_out_of_date_message">Текущая версия WebView %d. Версия WebView должна быть хотя бы %d, чтобы Просмотр PDF работал.</string>
+    <string name="action_share">Поделиться</string>
+</resources>

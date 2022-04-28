@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="property_names">
+        <item>Имя файла</item>
+        <item>Размер файла</item>
+        <item>Название</item>
+        <item>Автор</item>
+        <item>Тема</item>
+        <item>Ключевые слова</item>
+        <item>Дата создания</item>
+        <item>Дата изменения</item>
+        <item>Производитель</item>
+        <item>Создатель</item>
+        <item>Версия PDF</item>
+        <item>Страницы</item>
+    </string-array>
+</resources>
