@@ -198,15 +198,28 @@ function isTextSelected() {
     return window.getSelection().toString() !== "";
 }
 
-pdfjsLib.getDocument("https://localhost/placeholder.pdf").promise.then(function(newDoc) {
-    pdfDoc = newDoc;
-    channel.setNumPages(pdfDoc.numPages);
-    pdfDoc.getMetadata().then(function(data) {
-        channel.setDocumentProperties(JSON.stringify(data.info));
-    }).catch(function(error) {
-        console.log("getMetadata error: " + error);
+function loadDocument() {
+    const pdfPassword = channel.getPassword();
+    let loadingTask = pdfjsLib.getDocument({ url: "https://localhost/placeholder.pdf", password: pdfPassword });
+    loadingTask.onPassword = (_, error) => {
+        if (error === pdfjsLib.PasswordResponses.NEED_PASSWORD) {
+            channel.showPasswordPrompt();
+        }
+        if (error === pdfjsLib.PasswordResponses.INCORRECT_PASSWORD) {
+            channel.invalidPassword();
+        }
+    }
+
+    loadingTask.promise.then(function (newDoc) {
+        pdfDoc = newDoc;
+        channel.setNumPages(pdfDoc.numPages);
+        pdfDoc.getMetadata().then(function (data) {
+            channel.setDocumentProperties(JSON.stringify(data.info));
+        }).catch(function (error) {
+            console.log("getMetadata error: " + error);
+        });
+        renderPage(channel.getPage(), false, false);
+    }, function (reason) {
+        console.error(reason.name + ": " + reason.message);
     });
-    renderPage(channel.getPage(), false, false);
-}).catch(function(error) {
-    console.log("getDocument error: " + error);
-});
+}

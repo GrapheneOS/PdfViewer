@@ -32,6 +32,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.fragment.app.Fragment;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
 
@@ -39,11 +40,13 @@ import com.google.android.material.snackbar.Snackbar;
 
 import app.grapheneos.pdfviewer.databinding.PdfviewerBinding;
 import app.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
+import app.grapheneos.pdfviewer.fragment.PasswordPromptFragment;
 import app.grapheneos.pdfviewer.fragment.JumpToPageFragment;
 import app.grapheneos.pdfviewer.loader.DocumentPropertiesLoader;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.List;
 
@@ -54,6 +57,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final String STATE_PAGE = "page";
     private static final String STATE_ZOOM_RATIO = "zoomRatio";
     private static final String STATE_DOCUMENT_ORIENTATION_DEGREES = "documentOrientationDegrees";
+    private static final String STATE_ENCRYPTED_DOCUMENT_PASSWORD = "encrypted_document_password";
     private static final String KEY_PROPERTIES = "properties";
     private static final int MIN_WEBVIEW_RELEASE = 89;
 
@@ -110,6 +114,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private float mZoomRatio = 1f;
     private int mDocumentOrientationDegrees;
     private int mDocumentState;
+    private String mEncryptedDocumentPassword;
     private List<CharSequence> mDocumentProperties;
     private InputStream mInputStream;
 
@@ -117,6 +122,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private TextView mTextView;
     private Toast mToast;
     private Snackbar snackbar;
+    private PasswordPromptFragment mPasswordPromptFragment;
 
     private final ActivityResultLauncher<Intent> openDocumentLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -127,6 +133,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     mUri = result.getData().getData();
                     mPage = 1;
                     mDocumentProperties = null;
+                    mEncryptedDocumentPassword = "";
                     loadPdf();
                     invalidateOptionsMenu();
                 }
@@ -164,6 +171,35 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             args.putString(KEY_PROPERTIES, properties);
             runOnUiThread(() -> LoaderManager.getInstance(PdfViewer.this).restartLoader(DocumentPropertiesLoader.ID, args, PdfViewer.this));
         }
+
+        @JavascriptInterface
+        public void showPasswordPrompt() {
+            if (getPasswordPromptFragment().isAdded()) {
+                getPasswordPromptFragment().dismiss();
+            }
+            getPasswordPromptFragment().show(getSupportFragmentManager(), PasswordPromptFragment.class.getName());
+        }
+
+        @JavascriptInterface
+        public void invalidPassword() {
+            runOnUiThread(PdfViewer.this::notifyInvalidPassword);
+            showPasswordPrompt();
+        }
+
+        @JavascriptInterface
+        public String getPassword() {
+            return mEncryptedDocumentPassword != null ? mEncryptedDocumentPassword : "";
+        }
+    }
+
+    private void notifyInvalidPassword() {
+        if (snackbar == null) {
+            snackbar = Snackbar.make(binding.getRoot(), R.string.password_prompt_invalid_password, Snackbar.LENGTH_SHORT);
+            snackbar.show();
+            return;
+        }
+        snackbar.setText(R.string.password_prompt_invalid_password);
+        snackbar.show();
     }
 
     @Override
@@ -228,6 +264,12 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 Log.d(TAG, "path " + path);
 
                 if ("/placeholder.pdf".equals(path)) {
+                    maybeCloseInputStream();
+                    try {
+                        mInputStream = getContentResolver().openInputStream(mUri);
+                    } catch (FileNotFoundException ignored) {
+                        snackbar.setText(R.string.io_error).show();
+                    }
                     return new WebResourceResponse("application/pdf", null, mInputStream);
                 }
 
@@ -261,6 +303,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             public void onPageFinished(WebView view, String url) {
                 mDocumentState = STATE_LOADED;
                 invalidateOptionsMenu();
+                loadPdfWithPassword(mEncryptedDocumentPassword);
             }
         });
 
@@ -328,6 +371,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mPage = savedInstanceState.getInt(STATE_PAGE);
             mZoomRatio = savedInstanceState.getFloat(STATE_ZOOM_RATIO);
             mDocumentOrientationDegrees = savedInstanceState.getInt(STATE_DOCUMENT_ORIENTATION_DEGREES);
+            mEncryptedDocumentPassword = savedInstanceState.getString(STATE_ENCRYPTED_DOCUMENT_PASSWORD);
         }
 
         if (mUri != null) {
@@ -338,6 +382,38 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
             loadPdf();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        binding.webview.removeJavascriptInterface("channel");
+        binding.getRoot().removeView(binding.webview);
+        binding.webview.destroy();
+        maybeCloseInputStream();
+    }
+
+    void maybeCloseInputStream() {
+        InputStream stream = mInputStream;
+        if (stream == null) {
+            return;
+        }
+        mInputStream = null;
+        try {
+            stream.close();
+        } catch (IOException ignored) {}
+    }
+
+    private PasswordPromptFragment getPasswordPromptFragment() {
+        if (mPasswordPromptFragment == null) {
+            final Fragment fragment = getSupportFragmentManager().findFragmentByTag(PasswordPromptFragment.class.getName());
+            if (fragment != null) {
+                mPasswordPromptFragment = (PasswordPromptFragment) fragment;
+            } else {
+                mPasswordPromptFragment = new PasswordPromptFragment();
+            }
+        }
+        return mPasswordPromptFragment;
     }
 
     @Override
@@ -390,8 +466,15 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             return;
         }
 
+        mDocumentState = 0;
         showSystemUi();
+        invalidateOptionsMenu();
         binding.webview.loadUrl("https://localhost/viewer.html");
+    }
+
+    public void loadPdfWithPassword(final String password) {
+        mEncryptedDocumentPassword = password;
+        binding.webview.evaluateJavascript("loadDocument()", null);
     }
 
     private void renderPage(final int zoom) {
@@ -490,6 +573,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         savedInstanceState.putInt(STATE_PAGE, mPage);
         savedInstanceState.putFloat(STATE_ZOOM_RATIO, mZoomRatio);
         savedInstanceState.putInt(STATE_DOCUMENT_ORIENTATION_DEGREES, mDocumentOrientationDegrees);
+        savedInstanceState.putString(STATE_ENCRYPTED_DOCUMENT_PASSWORD, mEncryptedDocumentPassword);
     }
 
     private void showPageNumber() {
