@@ -24,4 +24,10 @@
 
     <string name="webview_out_of_date_title">WebView out-of-date</string>
     <string name="webview_out_of_date_message">Your current WebView version is %1$d. The WebView should be at least version %2$d for the PDF Viewer to work.</string>
+
+    <string name="password_prompt_hint">Password</string>
+    <string name="password_prompt_description">Enter the password to decrypt this PDF file</string>
+    <string name="password_prompt_invalid_password">Invalid password</string>
+    <string name="open">Open</string>
+    <string name="cancel">Cancel</string>
 </resources>
