@@ -26,18 +26,6 @@
         app:showAsAction="ifRoom" />
 
     <item
-        android:id="@+id/action_zoom_out"
-        android:icon="@drawable/ic_zoom_out_24dp"
-        android:title="@string/action_zoom_out"
-        app:showAsAction="ifRoom" />
-
-    <item
-        android:id="@+id/action_zoom_in"
-        android:icon="@drawable/ic_zoom_in_24dp"
-        android:title="@string/action_zoom_in"
-        app:showAsAction="ifRoom" />
-
-    <item
         android:id="@+id/action_share"
         android:icon="@drawable/ic_share_24dp"
         android:title="@string/action_share"

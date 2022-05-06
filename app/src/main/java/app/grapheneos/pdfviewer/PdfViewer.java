@@ -527,10 +527,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
-        final int[] ids = {R.id.action_zoom_in, R.id.action_zoom_out, R.id.action_jump_to_page,
-                R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
-                R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
-                R.id.action_view_document_properties, R.id.action_share, R.id.action_save_as};
+        final int[] ids = {R.id.action_jump_to_page, R.id.action_next, R.id.action_previous,
+                R.id.action_first, R.id.action_last, R.id.action_rotate_clockwise,
+                R.id.action_rotate_counterclockwise, R.id.action_view_document_properties,
+                R.id.action_share, R.id.action_save_as};
         if (mDocumentState < STATE_LOADED) {
             for (final int id : ids) {
                 final MenuItem item = menu.findItem(id);
@@ -549,8 +549,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
 
         enableDisableMenuItem(menu.findItem(R.id.action_open), getWebViewRelease() >= MIN_WEBVIEW_RELEASE);
-        enableDisableMenuItem(menu.findItem(R.id.action_zoom_in), mZoomRatio != MAX_ZOOM_RATIO);
-        enableDisableMenuItem(menu.findItem(R.id.action_zoom_out), mZoomRatio != MIN_ZOOM_RATIO);
         enableDisableMenuItem(menu.findItem(R.id.action_share), mUri != null);
         enableDisableMenuItem(menu.findItem(R.id.action_next), mPage < mNumPages);
         enableDisableMenuItem(menu.findItem(R.id.action_previous), mPage > 1);
@@ -576,12 +574,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             return true;
         } else if (itemId == R.id.action_open) {
             openDocument();
-            return true;
-        } else if (itemId == R.id.action_zoom_out) {
-            zoomOut(0.25f, true);
-            return true;
-        } else if (itemId == R.id.action_zoom_in) {
-            zoomIn(0.25f, true);
             return true;
         } else if (itemId == R.id.action_rotate_clockwise) {
             documentOrientationChanged(90);
