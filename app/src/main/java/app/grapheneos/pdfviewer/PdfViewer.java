@@ -83,6 +83,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         "document-domain=(), " +
         "encrypted-media=(), " +
         "fullscreen=(), " +
+        "gamepad=(), " +
         "geolocation=(), " +
         "gyroscope=(), " +
         "hid=(), " +
@@ -96,6 +97,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         "publickey-credentials-get=(), " +
         "screen-wake-lock=(), " +
         "serial=(), " +
+        "speaker-selection=(), " +
         "sync-xhr=(), " +
         "usb=(), " +
         "xr-spatial-tracking=()";
