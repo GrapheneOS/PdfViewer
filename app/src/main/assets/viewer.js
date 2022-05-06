@@ -210,6 +210,7 @@ function loadDocument() {
     }
 
     loadingTask.promise.then(function (newDoc) {
+        channel.onLoaded();
         pdfDoc = newDoc;
         channel.setNumPages(pdfDoc.numPages);
         pdfDoc.getMetadata().then(function (data) {
