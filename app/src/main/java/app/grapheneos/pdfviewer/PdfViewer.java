@@ -34,6 +34,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
 
@@ -44,6 +45,7 @@ import app.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
 import app.grapheneos.pdfviewer.fragment.PasswordPromptFragment;
 import app.grapheneos.pdfviewer.fragment.JumpToPageFragment;
 import app.grapheneos.pdfviewer.loader.DocumentPropertiesLoader;
+import app.grapheneos.pdfviewer.viewModel.PasswordStatus;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -126,6 +128,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private Toast mToast;
     private Snackbar snackbar;
     private PasswordPromptFragment mPasswordPromptFragment;
+    public PasswordStatus passwordValidationViewModel;
+
 
     private final ActivityResultLauncher<Intent> openDocumentLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -190,30 +194,29 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
         @JavascriptInterface
         public void showPasswordPrompt() {
-            if (getPasswordPromptFragment().isAdded()) {
-                getPasswordPromptFragment().dismiss();
+            if (!getPasswordPromptFragment().isAdded()){
+                getPasswordPromptFragment().show(getSupportFragmentManager(), PasswordPromptFragment.class.getName());
             }
-            getPasswordPromptFragment().show(getSupportFragmentManager(), PasswordPromptFragment.class.getName());
+            passwordValidationViewModel.passwordMissing();
         }
 
         @JavascriptInterface
         public void invalidPassword() {
-            runOnUiThread(PdfViewer.this::notifyInvalidPassword);
-            showPasswordPrompt();
+            runOnUiThread(() -> passwordValidationViewModel.invalid());
         }
 
         @JavascriptInterface
         public void onLoaded() {
+            passwordValidationViewModel.validated();
+            if (getPasswordPromptFragment().isAdded()) {
+                getPasswordPromptFragment().dismiss();
+            }
         }
 
         @JavascriptInterface
         public String getPassword() {
             return mEncryptedDocumentPassword != null ? mEncryptedDocumentPassword : "";
         }
-    }
-
-    private void notifyInvalidPassword() {
-        snackbar.setText(R.string.password_prompt_invalid_password).show();
     }
 
     @Override
@@ -223,6 +226,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         binding = PdfviewerBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         setSupportActionBar(binding.toolbar);
+        passwordValidationViewModel = new ViewModelProvider(this, ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication())).get(PasswordStatus.class);
 
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
 
