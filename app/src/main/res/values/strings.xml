@@ -7,9 +7,11 @@
     <string name="action_open">Open document</string>
     <string name="action_first">First page</string>
     <string name="action_last">Last page</string>
+    <string name="action_jump_to_page">Jump to page</string>
     <string name="action_rotate_clockwise">Rotate clockwise</string>
     <string name="action_rotate_counterclockwise">Rotate counterclockwise</string>
-    <string name="action_jump_to_page">Jump to page</string>
+    <string name="action_share">Share</string>
+    <string name="action_save_as">Save as</string>
     <string name="action_view_document_properties">Properties</string>
 
     <string name="document_properties_invalid_date">Invalid date</string>
@@ -22,6 +24,4 @@
 
     <string name="webview_out_of_date_title">WebView out-of-date</string>
     <string name="webview_out_of_date_message">Your current WebView version is %1$d. The WebView should be at least version %2$d for the PDF Viewer to work.</string>
-    <string name="action_share">Share</string>
-    <string name="action_save_as">Save as</string>
 </resources>
