@@ -277,7 +277,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     try {
                         mInputStream = getContentResolver().openInputStream(mUri);
                     } catch (FileNotFoundException ignored) {
-                        snackbar.setText(R.string.io_error).show();
+                        snackbar.setText(R.string.error_while_opening).show();
                     }
                     return new WebResourceResponse("application/pdf", null, mInputStream);
                 }
@@ -471,7 +471,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             }
             mInputStream = getContentResolver().openInputStream(mUri);
         } catch (IOException e) {
-            snackbar.setText(R.string.io_error).show();
+            snackbar.setText(R.string.error_while_opening).show();
             return;
         }
 
