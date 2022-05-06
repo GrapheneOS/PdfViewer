@@ -23,7 +23,7 @@
     <string name="error_while_saving">Error encountered while saving</string>
 
     <string name="webview_out_of_date_title">WebView out-of-date</string>
-    <string name="webview_out_of_date_message">Your current WebView version is %d. The WebView should be at least version %d for the PDF Viewer to work.</string>
+    <string name="webview_out_of_date_message">Your current WebView version is %1$d. The WebView should be at least version %2$d for the PDF Viewer to work.</string>
     <string name="action_share">Share</string>
     <string name="action_save_as">Save as</string>
 </resources>
