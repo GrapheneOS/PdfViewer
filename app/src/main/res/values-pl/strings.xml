@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Przeglądarka PDF</string>
+    <!--<string name="action_settings">Ustawienia</string>-->
+    <string name="action_previous">Poprzednia strona</string>
+    <string name="action_next">Następna strona</string>
+    <string name="action_open">Otwórz dokument</string>
+    <string name="action_first">Pierwsza strona</string>
+    <string name="action_last">Ostatnia strona</string>
+    <string name="action_jump_to_page">Skocz do strony</string>
+    <string name="action_rotate_clockwise">Obróć w prawo</string>
+    <string name="action_rotate_counterclockwise">Obróć w lewo</string>
+    <string name="action_share">Udostępnij</string>
+    <string name="action_save_as">Zapisz jako</string>
+    <string name="action_view_document_properties">Właściwości</string>
+
+    <string name="document_properties_invalid_date">Nieprawidłowa data</string>
+    <string name="document_properties_retrieval_failed">Nie udało się uzyskać metadanych dokumentu</string>
+
+    <string name="invalid_mime_type">Nie można otworzyć pliku z nieprawidłowym typem MIME</string>
+    <string name="legacy_file_uri">Nie można otworzyć przestarzałych ścieżek plików z niezabezpieczonych aplikacji</string>
+    <string name="error_while_opening">Wystąpił błąd podczas próby otwarcia treści</string>
+    <string name="error_while_saving">Wystąpił błąd podczas zapisywania</string>
+
+    <string name="webview_out_of_date_title">WebView nieaktualny</string>
+    <string name="webview_out_of_date_message">Twoja aktualna wersja WebView to %d. Aby Przeglądarka PDF działała, WebView powinien być co najmniej w wersji %d.</string>
+
+    <string name="password_prompt_hint">Hasło</string>
+    <string name="password_prompt_description">Wprowadź hasło, aby odszyfrować ten plik PDF</string>
+    <string name="password_prompt_invalid_password">Nieprawidłowe hasło</string>
+    <string name="open">Otwórz</string>
+    <string name="cancel">Anuluj</string>
+</resources>
