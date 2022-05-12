@@ -12,6 +12,7 @@
             android:theme="@style/AppTheme">
         <activity
             android:name=".PdfViewer"
+            android:documentLaunchMode="always"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
