@@ -8,6 +8,6 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 
-    <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.Material3.Dark" />
+    <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.Material3.DynamicColors.Dark" />
 
 </resources>
