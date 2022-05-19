@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PDF Viewer</string>
+    <!--<string name="action_settings">Settings</string>-->
+    <string name="action_previous">Vorherige Seite</string>
+    <string name="action_next">Nächste Seite</string>
+    <string name="action_open">Dokument öffnen</string>
+    <string name="action_first">Erste Seite</string>
+    <string name="action_last">Letzte Seite</string>
+    <string name="action_jump_to_page">Springe zu Seite</string>
+    <string name="action_rotate_clockwise">Im Urzeigersinn drehen</string>
+    <string name="action_rotate_counterclockwise">Gegen den Urzeigersinn drehen</string>
+    <string name="action_share">Teilen</string>
+    <string name="action_save_as">Speichern unter</string>
+    <string name="action_view_document_properties">Eigenschaften</string>
+
+    <string name="document_properties_invalid_date">Ungültiges Datum</string>
+    <string name="document_properties_retrieval_failed">Metadaten des Dokuments konnten nicht abgerufen werden</string>
+
+    <string name="invalid_mime_type">Datei mit ungültigem MIME-Typ kann nicht geöffnet werden</string>
+    <string name="legacy_file_uri">Alte Dateipfade von unsicheren Apps können nicht geöffnet werden</string>
+    <string name="error_while_opening">Beim Versuch, inhalte zu öffnen, ist ein Fehler aufgetreten</string>
+    <string name="error_while_saving">Beim Speichern ist ein Fehler aufgetreten</string>
+
+    <string name="webview_out_of_date_title">WebView veraltet</string>
+    <string name="webview_out_of_date_message">Die aktuelle verwendete WebView Version ist %1$d. WebView sollte mindestens die Version %2$d haben, damit der PDF Viewer funktioniert.</string>
+
+    <string name="password_prompt_hint">Passwort</string>
+    <string name="password_prompt_description">Passwort eingeben um diese PDF-Datei zu entschlüsseln</string>
+    <string name="password_prompt_invalid_password">Falsches Passwort</string>
+    <string name="open">Öffnen</string>
+    <string name="cancel">Abbrechen</string>
+</resources>
