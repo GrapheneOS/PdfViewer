@@ -42,6 +42,7 @@ android {
         versionCode = 14
         versionName = versionCode.toString()
         resourceConfigurations.add("en")
+        resourceConfigurations.add("de")
     }
 
     buildTypes {
