@@ -1,9 +1,4 @@
 <lint>
-    <!-- full backups are desired -->
-    <issue id="AllowBackup">
-        <ignore path="src/main/AndroidManifest.xml"/>
-    </issue>
-
     <!-- overly aggressive check -->
     <issue id="VectorPath">
         <ignore path="src/main/res/drawable/ic_rotate_left_24dp.xml"/>
