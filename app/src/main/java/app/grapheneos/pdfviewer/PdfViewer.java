@@ -503,6 +503,12 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("application/pdf");
         openDocumentLauncher.launch(intent);
+        // zoom out to the maximum possible dimension to give the user a complete view of the page
+        zoomOutMax();
+    }
+
+    private void zoomOutMax() {
+        zoomOut(0.5f, false);
     }
 
     private void shareDocument() {
