@@ -76,6 +76,10 @@ body {
     user-select: none;
 }
 
+body {
+    background: #808080;
+}
+
 .textLayer .endOfContent.active {
     top: 0;
 }
