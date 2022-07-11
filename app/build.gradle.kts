@@ -32,8 +32,8 @@ android {
         }
     }
 
-    compileSdk = 32
-    buildToolsVersion = "32.0.0"
+    compileSdk = 33
+    buildToolsVersion = "33.0.0"
 
     defaultConfig {
         applicationId = "app.grapheneos.pdfviewer"
@@ -83,5 +83,5 @@ android {
 
 dependencies {
     implementation("androidx.appcompat:appcompat:1.4.2")
-    implementation("com.google.android.material:material:1.6.0")
+    implementation("com.google.android.material:material:1.6.1")
 }
