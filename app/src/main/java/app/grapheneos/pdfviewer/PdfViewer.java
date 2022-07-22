@@ -6,6 +6,7 @@ import android.content.pm.PackageInfo;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
@@ -376,7 +377,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
 
         if (savedInstanceState != null) {
-            mUri = savedInstanceState.getParcelable(STATE_URI);
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                mUri = savedInstanceState.getParcelable(STATE_URI);
+            } else {
+                mUri = savedInstanceState.getParcelable(STATE_URI, Uri.class);
+            }
             mPage = savedInstanceState.getInt(STATE_PAGE);
             mZoomRatio = savedInstanceState.getFloat(STATE_ZOOM_RATIO);
             mDocumentOrientationDegrees = savedInstanceState.getInt(STATE_DOCUMENT_ORIENTATION_DEGREES);
