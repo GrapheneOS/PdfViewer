@@ -9,7 +9,7 @@
     <string name="action_last">Letzte Seite</string>
     <string name="action_jump_to_page">Springe zu Seite</string>
     <string name="action_rotate_clockwise">Im Uhrzeigersinn drehen</string>
-    <string name="action_rotate_counterclockwise">Gegen den Urzeigersinn drehen</string>
+    <string name="action_rotate_counterclockwise">Gegen den Uhrzeigersinn drehen</string>
     <string name="action_share">Teilen</string>
     <string name="action_save_as">Speichern unter</string>
     <string name="action_view_document_properties">Eigenschaften</string>
