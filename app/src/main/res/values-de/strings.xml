@@ -19,7 +19,7 @@
 
     <string name="invalid_mime_type">Datei mit ungültigem MIME-Typ kann nicht geöffnet werden</string>
     <string name="legacy_file_uri">Alte Dateipfade von unsicheren Apps können nicht geöffnet werden</string>
-    <string name="error_while_opening">Beim Versuch, inhalte zu öffnen, ist ein Fehler aufgetreten</string>
+    <string name="error_while_opening">Beim Versuch, Inhalte zu öffnen, ist ein Fehler aufgetreten</string>
     <string name="error_while_saving">Beim Speichern ist ein Fehler aufgetreten</string>
 
     <string name="webview_out_of_date_title">WebView veraltet</string>
