@@ -15,7 +15,7 @@
     <string name="action_view_document_properties">Eigenschaften</string>
 
     <string name="document_properties_invalid_date">Ungültiges Datum</string>
-    <string name="document_properties_retrieval_failed">Metadaten des Dokuments konnten nicht abgerufen werden</string>
+    <string name="document_properties_retrieval_failed">Metadaten des Dokuments konnten nicht gelesen werden</string>
 
     <string name="invalid_mime_type">Datei mit ungültigem MIME-Typ kann nicht geöffnet werden</string>
     <string name="legacy_file_uri">Alte Dateipfade von unsicheren Apps können nicht geöffnet werden</string>
