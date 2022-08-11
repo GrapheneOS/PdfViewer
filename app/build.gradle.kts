@@ -82,6 +82,6 @@ android {
 }
 
 dependencies {
-    implementation("androidx.appcompat:appcompat:1.4.2")
-    implementation("com.google.android.material:material:1.6.0")
+    implementation("androidx.appcompat:appcompat:1.5.0")
+    implementation("com.google.android.material:material:1.6.1")
 }
