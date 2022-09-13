@@ -39,14 +39,13 @@ public class Utils {
 
         final Calendar calendar = Calendar.getInstance();
         final int currentYear = calendar.get(Calendar.YEAR);
-        int year;
 
         // Year is required
         String field = date.substring(position += 2, 6);
         if (!TextUtils.isDigitsOnly(field)) {
             throw new ParseException("Invalid year", position);
         }
-        year = Integer.parseInt(field);
+        int year = Integer.parseInt(field);
         if (year > currentYear) {
             year = currentYear;
         }
