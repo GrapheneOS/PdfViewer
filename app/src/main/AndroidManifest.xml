@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-        package="app.grapheneos.pdfviewer"
         android:targetSandboxVersion="2">
     <original-package android:name="org.grapheneos.pdfviewer" />
 
