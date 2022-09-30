@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-        android:targetSandboxVersion="2">
+    android:targetSandboxVersion="2">
+
     <original-package android:name="org.grapheneos.pdfviewer" />
 
-    <application android:icon="@mipmap/ic_launcher"
-            android:roundIcon="@mipmap/ic_launcher"
-            android:label="@string/app_name"
-            android:theme="@style/AppTheme"
-            android:allowBackup="true">
-        <activity android:name=".PdfViewer"
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:theme="@style/AppTheme">
+        <activity
+            android:name=".PdfViewer"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -16,15 +19,19 @@
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
+
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+
                 <data android:mimeType="application/pdf" />
             </intent-filter>
         </activity>
 
-        <meta-data android:name="android.webkit.WebView.MetricsOptOut"
-                android:value="true" />
-        <meta-data android:name="android.webkit.WebView.EnableSafeBrowsing"
-                android:value="false" />
+        <meta-data
+            android:name="android.webkit.WebView.MetricsOptOut"
+            android:value="true" />
+        <meta-data
+            android:name="android.webkit.WebView.EnableSafeBrowsing"
+            android:value="false" />
     </application>
 </manifest>
