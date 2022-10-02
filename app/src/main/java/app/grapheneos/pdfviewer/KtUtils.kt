@@ -7,7 +7,12 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 
-@Throws(FileNotFoundException::class, IOException::class)
+@Throws(
+    FileNotFoundException::class,
+    IOException::class,
+    IllegalArgumentException::class,
+    OutOfMemoryError::class
+)
 fun saveAs(context: Context, existingUri: Uri, saveAs: Uri) {
 
     context.asInputStream(existingUri)?.use { inputStream ->
