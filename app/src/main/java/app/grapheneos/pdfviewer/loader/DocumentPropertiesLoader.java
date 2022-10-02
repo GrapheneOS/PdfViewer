@@ -132,7 +132,7 @@ public class DocumentPropertiesLoader extends AsyncTaskLoader<List<CharSequence>
         final SpannableStringBuilder property = new SpannableStringBuilder(name).append(":\n");
         final String value = json != null ? json.optString(specName, "-") : specName;
 
-        if (specName.endsWith("Date")) {
+        if (specName != null && specName.endsWith("Date")) {
             final Context context = getContext();
             try {
                 property.append(value.equals("-") ? value : Utils.parseDate(value));
