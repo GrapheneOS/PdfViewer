@@ -709,8 +709,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private void saveDocumentAs(Uri uri) {
         try {
             KtUtilsKt.saveAs(this, mUri, uri);
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException | OutOfMemoryError | IllegalArgumentException e) {
             snackbar.setText(R.string.error_while_saving).show();
         }
     }
