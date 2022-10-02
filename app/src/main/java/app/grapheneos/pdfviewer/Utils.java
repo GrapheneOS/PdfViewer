@@ -25,6 +25,14 @@ public class Utils {
         return format.format(kb / 1000) + " MB (" + fileSize + " Bytes)";
     }
 
+    private static int parseIntSafely(String field) throws ParseException  {
+        try {
+            return Integer.parseInt(field);
+        } catch (NumberFormatException e) {
+            throw new ParseException("Error while parsing int", -1);
+        }
+    }
+
     // Parse date as per PDF spec (complies with PDF v1.4 to v1.7)
     public static String parseDate(String date) throws ParseException {
         int position = 0;
@@ -45,7 +53,7 @@ public class Utils {
         if (!TextUtils.isDigitsOnly(field)) {
             throw new ParseException("Invalid year", position);
         }
-        int year = Integer.parseInt(field);
+        int year = parseIntSafely(field);
         if (year > currentYear) {
             year = currentYear;
         }
@@ -66,7 +74,7 @@ public class Utils {
             if (!TextUtils.isDigitsOnly(field)) {
                 throw new ParseException("Invalid month", position);
             }
-            month = Integer.parseInt(field) - 1;
+            month = parseIntSafely(field) - 1;
             if (month > 11) {
                 throw new ParseException("Invalid month", position);
             }
@@ -77,7 +85,7 @@ public class Utils {
             if (!TextUtils.isDigitsOnly(field)) {
                 throw new ParseException("Invalid day", position);
             }
-            day = Integer.parseInt(field);
+            day = parseIntSafely(field);
             if (day > 31) {
                 throw new ParseException("Invalid day", position);
             }
@@ -88,7 +96,7 @@ public class Utils {
             if (!TextUtils.isDigitsOnly(field)) {
                 throw new ParseException("Invalid hours", position);
             }
-            hours = Integer.parseInt(field);
+            hours = parseIntSafely(field);
             if (hours > 23) {
                 throw new ParseException("Invalid hours", position);
             }
@@ -99,7 +107,7 @@ public class Utils {
             if (!TextUtils.isDigitsOnly(field)) {
                 throw new ParseException("Invalid minutes", position);
             }
-            minutes = Integer.parseInt(field);
+            minutes = parseIntSafely(field);
             if (minutes > 59) {
                 throw new ParseException("Invalid minutes", position);
             }
@@ -110,7 +118,7 @@ public class Utils {
             if (!TextUtils.isDigitsOnly(field)) {
                 throw new ParseException("Invalid seconds", position);
             }
-            seconds = Integer.parseInt(field);
+            seconds = parseIntSafely(field);
             if (seconds > 59) {
                 throw new ParseException("Invalid seconds", position);
             }
@@ -134,7 +142,7 @@ public class Utils {
                 if (!TextUtils.isDigitsOnly(field)) {
                     throw new ParseException("Invalid UTC offset hours", position);
                 }
-                offsetHours = Integer.parseInt(field);
+                offsetHours = parseIntSafely(field);
                 final int offsetHoursMinutes = offsetHours * 100 + offsetMinutes;
 
                 // Validate UTC offset (UTC-12:00 to UTC+14:00)
@@ -157,7 +165,7 @@ public class Utils {
                     if (!TextUtils.isDigitsOnly(field)) {
                         throw new ParseException("Invalid UTC offset minutes", position);
                     }
-                    offsetMinutes = Integer.parseInt(field);
+                    offsetMinutes = parseIntSafely(field);
                     if (offsetMinutes > 59) {
                         throw new ParseException("Invalid UTC offset minutes", position);
                     }
