@@ -569,12 +569,12 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     private void showSystemUi() {
-        ViewKt.showSystemUi(binding.getRoot());
+        ViewKt.showSystemUi(binding.getRoot(), getWindow());
         getSupportActionBar().show();
     }
 
     private void hideSystemUi() {
-        ViewKt.hideSystemUi(binding.getRoot());
+        ViewKt.hideSystemUi(binding.getRoot(), getWindow());
         getSupportActionBar().hide();
     }
 
