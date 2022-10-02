@@ -601,7 +601,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
+    public boolean onCreateOptionsMenu(@NonNull Menu menu) {
         super.onCreateOptionsMenu(menu);
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.pdf_viewer, menu);
@@ -609,7 +609,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     @Override
-    public boolean onPrepareOptionsMenu(Menu menu) {
+    public boolean onPrepareOptionsMenu(@NonNull Menu menu) {
         final int[] ids = {R.id.action_jump_to_page, R.id.action_next, R.id.action_previous,
                 R.id.action_first, R.id.action_last, R.id.action_rotate_clockwise,
                 R.id.action_rotate_counterclockwise, R.id.action_view_document_properties,
