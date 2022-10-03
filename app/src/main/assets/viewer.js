@@ -73,7 +73,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
     for (let i = 0; i < cache.length; i++) {
         const cached = cache[i];
         if (cached.pageNumber === pageNumber && cached.zoomRatio === newZoomRatio &&
-                cache.orientationDegrees === orientationDegrees) {
+                cached.orientationDegrees === orientationDegrees) {
             if (useRender) {
                 cache.splice(i, 1);
                 cache.push(cached);
