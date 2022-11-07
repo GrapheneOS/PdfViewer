@@ -79,3 +79,14 @@ body {
 .textLayer .endOfContent.active {
     top: 0;
 }
+
+#loading-bar-container {
+  width: 100%;
+  background-color: #bbdefb;
+}
+
+#loading-bar {
+  width: 0%;
+  height: 4px;
+  background-color: #106cc8;
+}

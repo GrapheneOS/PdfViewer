@@ -19,6 +19,25 @@ let useRender;
 const cache = [];
 const maxCached = 6;
 
+var loading_bar = document.getElementById("loading-bar");
+var loading_bar_container = document.getElementById("loading-bar-container");
+
+function show_progress_bar() {
+    loading_bar.style.display = "block";
+    loading_bar_container.style.display = "block";
+}
+
+function hide_progress_bar() {
+    loading_bar.style.display = "none";
+    loading_bar_container.style.display = "none";
+}
+
+function set_progress(value) {
+    if(value==0) show_progress_bar();
+    else if(value==100) hide_progress_bar();
+    else loading_bar.style.width = value + "%";
+}
+
 function maybeRenderNextPage() {
     if (renderPending) {
         pageRendering = false;
@@ -209,6 +228,14 @@ function loadDocument() {
         }
     }
 
+    loadingTask.onProgress = function(data){
+        var progress = Math.ceil((data.loaded/data.total)*100);
+        console.log("Progress: " + progress);
+        set_progress(progress);
+    }
+
+    show_progress_bar();
+
     loadingTask.promise.then(function (newDoc) {
         channel.onLoaded();
         pdfDoc = newDoc;
@@ -219,7 +246,9 @@ function loadDocument() {
             console.log("getMetadata error: " + error);
         });
         renderPage(channel.getPage(), false, false);
+        hide_progress_bar();
     }, function (reason) {
+        hide_progress_bar();
         console.error(reason.name + ": " + reason.message);
     });
 }
