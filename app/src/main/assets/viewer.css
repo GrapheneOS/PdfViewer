@@ -1,24 +1,36 @@
+html, body {
+    height: 100%;
+}
+
 body, canvas {
     padding: 0;
     margin: 0;
-}
-
-canvas {
-    margin: auto;
-    display: block;
 }
 
 body {
     background-color: #c0c0c0;
 }
 
+#container {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+}
+
+#container canvas, #container .textLayer {
+    /* overlay child elements on top of each other */
+    grid-row-start: 1;
+    grid-column-start: 1;
+}
+
+canvas, .textLayer {
+    display: inline-block;
+    position: relative;
+}
+
 .textLayer {
-    position: absolute;
     text-align: initial;
-    left: 0;
-    top: 0;
-    right: 0;
-    bottom: 0;
     overflow: hidden;
     opacity: 0.2;
     line-height: 1;
