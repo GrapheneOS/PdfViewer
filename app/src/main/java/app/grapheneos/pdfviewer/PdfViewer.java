@@ -252,6 +252,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         settings.setAllowFileAccess(false);
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         settings.setJavaScriptEnabled(true);
+        settings.setMinimumFontSize(1);
 
         CookieManager.getInstance().setAcceptCookie(false);
 
