@@ -386,7 +386,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
         if (savedInstanceState != null) {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-                mUri = savedInstanceState.getParcelable(STATE_URI);
+                @SuppressWarnings("deprecation")
+                final Uri uri = savedInstanceState.getParcelable(STATE_URI);
+                mUri = uri;
             } else {
                 mUri = savedInstanceState.getParcelable(STATE_URI, Uri.class);
             }
