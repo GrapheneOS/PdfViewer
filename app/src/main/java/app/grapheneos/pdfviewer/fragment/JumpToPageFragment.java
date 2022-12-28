@@ -22,23 +22,19 @@ public class JumpToPageFragment extends DialogFragment {
 
     private NumberPicker mPicker;
 
-    @Override
-    public void onActivityCreated(Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-        if (savedInstanceState != null) {
-            mPicker.setMinValue(savedInstanceState.getInt(STATE_PICKER_MIN));
-            mPicker.setMaxValue(savedInstanceState.getInt(STATE_PICKER_MAX));
-            mPicker.setValue(savedInstanceState.getInt(STATE_PICKER_CUR));
-        }
-    }
-
     @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         mPicker = new NumberPicker(getActivity());
-        mPicker.setMinValue(1);
-        mPicker.setMaxValue(((PdfViewer)requireActivity()).mNumPages);
-        mPicker.setValue(((PdfViewer)requireActivity()).mPage);
+        if (savedInstanceState != null) {
+            mPicker.setMinValue(savedInstanceState.getInt(STATE_PICKER_MIN));
+            mPicker.setMaxValue(savedInstanceState.getInt(STATE_PICKER_MAX));
+            mPicker.setValue(savedInstanceState.getInt(STATE_PICKER_CUR));
+        } else {
+            mPicker.setMinValue(1);
+            mPicker.setMaxValue(((PdfViewer)requireActivity()).mNumPages);
+            mPicker.setValue(((PdfViewer)requireActivity()).mPage);
+        }
 
         final FrameLayout layout = new FrameLayout(getActivity());
         layout.addView(mPicker, new FrameLayout.LayoutParams(
