@@ -86,4 +86,7 @@ android {
 dependencies {
     implementation("androidx.appcompat:appcompat:1.5.1")
     implementation("com.google.android.material:material:1.7.0")
+    implementation("com.android.tools.build:aapt2:7.3.1-8691043:linux")
+    implementation("com.android.tools.build:aapt2:7.3.1-8691043:windows")
+    implementation("com.android.tools.build:aapt2:7.3.1-8691043:osx")
 }
