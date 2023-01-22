@@ -440,6 +440,15 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         return mPasswordPromptFragment;
     }
 
+    private void setToolbarTitleWithDocumentName() {
+        String documentName = getCurrentDocumentName();
+        if (documentName != null && !documentName.isEmpty()) {
+            getSupportActionBar().setTitle(documentName);
+        } else {
+            getSupportActionBar().setTitle(R.string.app_name);
+        }
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -471,6 +480,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     @Override
     public void onLoadFinished(@NonNull Loader<List<CharSequence>> loader, List<CharSequence> data) {
         mDocumentProperties = data;
+        setToolbarTitleWithDocumentName();
         LoaderManager.getInstance(this).destroyLoader(DocumentPropertiesLoader.ID);
     }
 
