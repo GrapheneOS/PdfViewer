@@ -13,6 +13,12 @@ plugins {
     id("kotlin-android")
 }
 
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }
+}
+
 android {
     if (useKeystoreProperties) {
         signingConfigs {
