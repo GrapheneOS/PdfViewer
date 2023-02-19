@@ -11,13 +11,13 @@
         android:id="@+id/action_previous"
         android:icon="@drawable/ic_navigate_before_24dp"
         android:title="@string/action_previous"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
 
     <item
         android:id="@+id/action_next"
         android:icon="@drawable/ic_navigate_next_24dp"
         android:title="@string/action_next"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
 
     <item
         android:id="@+id/action_open"
