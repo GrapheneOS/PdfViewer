@@ -6,3 +6,4 @@ keystore.properties
 *.keystore
 /.idea
 /releases
+/node_modules
