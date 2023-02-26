@@ -10,11 +10,16 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: true
+      - uses: actions/setup-node@v3
+        with:
+          cache: npm
       - name: Set up JDK 19
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: 19
           cache: gradle
+
+      - run: npm ci --ignore-scripts
       - name: Build with Gradle
         run: ./gradlew build --no-daemon
