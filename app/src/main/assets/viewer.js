@@ -7,6 +7,7 @@ let pageRendering = false;
 let renderPending = false;
 let renderPendingZoom = 0;
 const canvas = document.getElementById('content');
+const container = document.getElementById("container");
 let orientationDegrees = 0;
 let zoomRatio = 1;
 let textLayerDiv = document.getElementById("text");
@@ -82,6 +83,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
 
                 textLayerDiv.replaceWith(cached.textLayerDiv);
                 textLayerDiv = cached.textLayerDiv;
+                container.style.setProperty("--scale-factor", newZoomRatio.toString());
             }
 
             pageRendering = false;
@@ -153,6 +155,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
                 if (useRender) {
                     textLayerDiv.replaceWith(newTextLayerDiv);
                     textLayerDiv = newTextLayerDiv;
+                    container.style.setProperty("--scale-factor", newZoomRatio.toString());
                 }
 
                 if (cache.length === maxCached) {
