@@ -44,7 +44,7 @@ canvas, .textLayer {
     position: absolute;
     white-space: pre;
     cursor: text;
-    transform-origin: 0% 0%;
+    transform-origin: 0 0;
 }
 
 .textLayer .highlight {

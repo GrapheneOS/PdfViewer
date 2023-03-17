@@ -6,7 +6,7 @@ let pdfDoc = null;
 let pageRendering = false;
 let renderPending = false;
 let renderPendingZoom = 0;
-const canvas = document.getElementById('content');
+const canvas = document.getElementById("content");
 const container = document.getElementById("container");
 let orientationDegrees = 0;
 let zoomRatio = 1;
@@ -97,7 +97,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
             return;
         }
 
-        const viewport = page.getViewport({scale: newZoomRatio, rotation: orientationDegrees})
+        const viewport = page.getViewport({scale: newZoomRatio, rotation: orientationDegrees});
 
         if (useRender) {
             if (newZoomRatio !== zoomRatio) {
@@ -107,7 +107,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
             zoomRatio = newZoomRatio;
         }
 
-        if (zoom == 2) {
+        if (zoom === 2) {
             pageRendering = false;
             return;
         }
