@@ -137,10 +137,10 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
             }
             render();
 
-            const textLayerFrag = document.createDocumentFragment();
+            const newTextLayerDiv = textLayerDiv.cloneNode();
             task = pdfjsLib.renderTextLayer({
-                textContentStream: page.streamTextContent(),
-                container: textLayerFrag,
+                textContentSource: page.streamTextContent(),
+                container: newTextLayerDiv,
                 viewport: viewport
             });
             task.promise.then(function() {
@@ -148,14 +148,12 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
 
                 render();
 
-                const newTextLayerDiv = textLayerDiv.cloneNode();
                 newTextLayerDiv.style.height = newCanvas.style.height;
                 newTextLayerDiv.style.width = newCanvas.style.width;
                 if (useRender) {
                     textLayerDiv.replaceWith(newTextLayerDiv);
                     textLayerDiv = newTextLayerDiv;
                 }
-                newTextLayerDiv.appendChild(textLayerFrag);
 
                 if (cache.length === maxCached) {
                     cache.shift()
