@@ -150,8 +150,18 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
 
                 render();
 
-                newTextLayerDiv.style.height = newCanvas.style.height;
-                newTextLayerDiv.style.width = newCanvas.style.width;
+                // We use CSS transform to rotate a text layer div of zero
+                // degrees rotation. So, when the rotation is 90 or 270
+                // degrees, set width and height of the text layer div to the
+                // height and width of the canvas, respectively, to prevent
+                // text layer misalignment.
+                if (orientationDegrees % 180 === 0) {
+                    newTextLayerDiv.style.height = newCanvas.style.height;
+                    newTextLayerDiv.style.width = newCanvas.style.width;
+                } else {
+                    newTextLayerDiv.style.height = newCanvas.style.width;
+                    newTextLayerDiv.style.width = newCanvas.style.height;
+                }
                 if (useRender) {
                     textLayerDiv.replaceWith(newTextLayerDiv);
                     textLayerDiv = newTextLayerDiv;
