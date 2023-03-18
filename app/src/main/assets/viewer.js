@@ -20,6 +20,8 @@ let useRender;
 const cache = [];
 const maxCached = 6;
 
+let isTextLayerVisible = false;
+
 function maybeRenderNextPage() {
     if (renderPending) {
         pageRendering = false;
@@ -207,6 +209,18 @@ function onRenderPage(zoom) {
 
 function isTextSelected() {
     return window.getSelection().toString() !== "";
+}
+
+function toggleTextLayerVisibility() {
+    let textLayerForeground = "red";
+    let textLayerOpacity = 1;
+    if (isTextLayerVisible) {
+        textLayerForeground = "transparent";
+        textLayerOpacity = 0.2;
+    }
+    document.documentElement.style.setProperty("--text-layer-foreground", textLayerForeground);
+    document.documentElement.style.setProperty("--text-layer-opacity", textLayerOpacity.toString());
+    isTextLayerVisible = !isTextLayerVisible;
 }
 
 function loadDocument() {

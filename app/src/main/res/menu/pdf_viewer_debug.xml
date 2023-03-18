@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/debug_action_toggle_text_layer_visibility"
+        android:title="@string/debug_action_toggle_text_layer_visibility"
+        app:showAsAction="never" />
+
+</menu>

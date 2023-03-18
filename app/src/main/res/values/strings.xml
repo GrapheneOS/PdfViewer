@@ -14,6 +14,8 @@
     <string name="action_save_as">Save as</string>
     <string name="action_view_document_properties">Properties</string>
 
+    <string name="debug_action_toggle_text_layer_visibility">Toggle text layer visibility</string>
+
     <string name="document_properties_invalid_date">Invalid date</string>
     <string name="document_properties_retrieval_failed">Failed to obtain document metadata</string>
 
