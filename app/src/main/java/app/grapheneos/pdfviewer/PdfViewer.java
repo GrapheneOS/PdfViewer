@@ -51,6 +51,8 @@ import app.grapheneos.pdfviewer.viewModel.PasswordStatus;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -618,15 +620,21 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         super.onCreateOptionsMenu(menu);
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.pdf_viewer, menu);
+        if (BuildConfig.DEBUG) {
+            inflater.inflate(R.menu.pdf_viewer_debug, menu);
+        }
         return true;
     }
 
     @Override
     public boolean onPrepareOptionsMenu(@NonNull Menu menu) {
-        final int[] ids = {R.id.action_jump_to_page, R.id.action_next, R.id.action_previous,
-                R.id.action_first, R.id.action_last, R.id.action_rotate_clockwise,
-                R.id.action_rotate_counterclockwise, R.id.action_view_document_properties,
-                R.id.action_share, R.id.action_save_as};
+        final ArrayList<Integer> ids = new ArrayList<>(Arrays.asList(R.id.action_jump_to_page,
+                R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
+                R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
+                R.id.action_view_document_properties, R.id.action_share, R.id.action_save_as));
+        if (BuildConfig.DEBUG) {
+            ids.add(R.id.debug_action_toggle_text_layer_visibility);
+        }
         if (mDocumentState < STATE_LOADED) {
             for (final int id : ids) {
                 final MenuItem item = menu.findItem(id);
@@ -691,6 +699,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             return true;
         } else if (itemId == R.id.action_save_as) {
             saveDocument();
+        } else if (itemId == R.id.debug_action_toggle_text_layer_visibility) {
+            binding.webview.evaluateJavascript("toggleTextLayerVisibility()", null);
+            return true;
         }
 
         return super.onOptionsItemSelected(item);
