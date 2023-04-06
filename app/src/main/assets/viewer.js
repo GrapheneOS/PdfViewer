@@ -64,6 +64,14 @@ function display(newCanvas, zoom) {
     }
 }
 
+function setLayerTransform(pageWidth, pageHeight, layerDiv) {
+    const translate = {
+        X: Math.max(0, pageWidth - document.body.clientWidth) / 2,
+        Y: Math.max(0, pageHeight - document.body.clientHeight) / 2
+    };
+    layerDiv.style.translate = `${translate.X}px ${translate.Y}px`;
+}
+
 function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
     pageRendering = true;
     useRender = !prerender;
@@ -85,6 +93,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
 
                 textLayerDiv.replaceWith(cached.textLayerDiv);
                 textLayerDiv = cached.textLayerDiv;
+                setLayerTransform(cached.pageWidth, cached.pageHeight, textLayerDiv);
                 container.style.setProperty("--scale-factor", newZoomRatio.toString());
             }
 
@@ -164,6 +173,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
                     newTextLayerDiv.style.height = newCanvas.style.width;
                     newTextLayerDiv.style.width = newCanvas.style.height;
                 }
+                setLayerTransform(viewport.width, viewport.height, newTextLayerDiv);
                 if (useRender) {
                     textLayerDiv.replaceWith(newTextLayerDiv);
                     textLayerDiv = newTextLayerDiv;
@@ -178,7 +188,9 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
                     zoomRatio: newZoomRatio,
                     orientationDegrees: orientationDegrees,
                     canvas: newCanvas,
-                    textLayerDiv: newTextLayerDiv
+                    textLayerDiv: newTextLayerDiv,
+                    pageWidth: viewport.width,
+                    pageHeight: viewport.height
                 });
 
                 pageRendering = false;
@@ -247,4 +259,8 @@ function loadDocument() {
     }, function (reason) {
         console.error(reason.name + ": " + reason.message);
     });
+}
+
+window.onresize = () => {
+    setLayerTransform(canvas.clientWidth, canvas.clientHeight, textLayerDiv);
 }

@@ -31,13 +31,14 @@ body {
     grid-column-start: 1;
 }
 
-canvas, .textLayer {
+canvas {
     display: inline-block;
     position: relative;
 }
 
 .textLayer {
     text-align: initial;
+    position: absolute;
     overflow: hidden;
     opacity: var(--text-layer-opacity);
     line-height: 1;
