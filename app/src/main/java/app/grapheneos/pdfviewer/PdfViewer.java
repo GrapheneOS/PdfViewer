@@ -45,7 +45,7 @@ import app.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
 import app.grapheneos.pdfviewer.fragment.PasswordPromptFragment;
 import app.grapheneos.pdfviewer.fragment.JumpToPageFragment;
 import app.grapheneos.pdfviewer.ktx.ViewKt;
-import app.grapheneos.pdfviewer.loader.DocumentPropertiesLoader;
+import app.grapheneos.pdfviewer.loader.DocumentPropertiesAsyncTaskLoader;
 import app.grapheneos.pdfviewer.viewModel.PasswordStatus;
 
 import java.io.IOException;
@@ -191,7 +191,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
             final Bundle args = new Bundle();
             args.putString(KEY_PROPERTIES, properties);
-            runOnUiThread(() -> LoaderManager.getInstance(PdfViewer.this).restartLoader(DocumentPropertiesLoader.ID, args, PdfViewer.this));
+            runOnUiThread(() -> LoaderManager.getInstance(PdfViewer.this).restartLoader(DocumentPropertiesAsyncTaskLoader.ID, args, PdfViewer.this));
         }
 
         @JavascriptInterface
@@ -476,14 +476,14 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     @NonNull
     @Override
     public Loader<List<CharSequence>> onCreateLoader(int id, Bundle args) {
-        return new DocumentPropertiesLoader(this, args.getString(KEY_PROPERTIES), mNumPages, mUri);
+        return new DocumentPropertiesAsyncTaskLoader(this, args.getString(KEY_PROPERTIES), mNumPages, mUri);
     }
 
     @Override
     public void onLoadFinished(@NonNull Loader<List<CharSequence>> loader, List<CharSequence> data) {
         mDocumentProperties = data;
         setToolbarTitleWithDocumentName();
-        LoaderManager.getInstance(this).destroyLoader(DocumentPropertiesLoader.ID);
+        LoaderManager.getInstance(this).destroyLoader(DocumentPropertiesAsyncTaskLoader.ID);
     }
 
     @Override
