@@ -9,21 +9,6 @@ import java.text.ParseException;
 import java.util.Calendar;
 
 public class Utils {
-    public static String parseFileSize(long fileSize) {
-        final double kb = fileSize / 1000d;
-
-        if (kb == 0d) {
-            return fileSize + " Bytes";
-        }
-
-        final DecimalFormat format = new DecimalFormat("#.##");
-        format.setRoundingMode(RoundingMode.CEILING);
-
-        if (kb < 1000) {
-            return format.format(kb) + " kB (" + fileSize + " Bytes)";
-        }
-        return format.format(kb / 1000) + " MB (" + fileSize + " Bytes)";
-    }
 
     private static int parseIntSafely(String field) throws ParseException  {
         try {

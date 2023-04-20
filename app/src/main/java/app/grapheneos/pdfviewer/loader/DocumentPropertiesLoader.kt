@@ -6,10 +6,10 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import android.text.format.Formatter
 import android.text.style.StyleSpan
 import android.util.Log
 import app.grapheneos.pdfviewer.R
-import app.grapheneos.pdfviewer.Utils
 import org.json.JSONException
 
 class DocumentPropertiesLoader(
@@ -103,7 +103,7 @@ class DocumentPropertiesLoader(
             val indexSize: Int = cursor.getColumnIndex(OpenableColumns.SIZE)
             if (indexSize >= 0) {
                 val fileSize: Long = cursor.getString(indexSize).toLong()
-                collections[DocumentProperty.FileSize] = Utils.parseFileSize(fileSize)
+                collections[DocumentProperty.FileSize] = Formatter.formatShortFileSize(context, fileSize)
             }
         }
         return collections
