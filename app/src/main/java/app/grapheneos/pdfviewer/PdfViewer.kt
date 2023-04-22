@@ -120,7 +120,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
 
         @JavascriptInterface
         fun showPasswordPrompt() {
-            if (!passwordPromptFragment.isAdded()) {
+            if (!passwordPromptFragment.isAdded) {
                 passwordPromptFragment.show(
                     supportFragmentManager,
                     PasswordPromptFragment::class.java.name
@@ -338,14 +338,15 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         }
     }
 
-    private val passwordPromptFragment: PasswordPromptFragment?
-        private get() {
+    private val passwordPromptFragment: PasswordPromptFragment
+        get() {
+            var mPasswordPromptFragment = mPasswordPromptFragment
             if (mPasswordPromptFragment == null) {
                 val fragment = supportFragmentManager.findFragmentByTag(
                     PasswordPromptFragment::class.java.name
                 )
                 mPasswordPromptFragment = if (fragment != null) {
-                    fragment as PasswordPromptFragment?
+                    fragment as PasswordPromptFragment
                 } else {
                     PasswordPromptFragment()
                 }
