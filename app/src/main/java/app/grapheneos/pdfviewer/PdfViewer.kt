@@ -483,7 +483,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
     }
 
     fun onJumpToPageInDocument(selected_page: Int) {
-        if (selected_page >= 1 && selected_page <= mNumPages && mPage != selected_page) {
+        if (selected_page in 1..mNumPages && mPage != selected_page) {
             mPage = selected_page
             renderPage(0)
             showPageNumber()
