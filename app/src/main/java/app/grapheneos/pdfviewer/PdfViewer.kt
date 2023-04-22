@@ -75,32 +75,26 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
     }
     private var mPasswordPromptFragment: PasswordPromptFragment? = null
     val passwordValidationViewModel: PasswordStatus by viewModels()
-    private val openDocumentLauncher = registerForActivityResult<Intent, ActivityResult>(
+    private val openDocumentLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result: ActivityResult? ->
-        if (result == null) return@registerForActivityResult
-        if (result.resultCode != RESULT_OK) return@registerForActivityResult
-        val resultData = result.data
-        if (resultData != null) {
-            mUri = result.data!!.data
-            mPage = 1
-            mDocumentProperties = null
-            mEncryptedDocumentPassword = ""
-            loadPdf()
-            invalidateOptionsMenu()
-        }
+        if (result == null || result.resultCode != RESULT_OK) return@registerForActivityResult
+        mUri = result.data?.data ?: return@registerForActivityResult
+        mPage = 1
+        mDocumentProperties = null
+        mEncryptedDocumentPassword = ""
+        loadPdf()
+        invalidateOptionsMenu()
     }
-    private val saveAsLauncher = registerForActivityResult<Intent, ActivityResult>(
+
+    private val saveAsLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result: ActivityResult? ->
-        if (result == null) return@registerForActivityResult
-        if (result.resultCode != RESULT_OK) return@registerForActivityResult
-        val resultData = result.data
-        if (resultData != null) {
-            val path = resultData.data
-            path?.let { saveDocumentAs(it) }
-        }
+        if (result == null || result.resultCode != RESULT_OK) return@registerForActivityResult
+        val resultData = result.data?.data ?: return@registerForActivityResult
+        saveDocumentAs(resultData)
     }
+
 
     private inner class Channel {
         @JavascriptInterface
