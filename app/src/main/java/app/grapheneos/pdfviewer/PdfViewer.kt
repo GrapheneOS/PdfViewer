@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Parcelable
 import android.util.Log
 import android.view.Gravity
 import android.view.Menu
@@ -48,7 +49,7 @@ import java.io.InputStream
 import java.util.Arrays
 
 class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSequence>> {
-    private var mUri: Uri? = null
+    private lateinit var mUri: Uri
 
     var mPage = 0
     var mNumPages = 0
@@ -216,7 +217,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
                 if ("/placeholder.pdf" == path) {
                     maybeCloseInputStream()
                     try {
-                        mInputStream = contentResolver.openInputStream(mUri!!)
+                        mInputStream = contentResolver.openInputStream(mUri)
                     } catch (ignored: FileNotFoundException) {
                         snackbar.setText(R.string.error_while_opening).show()
                     }
@@ -255,19 +256,17 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         GestureHelper.attach(this@PdfViewer, binding.webview,
             object : GestureListener {
                 override fun onTapUp(): Boolean {
-                    if (mUri != null) {
-                        binding.webview.evaluateJavascript("isTextSelected()") { selection: String? ->
-                            if (!java.lang.Boolean.parseBoolean(selection)) {
-                                if (supportActionBar!!.isShowing) {
-                                    hideSystemUi()
-                                } else {
-                                    showSystemUi()
-                                }
+                    if (!this@PdfViewer::mUri.isInitialized) return false
+                    binding.webview.evaluateJavascript("isTextSelected()") { selection: String? ->
+                        if (!java.lang.Boolean.parseBoolean(selection)) {
+                            if (supportActionBar!!.isShowing) {
+                                hideSystemUi()
+                            } else {
+                                showSystemUi()
                             }
                         }
-                        return true
                     }
-                    return false
+                    return true
                 }
 
                 override fun onZoomIn(value: Float) {
@@ -293,16 +292,11 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
                 snackbar.setText(R.string.invalid_mime_type).show()
                 return
             }
-            mUri = intent.data
+            intent.data?.let { mUri = it }
             mPage = 1
         }
         if (savedInstanceState != null) {
-            mUri = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-                val uri = savedInstanceState.getParcelable<Uri>(STATE_URI)
-                uri
-            } else {
-                savedInstanceState.getParcelable(STATE_URI, Uri::class.java)
-            }
+            getParcelableExtra<Uri>(savedInstanceState, STATE_URI)?.let { mUri = it }
             mPage = savedInstanceState.getInt(STATE_PAGE)
             zoomRatio = savedInstanceState.getFloat(STATE_ZOOM_RATIO)
             documentOrientationDegrees = savedInstanceState.getInt(
@@ -312,13 +306,14 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
                 STATE_ENCRYPTED_DOCUMENT_PASSWORD
             )
         }
-        if (mUri != null) {
-            if ("file" == mUri!!.scheme) {
-                snackbar.setText(R.string.legacy_file_uri).show()
-                return
-            }
-            loadPdf()
+        if (!this@PdfViewer::mUri.isInitialized) {
+            return
         }
+        if ("file" == mUri.scheme) {
+            snackbar.setText(R.string.legacy_file_uri).show()
+            return
+        }
+        loadPdf()
     }
 
     override fun onDestroy() {
@@ -327,6 +322,18 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         binding.root.removeView(binding.webview)
         binding.webview.destroy()
         maybeCloseInputStream()
+    }
+
+    private inline fun <reified T : Parcelable> getParcelableExtra(
+        bundle: Bundle,
+        name: String
+    ): T? {
+        return if (Build.VERSION.SDK_INT >= 33) {
+            bundle.getParcelable(name, T::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            bundle.getParcelable<T>(name)
+        }
     }
 
     fun maybeCloseInputStream() {
@@ -413,7 +420,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
             if (mInputStream != null) {
                 mInputStream!!.close()
             }
-            contentResolver.openInputStream(mUri!!)
+            contentResolver.openInputStream(mUri)
         } catch (e: IOException) {
             snackbar.setText(R.string.error_while_opening).show()
             return
@@ -449,15 +456,15 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
     }
 
     private fun shareDocument() {
-        if (mUri != null) {
-            val shareIntent = Intent(Intent.ACTION_SEND)
-            shareIntent.setDataAndTypeAndNormalize(mUri!!, "application/pdf")
-            shareIntent.putExtra(Intent.EXTRA_STREAM, mUri)
-            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            startActivity(Intent.createChooser(shareIntent, getString(R.string.action_share)))
-        } else {
+        if (!this@PdfViewer::mUri.isInitialized) {
             Log.w(TAG, "Cannot share unexpected null URI")
+            return
         }
+        val shareIntent = Intent(Intent.ACTION_SEND)
+        shareIntent.setDataAndTypeAndNormalize(mUri, "application/pdf")
+        shareIntent.putExtra(Intent.EXTRA_STREAM, mUri)
+        shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        startActivity(Intent.createChooser(shareIntent, getString(R.string.action_share)))
     }
 
     private fun zoomIn(value: Float, end: Boolean) {
@@ -501,7 +508,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
 
     public override fun onSaveInstanceState(savedInstanceState: Bundle) {
         super.onSaveInstanceState(savedInstanceState)
-        savedInstanceState.putParcelable(STATE_URI, mUri)
+        savedInstanceState.putParcelable(STATE_URI, if(this::mUri.isInitialized) mUri else null)
         savedInstanceState.putInt(STATE_PAGE, mPage)
         savedInstanceState.putFloat(STATE_ZOOM_RATIO, zoomRatio)
         savedInstanceState.putInt(STATE_DOCUMENT_ORIENTATION_DEGREES, documentOrientationDegrees)
@@ -571,10 +578,13 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
             menu.findItem(R.id.action_open),
             webViewRelease >= MIN_WEBVIEW_RELEASE
         )
-        enableDisableMenuItem(menu.findItem(R.id.action_share), mUri != null)
+        enableDisableMenuItem(menu.findItem(R.id.action_share), this@PdfViewer::mUri.isInitialized)
         enableDisableMenuItem(menu.findItem(R.id.action_next), mPage < mNumPages)
         enableDisableMenuItem(menu.findItem(R.id.action_previous), mPage > 1)
-        enableDisableMenuItem(menu.findItem(R.id.action_save_as), mUri != null)
+        enableDisableMenuItem(
+            menu.findItem(R.id.action_save_as),
+            this@PdfViewer::mUri.isInitialized
+        )
         return true
     }
 
@@ -647,7 +657,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
 
     private fun saveDocumentAs(uri: Uri) {
         try {
-            saveAs(this, mUri!!, uri)
+            saveAs(this, mUri, uri)
         } catch (e: IOException) {
             snackbar.setText(R.string.error_while_saving).show()
         } catch (e: OutOfMemoryError) {
