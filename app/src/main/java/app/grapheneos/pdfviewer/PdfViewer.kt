@@ -584,46 +584,71 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        val itemId = item.itemId
-        if (itemId == R.id.action_previous) {
-            onJumpToPageInDocument(mPage - 1)
-            return true
-        } else if (itemId == R.id.action_next) {
-            onJumpToPageInDocument(mPage + 1)
-            return true
-        } else if (itemId == R.id.action_first) {
-            onJumpToPageInDocument(1)
-            return true
-        } else if (itemId == R.id.action_last) {
-            onJumpToPageInDocument(mNumPages)
-            return true
-        } else if (itemId == R.id.action_open) {
-            openDocument()
-            return true
-        } else if (itemId == R.id.action_rotate_clockwise) {
-            documentOrientationChanged(90)
-            return true
-        } else if (itemId == R.id.action_rotate_counterclockwise) {
-            documentOrientationChanged(-90)
-            return true
-        } else if (itemId == R.id.action_view_document_properties) {
-            newInstance(mDocumentProperties!!)
-                .show(supportFragmentManager, DocumentPropertiesFragment.TAG)
-            return true
-        } else if (itemId == R.id.action_jump_to_page) {
-            JumpToPageFragment()
-                .show(supportFragmentManager, JumpToPageFragment.TAG)
-            return true
-        } else if (itemId == R.id.action_share) {
-            shareDocument()
-            return true
-        } else if (itemId == R.id.action_save_as) {
-            saveDocument()
-        } else if (itemId == R.id.debug_action_toggle_text_layer_visibility) {
-            binding.webview.evaluateJavascript("toggleTextLayerVisibility()", null)
-            return true
+        return when (item.itemId) {
+            R.id.action_previous -> {
+                onJumpToPageInDocument(mPage - 1)
+                true
+            }
+
+            R.id.action_next -> {
+                onJumpToPageInDocument(mPage + 1)
+                true
+            }
+
+            R.id.action_first -> {
+                onJumpToPageInDocument(1)
+                true
+            }
+
+            R.id.action_last -> {
+                onJumpToPageInDocument(mNumPages)
+                true
+            }
+
+            R.id.action_open -> {
+                openDocument()
+                true
+            }
+
+            R.id.action_rotate_clockwise -> {
+                documentOrientationChanged(90)
+                true
+            }
+
+            R.id.action_rotate_counterclockwise -> {
+                documentOrientationChanged(-90)
+                true
+            }
+
+            R.id.action_view_document_properties -> {
+                newInstance(mDocumentProperties!!)
+                    .show(supportFragmentManager, DocumentPropertiesFragment.TAG)
+                true
+            }
+
+            R.id.action_jump_to_page -> {
+                JumpToPageFragment()
+                    .show(supportFragmentManager, JumpToPageFragment.TAG)
+                true
+            }
+
+            R.id.action_share -> {
+                shareDocument()
+                true
+            }
+
+            R.id.action_save_as -> {
+                saveDocument()
+                true
+            }
+
+            R.id.debug_action_toggle_text_layer_visibility -> {
+                binding.webview.evaluateJavascript("toggleTextLayerVisibility()", null)
+                true
+            }
+
+            else -> super.onOptionsItemSelected(item)
         }
-        return super.onOptionsItemSelected(item)
     }
 
     private fun saveDocument() {
