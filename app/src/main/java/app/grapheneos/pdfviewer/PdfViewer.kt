@@ -687,6 +687,14 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         }
     }
 
+    private fun enableDisableMenuItem(item: MenuItem, enable: Boolean) {
+        val alphaLow = 130
+        val alphaHigh = 255
+
+        item.isEnabled = enable
+        item.icon?.alpha = if (enable) alphaHigh else alphaLow
+    }
+
     companion object {
         private const val DOCUMENT_TYPE_PDF = "application/pdf"
         const val TAG = "PdfViewer"
@@ -699,19 +707,8 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         private const val MIN_WEBVIEW_RELEASE = 89
         private const val MIN_ZOOM_RATIO = 0.5f
         private const val MAX_ZOOM_RATIO = 1.5f
-        private const val ALPHA_LOW = 130
-        private const val ALPHA_HIGH = 255
         private const val STATE_LOADED = 1
         private const val STATE_END = 2
         private const val PADDING = 10
-        private fun enableDisableMenuItem(item: MenuItem, enable: Boolean) {
-            if (enable) {
-                item.isEnabled = true
-                item.icon!!.alpha = ALPHA_HIGH
-            } else {
-                item.isEnabled = false
-                item.icon!!.alpha = ALPHA_LOW
-            }
-        }
     }
 }
