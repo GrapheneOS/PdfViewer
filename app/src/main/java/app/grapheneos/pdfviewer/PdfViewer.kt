@@ -61,9 +61,18 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
     private var mDocumentProperties: List<CharSequence>? = null
     private var mInputStream: InputStream? = null
     private lateinit var binding: PdfviewerBinding
-    private var mTextView: TextView? = null
-    private var mToast: Toast? = null
-    private var snackbar: Snackbar? = null
+    private val pageNumberTextView: TextView by lazy {
+        TextView(this).apply {
+            setBackgroundColor(Color.DKGRAY)
+            setTextColor(ColorStateList.valueOf(Color.WHITE))
+            textSize = 18f
+            setPadding(PADDING, 0, PADDING, 0)
+        }
+    }
+    private lateinit var pageNumberToast: Toast
+    private val snackbar: Snackbar by lazy {
+        Snackbar.make(binding.root, "", Snackbar.LENGTH_LONG)
+    }
     private var mPasswordPromptFragment: PasswordPromptFragment? = null
     val passwordValidationViewModel: PasswordStatus by viewModels()
     private val openDocumentLauncher = registerForActivityResult<Intent, ActivityResult>(
@@ -215,7 +224,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
                     try {
                         mInputStream = contentResolver.openInputStream(mUri!!)
                     } catch (ignored: FileNotFoundException) {
-                        snackbar!!.setText(R.string.error_while_opening).show()
+                        snackbar.setText(R.string.error_while_opening).show()
                     }
                     return WebResourceResponse("application/pdf", null, mInputStream)
                 }
@@ -279,21 +288,15 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
                     zoomEnd()
                 }
             })
-        mTextView = TextView(this)
-        mTextView!!.setBackgroundColor(Color.DKGRAY)
-        mTextView!!.setTextColor(ColorStateList.valueOf(Color.WHITE))
-        mTextView!!.textSize = 18f
-        mTextView!!.setPadding(PADDING, 0, PADDING, 0)
 
         // If loaders are not being initialized in onCreate(), the result will not be delivered
         // after orientation change (See FragmentHostCallback), thus initialize the
         // loader manager impl so that the result will be delivered.
         LoaderManager.getInstance(this)
-        snackbar = Snackbar.make(binding.root, "", Snackbar.LENGTH_LONG)
         val intent = intent
         if (Intent.ACTION_VIEW == intent.action) {
             if ("application/pdf" != intent.type) {
-                snackbar!!.setText(R.string.invalid_mime_type).show()
+                snackbar.setText(R.string.invalid_mime_type).show()
                 return
             }
             mUri = intent.data
@@ -317,7 +320,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         }
         if (mUri != null) {
             if ("file" == mUri!!.scheme) {
-                snackbar!!.setText(R.string.legacy_file_uri).show()
+                snackbar.setText(R.string.legacy_file_uri).show()
                 return
             }
             loadPdf()
@@ -418,7 +421,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
             }
             contentResolver.openInputStream(mUri!!)
         } catch (e: IOException) {
-            snackbar!!.setText(R.string.error_while_opening).show()
+            snackbar.setText(R.string.error_while_opening).show()
             return
         }
         mDocumentState = 0
@@ -511,16 +514,25 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         savedInstanceState.putString(STATE_ENCRYPTED_DOCUMENT_PASSWORD, mEncryptedDocumentPassword)
     }
 
-    private fun showPageNumber() {
-        if (mToast != null) {
-            mToast!!.cancel()
+    private fun createPageNumberToast(): Toast {
+        return Toast(applicationContext).apply {
+            setGravity(Gravity.BOTTOM or Gravity.END, PADDING, PADDING)
+            duration = Toast.LENGTH_SHORT
         }
-        mTextView!!.text = String.format("%s/%s", mPage, mNumPages)
-        mToast = Toast(applicationContext)
-        mToast!!.setGravity(Gravity.BOTTOM or Gravity.END, PADDING, PADDING)
-        mToast!!.duration = Toast.LENGTH_SHORT
-        mToast!!.view = mTextView
-        mToast!!.show()
+    }
+
+    private fun showPageNumber() {
+        if (!this::pageNumberToast.isInitialized) {
+            pageNumberToast = createPageNumberToast()
+        }
+        if (pageNumberToast.view?.isShown == true) {
+            pageNumberToast.cancel()
+            pageNumberToast = createPageNumberToast()
+        }
+        pageNumberToast.view = pageNumberTextView.apply {
+            text = String.format("%s/%s", mPage, mNumPages)
+        }
+        pageNumberToast.show()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -643,11 +655,11 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         try {
             saveAs(this, mUri!!, uri)
         } catch (e: IOException) {
-            snackbar!!.setText(R.string.error_while_saving).show()
+            snackbar.setText(R.string.error_while_saving).show()
         } catch (e: OutOfMemoryError) {
-            snackbar!!.setText(R.string.error_while_saving).show()
+            snackbar.setText(R.string.error_while_saving).show()
         } catch (e: IllegalArgumentException) {
-            snackbar!!.setText(R.string.error_while_saving).show()
+            snackbar.setText(R.string.error_while_saving).show()
         }
     }
 
