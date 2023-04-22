@@ -385,7 +385,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
     }
 
     private val webViewRelease: Int
-        private get() {
+        get() {
             val webViewPackage = WebView.getCurrentWebViewPackage()
             val webViewVersionName = webViewPackage!!.versionName
             return webViewVersionName.substring(0, webViewVersionName.indexOf(".")).toInt()
@@ -662,7 +662,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
     }
 
     private val currentDocumentName: String
-        private get() {
+        get() {
             if (mDocumentProperties == null || mDocumentProperties!!.isEmpty()) return ""
             var fileName = ""
             var title = ""
