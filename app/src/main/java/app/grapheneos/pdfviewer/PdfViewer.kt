@@ -65,7 +65,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
     private var mEncryptedDocumentPassword: String? = null
     private var mDocumentProperties: List<CharSequence>? = null
     private var mInputStream: InputStream? = null
-    private var binding: PdfviewerBinding? = null
+    private lateinit var binding: PdfviewerBinding
     private var mTextView: TextView? = null
     private var mToast: Toast? = null
     private var snackbar: Snackbar? = null
@@ -151,13 +151,13 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = PdfviewerBinding.inflate(layoutInflater)
-        setContentView(binding!!.root)
-        setSupportActionBar(binding!!.toolbar)
+        setContentView(binding.root)
+        setSupportActionBar(binding.toolbar)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         // Margins for the toolbar are needed, so that content of the toolbar
         // is not covered by a system button navigation bar when in landscape.
-        ViewCompat.setOnApplyWindowInsetsListener(binding!!.toolbar) { v: View, windowInsets: WindowInsetsCompat ->
+        ViewCompat.setOnApplyWindowInsetsListener(binding.toolbar) { v: View, windowInsets: WindowInsetsCompat ->
             val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
             val mlp = v.layoutParams as MarginLayoutParams
             mlp.leftMargin = insets.left
@@ -165,19 +165,19 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
             v.layoutParams = mlp
             windowInsets
         }
-        binding!!.webview.setBackgroundColor(Color.TRANSPARENT)
+        binding.webview.setBackgroundColor(Color.TRANSPARENT)
         if (BuildConfig.DEBUG) {
             WebView.setWebContentsDebuggingEnabled(true)
         }
-        val settings = binding!!.webview.settings
+        val settings = binding.webview.settings
         settings.allowContentAccess = false
         settings.allowFileAccess = false
         settings.cacheMode = WebSettings.LOAD_NO_CACHE
         settings.javaScriptEnabled = true
         settings.minimumFontSize = 1
         CookieManager.getInstance().setAcceptCookie(false)
-        binding!!.webview.addJavascriptInterface(Channel(), "channel")
-        binding!!.webview.webViewClient = object : WebViewClient() {
+        binding.webview.addJavascriptInterface(Channel(), "channel")
+        binding.webview.webViewClient = object : WebViewClient() {
             private fun fromAsset(mime: String, path: String): WebResourceResponse? {
                 return try {
                     val inputStream = assets.open(path.substring(1))
@@ -239,11 +239,11 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
                 loadPdfWithPassword(mEncryptedDocumentPassword)
             }
         }
-        GestureHelper.attach(this@PdfViewer, binding!!.webview,
+        GestureHelper.attach(this@PdfViewer, binding.webview,
             object : GestureListener {
                 override fun onTapUp(): Boolean {
                     if (mUri != null) {
-                        binding!!.webview.evaluateJavascript("isTextSelected()") { selection: String? ->
+                        binding.webview.evaluateJavascript("isTextSelected()") { selection: String? ->
                             if (!java.lang.Boolean.parseBoolean(selection)) {
                                 if (supportActionBar!!.isShowing) {
                                     hideSystemUi()
@@ -279,7 +279,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         // after orientation change (See FragmentHostCallback), thus initialize the
         // loader manager impl so that the result will be delivered.
         LoaderManager.getInstance(this)
-        snackbar = Snackbar.make(binding!!.root, "", Snackbar.LENGTH_LONG)
+        snackbar = Snackbar.make(binding.root, "", Snackbar.LENGTH_LONG)
         val intent = intent
         if (Intent.ACTION_VIEW == intent.action) {
             if ("application/pdf" != intent.type) {
@@ -316,9 +316,9 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
 
     override fun onDestroy() {
         super.onDestroy()
-        binding!!.webview.removeJavascriptInterface("channel")
-        binding!!.root.removeView(binding!!.webview)
-        binding!!.webview.destroy()
+        binding.webview.removeJavascriptInterface("channel")
+        binding.root.removeView(binding.webview)
+        binding.webview.destroy()
         maybeCloseInputStream()
     }
 
@@ -362,16 +362,16 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         // The user could have left the activity to update the WebView
         invalidateOptionsMenu()
         if (webViewRelease >= MIN_WEBVIEW_RELEASE) {
-            binding!!.webviewOutOfDateLayout.visibility = View.GONE
-            binding!!.webview.visibility = View.VISIBLE
+            binding.webviewOutOfDateLayout.visibility = View.GONE
+            binding.webview.visibility = View.VISIBLE
         } else {
-            binding!!.webview.visibility = View.GONE
-            binding!!.webviewOutOfDateMessage.text = getString(
+            binding.webview.visibility = View.GONE
+            binding.webviewOutOfDateMessage.text = getString(
                 R.string.webview_out_of_date_message,
                 webViewRelease,
                 MIN_WEBVIEW_RELEASE
             )
-            binding!!.webviewOutOfDateLayout.visibility = View.VISIBLE
+            binding.webviewOutOfDateLayout.visibility = View.VISIBLE
         }
     }
 
@@ -414,16 +414,16 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         mDocumentState = 0
         showSystemUi()
         invalidateOptionsMenu()
-        binding!!.webview.loadUrl("https://localhost/viewer.html")
+        binding.webview.loadUrl("https://localhost/viewer.html")
     }
 
     fun loadPdfWithPassword(password: String?) {
         mEncryptedDocumentPassword = password
-        binding!!.webview.evaluateJavascript("loadDocument()", null)
+        binding.webview.evaluateJavascript("loadDocument()", null)
     }
 
     private fun renderPage(zoom: Int) {
-        binding!!.webview.evaluateJavascript("onRenderPage($zoom)", null)
+        binding.webview.evaluateJavascript("onRenderPage($zoom)", null)
     }
 
     private fun documentOrientationChanged(orientationDegreesOffset: Int) {
@@ -483,12 +483,12 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
     }
 
     private fun showSystemUi() {
-        binding!!.root.showSystemUi(window)
+        binding.root.showSystemUi(window)
         supportActionBar!!.show()
     }
 
     private fun hideSystemUi() {
-        binding!!.root.hideSystemUi(window)
+        binding.root.hideSystemUi(window)
         supportActionBar!!.hide()
     }
 
@@ -599,7 +599,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         } else if (itemId == R.id.action_save_as) {
             saveDocument()
         } else if (itemId == R.id.debug_action_toggle_text_layer_visibility) {
-            binding!!.webview.evaluateJavascript("toggleTextLayerVisibility()", null)
+            binding.webview.evaluateJavascript("toggleTextLayerVisibility()", null)
             return true
         }
         return super.onOptionsItemSelected(item)
