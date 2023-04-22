@@ -660,43 +660,6 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         private const val STATE_ENCRYPTED_DOCUMENT_PASSWORD = "encrypted_document_password"
         private const val KEY_PROPERTIES = "properties"
         private const val MIN_WEBVIEW_RELEASE = 89
-        private const val CONTENT_SECURITY_POLICY = "default-src 'none'; " +
-                "form-action 'none'; " +
-                "connect-src https://localhost/placeholder.pdf; " +
-                "img-src blob: 'self'; " +
-                "script-src 'self'; " +
-                "style-src 'self'; " +
-                "frame-ancestors 'none'; " +
-                "base-uri 'none'"
-        private const val PERMISSIONS_POLICY = "accelerometer=(), " +
-                "ambient-light-sensor=(), " +
-                "autoplay=(), " +
-                "battery=(), " +
-                "camera=(), " +
-                "clipboard-read=(), " +
-                "clipboard-write=(), " +
-                "display-capture=(), " +
-                "document-domain=(), " +
-                "encrypted-media=(), " +
-                "fullscreen=(), " +
-                "gamepad=(), " +
-                "geolocation=(), " +
-                "gyroscope=(), " +
-                "hid=(), " +
-                "idle-detection=(), " +
-                "interest-cohort=(), " +
-                "magnetometer=(), " +
-                "microphone=(), " +
-                "midi=(), " +
-                "payment=(), " +
-                "picture-in-picture=(), " +
-                "publickey-credentials-get=(), " +
-                "screen-wake-lock=(), " +
-                "serial=(), " +
-                "speaker-selection=(), " +
-                "sync-xhr=(), " +
-                "usb=(), " +
-                "xr-spatial-tracking=()"
         private const val MIN_ZOOM_RATIO = 0.5f
         private const val MAX_ZOOM_RATIO = 1.5f
         private const val ALPHA_LOW = 130
