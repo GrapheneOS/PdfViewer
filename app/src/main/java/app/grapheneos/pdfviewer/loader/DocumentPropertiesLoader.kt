@@ -108,6 +108,4 @@ class DocumentPropertiesLoader(
         }
         return collections
     }
-
-
 }

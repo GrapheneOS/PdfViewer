@@ -9,7 +9,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class DocumentPropertiesFragment : DialogFragment() {
 
-    //TODO replace with nav args once the `PdfViewer` activity is converted to kotlin
+    // TODO replace with nav args once the `PdfViewer` activity is converted to kotlin
     private val mDocumentProperties: List<String> by lazy {
         requireArguments().getStringArrayList(KEY_DOCUMENT_PROPERTIES)?.toList() ?: emptyList()
     }

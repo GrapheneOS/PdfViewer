@@ -32,5 +32,4 @@ enum class DocumentProperty(
     Producer(key = PRODUCER_KEY, nameResource = R.string.producer),
     Creator(key = CREATOR_KEY, nameResource = R.string.creator),
     PDFVersion(key = PDF_VERSION_KEY, nameResource = R.string.pdf_version);
-
 }

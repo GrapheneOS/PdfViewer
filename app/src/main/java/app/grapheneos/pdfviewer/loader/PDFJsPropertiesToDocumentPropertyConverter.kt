@@ -44,6 +44,4 @@ class PDFJsPropertiesToDocumentPropertyConverter(
         }
         return value
     }
-
-
 }
