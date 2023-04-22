@@ -362,12 +362,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         }
 
     private fun setToolbarTitleWithDocumentName() {
-        val documentName = currentDocumentName
-        if (documentName != null && !documentName.isEmpty()) {
-            supportActionBar!!.title = documentName
-        } else {
-            supportActionBar!!.setTitle(R.string.app_name)
-        }
+        binding.toolbar.title = currentDocumentName.ifEmpty { getString(R.string.app_name) }
     }
 
     override fun onResume() {
