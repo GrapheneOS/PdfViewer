@@ -24,11 +24,11 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.lifecycle.ViewModelProvider
 import androidx.loader.app.LoaderManager
 import androidx.loader.content.Loader
 import app.grapheneos.pdfviewer.GestureHelper.GestureListener
@@ -70,7 +70,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
     private var mToast: Toast? = null
     private var snackbar: Snackbar? = null
     private var mPasswordPromptFragment: PasswordPromptFragment? = null
-    var passwordValidationViewModel: PasswordStatus? = null
+    val passwordValidationViewModel: PasswordStatus by viewModels()
     private val openDocumentLauncher = registerForActivityResult<Intent, ActivityResult>(
         ActivityResultContracts.StartActivityForResult()
     ) { result: ActivityResult? ->
@@ -126,18 +126,18 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
                     PasswordPromptFragment::class.java.name
                 )
             }
-            passwordValidationViewModel!!.passwordMissing()
+            passwordValidationViewModel.passwordMissing()
         }
 
         @JavascriptInterface
         fun invalidPassword() {
-            runOnUiThread { passwordValidationViewModel!!.invalid() }
+            runOnUiThread { passwordValidationViewModel.invalid() }
         }
 
         @JavascriptInterface
         fun onLoaded() {
-            passwordValidationViewModel!!.validated()
-            if (passwordPromptFragment.isAdded()) {
+            passwordValidationViewModel.validated()
+            if (passwordPromptFragment.isAdded) {
                 passwordPromptFragment.dismiss()
             }
         }
@@ -153,13 +153,6 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         binding = PdfviewerBinding.inflate(layoutInflater)
         setContentView(binding!!.root)
         setSupportActionBar(binding!!.toolbar)
-        passwordValidationViewModel = ViewModelProvider(
-            this, ViewModelProvider.AndroidViewModelFactory.getInstance(
-                application
-            )
-        ).get<PasswordStatus>(
-            PasswordStatus::class.java
-        )
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         // Margins for the toolbar are needed, so that content of the toolbar
