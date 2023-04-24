@@ -229,8 +229,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
                     headers["Content-Security-Policy"] = CONTENT_SECURITY_POLICY
                     headers["Permissions-Policy"] = PERMISSIONS_POLICY
                     headers["X-Content-Type-Options"] = "nosniff"
-                    response!!.responseHeaders = headers
-                    return response
+                    return response?.apply { responseHeaders = headers }
                 }
                 if ("/viewer.css" == path) {
                     return fromAsset("text/css", path)
