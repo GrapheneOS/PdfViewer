@@ -50,15 +50,10 @@ import java.util.Arrays
 class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSequence>> {
     private var mUri: Uri? = null
 
-    @get:JavascriptInterface
     var mPage = 0
     var mNumPages = 0
-
-    @get:JavascriptInterface
     var zoomRatio = 1f
         private set
-
-    @get:JavascriptInterface
     var documentOrientationDegrees = 0
         private set
     private var mDocumentState = 0
@@ -99,6 +94,21 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
     }
 
     private inner class Channel {
+        @JavascriptInterface
+        fun getPage(): Int {
+            return mPage
+        }
+
+        @JavascriptInterface
+        fun getZoomRatio(): Float {
+            return zoomRatio
+        }
+
+        @JavascriptInterface
+        fun getDocumentOrientationDegrees(): Int {
+            return documentOrientationDegrees
+        }
+
         @JavascriptInterface
         fun setNumPages(numPages: Int) {
             mNumPages = numPages
