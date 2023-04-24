@@ -308,7 +308,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         if (!this@PdfViewer::mUri.isInitialized) {
             return
         }
-        if ("file" == mUri.scheme) {
+        if (LEGACY_URI_SCHEME == mUri.scheme) {
             snackbar.setText(R.string.legacy_file_uri).show()
             return
         }
@@ -696,6 +696,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
 
     companion object {
         private const val DOCUMENT_TYPE_PDF = "application/pdf"
+        private const val LEGACY_URI_SCHEME = "file"
         const val TAG = "PdfViewer"
         private const val STATE_URI = "uri"
         private const val STATE_PAGE = "page"
