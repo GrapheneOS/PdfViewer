@@ -46,7 +46,6 @@ import com.google.android.material.snackbar.Snackbar
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
-import java.util.Arrays
 
 class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSequence>> {
     private lateinit var mUri: Uri
@@ -541,13 +540,11 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        val ids = ArrayList(
-            Arrays.asList(
-                R.id.action_jump_to_page,
-                R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
-                R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
-                R.id.action_view_document_properties, R.id.action_share, R.id.action_save_as
-            )
+        val ids = arrayListOf(
+            R.id.action_jump_to_page,
+            R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
+            R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
+            R.id.action_view_document_properties, R.id.action_share, R.id.action_save_as
         )
         if (BuildConfig.DEBUG) {
             ids.add(R.id.debug_action_toggle_text_layer_visibility)
