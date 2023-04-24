@@ -190,7 +190,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         settings.javaScriptEnabled = true
         settings.minimumFontSize = 1
         CookieManager.getInstance().setAcceptCookie(false)
-        binding.webview.addJavascriptInterface(Channel(), "channel")
+        binding.webview.addJavascriptInterface(Channel(), JAVASCRIPT_CHANNEL_NAME)
         binding.webview.webViewClient = object : WebViewClient() {
             private fun fromAsset(mime: String, path: String): WebResourceResponse? {
                 return try {
@@ -318,7 +318,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
 
     override fun onDestroy() {
         super.onDestroy()
-        binding.webview.removeJavascriptInterface("channel")
+        binding.webview.removeJavascriptInterface(JAVASCRIPT_CHANNEL_NAME)
         binding.root.removeView(binding.webview)
         binding.webview.destroy()
         maybeCloseInputStream()
@@ -703,6 +703,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         private const val STATE_ZOOM_RATIO = "zoomRatio"
         private const val STATE_DOCUMENT_ORIENTATION_DEGREES = "documentOrientationDegrees"
         private const val STATE_ENCRYPTED_DOCUMENT_PASSWORD = "encrypted_document_password"
+        private const val JAVASCRIPT_CHANNEL_NAME = "channel"
         private const val KEY_PROPERTIES = "properties"
         private const val MIN_WEBVIEW_RELEASE = 89
         private const val STATE_LOADED = 1
