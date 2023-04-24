@@ -412,9 +412,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
 
     private fun loadPdf() {
         mInputStream = try {
-            if (mInputStream != null) {
-                mInputStream!!.close()
-            }
+            mInputStream?.close()
             contentResolver.openInputStream(mUri)
         } catch (e: IOException) {
             snackbar.setText(R.string.error_while_opening).show()
