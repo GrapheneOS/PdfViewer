@@ -182,12 +182,13 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         if (BuildConfig.DEBUG) {
             WebView.setWebContentsDebuggingEnabled(true)
         }
-        val settings = binding.webview.settings
-        settings.allowContentAccess = false
-        settings.allowFileAccess = false
-        settings.cacheMode = WebSettings.LOAD_NO_CACHE
-        settings.javaScriptEnabled = true
-        settings.minimumFontSize = 1
+        binding.webview.settings.apply {
+            allowContentAccess = false
+            allowFileAccess = false
+            cacheMode = WebSettings.LOAD_NO_CACHE
+            javaScriptEnabled = true
+            minimumFontSize = 1
+        }
         CookieManager.getInstance().setAcceptCookie(false)
         binding.webview.addJavascriptInterface(Channel(), JAVASCRIPT_CHANNEL_NAME)
         binding.webview.webViewClient = object : WebViewClient() {
@@ -440,9 +441,10 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
     }
 
     private fun openDocument() {
-        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-        intent.addCategory(Intent.CATEGORY_OPENABLE)
-        intent.type = DOCUMENT_TYPE_PDF
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = DOCUMENT_TYPE_PDF
+        }
         openDocumentLauncher.launch(intent)
     }
 
@@ -451,10 +453,11 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
             Log.w(TAG, "Cannot share unexpected null URI")
             return
         }
-        val shareIntent = Intent(Intent.ACTION_SEND)
-        shareIntent.setDataAndTypeAndNormalize(mUri, DOCUMENT_TYPE_PDF)
-        shareIntent.putExtra(Intent.EXTRA_STREAM, mUri)
-        shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            setDataAndTypeAndNormalize(mUri, DOCUMENT_TYPE_PDF)
+            putExtra(Intent.EXTRA_STREAM, mUri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
         startActivity(Intent.createChooser(shareIntent, getString(R.string.action_share)))
     }
 
@@ -501,11 +504,13 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
 
     public override fun onSaveInstanceState(savedInstanceState: Bundle) {
         super.onSaveInstanceState(savedInstanceState)
-        savedInstanceState.putParcelable(STATE_URI, if(this::mUri.isInitialized) mUri else null)
-        savedInstanceState.putInt(STATE_PAGE, mPage)
-        savedInstanceState.putFloat(STATE_ZOOM_RATIO, zoomRatio)
-        savedInstanceState.putInt(STATE_DOCUMENT_ORIENTATION_DEGREES, documentOrientationDegrees)
-        savedInstanceState.putString(STATE_ENCRYPTED_DOCUMENT_PASSWORD, mEncryptedDocumentPassword)
+        savedInstanceState.apply {
+            putParcelable(STATE_URI, if (this@PdfViewer::mUri.isInitialized) mUri else null)
+            putInt(STATE_PAGE, mPage)
+            putFloat(STATE_ZOOM_RATIO, zoomRatio)
+            putInt(STATE_DOCUMENT_ORIENTATION_DEGREES, documentOrientationDegrees)
+            putString(STATE_ENCRYPTED_DOCUMENT_PASSWORD, mEncryptedDocumentPassword)
+        }
     }
 
     private fun createPageNumberToast(): Toast {
@@ -648,16 +653,17 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
     }
 
     private fun saveDocument() {
-        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT)
-        intent.addCategory(Intent.CATEGORY_OPENABLE)
-        intent.type = DOCUMENT_TYPE_PDF
-        intent.putExtra(Intent.EXTRA_TITLE, currentDocumentName)
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = DOCUMENT_TYPE_PDF
+            putExtra(Intent.EXTRA_TITLE, currentDocumentName)
+        }
         saveAsLauncher.launch(intent)
     }
 
     private val currentDocumentName: String
         get() {
-            if (mDocumentProperties == null || mDocumentProperties!!.isEmpty()) return ""
+            if (mDocumentProperties.isNullOrEmpty()) return ""
             var fileName = ""
             var title = ""
             for (property in mDocumentProperties!!) {
