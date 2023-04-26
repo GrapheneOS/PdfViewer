@@ -135,8 +135,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         fun showPasswordPrompt() {
             if (!passwordPromptFragment.isAdded) {
                 passwordPromptFragment.show(
-                    supportFragmentManager,
-                    PasswordPromptFragment::class.java.name
+                    supportFragmentManager, PasswordPromptFragment::class.java.name
                 )
             }
             passwordValidationViewModel.passwordMissing()
@@ -202,8 +201,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
             }
 
             override fun shouldInterceptRequest(
-                view: WebView,
-                request: WebResourceRequest
+                view: WebView, request: WebResourceRequest
             ): WebResourceResponse? {
                 if ("GET" != request.method) {
                     return null
@@ -240,8 +238,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
             }
 
             override fun shouldOverrideUrlLoading(
-                view: WebView,
-                request: WebResourceRequest
+                view: WebView, request: WebResourceRequest
             ): Boolean {
                 return true
             }
@@ -252,34 +249,33 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
                 loadPdfWithPassword(mEncryptedDocumentPassword)
             }
         }
-        GestureHelper.attach(this@PdfViewer, binding.webview,
-            object : GestureListener {
-                override fun onTapUp(): Boolean {
-                    if (!this@PdfViewer::mUri.isInitialized) return false
-                    binding.webview.evaluateJavascript("isTextSelected()") { selection: String? ->
-                        if (!selection.toBoolean()) {
-                            if (supportActionBar!!.isShowing) {
-                                hideSystemUi()
-                            } else {
-                                showSystemUi()
-                            }
+        GestureHelper.attach(this@PdfViewer, binding.webview, object : GestureListener {
+            override fun onTapUp(): Boolean {
+                if (!this@PdfViewer::mUri.isInitialized) return false
+                binding.webview.evaluateJavascript("isTextSelected()") { selection: String? ->
+                    if (!selection.toBoolean()) {
+                        if (supportActionBar!!.isShowing) {
+                            hideSystemUi()
+                        } else {
+                            showSystemUi()
                         }
                     }
-                    return true
                 }
+                return true
+            }
 
-                override fun onZoomIn(value: Float) {
-                    zoomIn(value, false)
-                }
+            override fun onZoomIn(value: Float) {
+                zoomIn(value, false)
+            }
 
-                override fun onZoomOut(value: Float) {
-                    zoomOut(value, false)
-                }
+            override fun onZoomOut(value: Float) {
+                zoomOut(value, false)
+            }
 
-                override fun onZoomEnd() {
-                    zoomEnd()
-                }
-            })
+            override fun onZoomEnd() {
+                zoomEnd()
+            }
+        })
 
         // If loaders are not being initialized in onCreate(), the result will not be delivered
         // after orientation change (See FragmentHostCallback), thus initialize the
@@ -324,14 +320,12 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
     }
 
     private inline fun <reified T : Parcelable> getParcelableExtra(
-        bundle: Bundle,
-        name: String
+        bundle: Bundle, name: String
     ): T? {
         return if (Build.VERSION.SDK_INT >= 33) {
             bundle.getParcelable(name, T::class.java)
         } else {
-            @Suppress("DEPRECATION")
-            bundle.getParcelable<T>(name)
+            @Suppress("DEPRECATION") bundle.getParcelable<T>(name)
         }
     }
 
@@ -375,9 +369,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
         } else {
             binding.webview.visibility = View.GONE
             binding.webviewOutOfDateMessage.text = getString(
-                R.string.webview_out_of_date_message,
-                webViewRelease,
-                MIN_WEBVIEW_RELEASE
+                R.string.webview_out_of_date_message, webViewRelease, MIN_WEBVIEW_RELEASE
             )
             binding.webviewOutOfDateLayout.visibility = View.VISIBLE
         }
@@ -392,10 +384,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
 
     override fun onCreateLoader(id: Int, args: Bundle?): Loader<List<CharSequence>> {
         return DocumentPropertiesAsyncTaskLoader(
-            this,
-            args!!.getString(KEY_PROPERTIES),
-            mNumPages,
-            mUri
+            this, args!!.getString(KEY_PROPERTIES), mNumPages, mUri
         )
     }
 
@@ -547,9 +536,15 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         val ids = arrayListOf(
             R.id.action_jump_to_page,
-            R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
-            R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
-            R.id.action_view_document_properties, R.id.action_share, R.id.action_save_as
+            R.id.action_next,
+            R.id.action_previous,
+            R.id.action_first,
+            R.id.action_last,
+            R.id.action_rotate_clockwise,
+            R.id.action_rotate_counterclockwise,
+            R.id.action_view_document_properties,
+            R.id.action_share,
+            R.id.action_save_as
         )
         if (BuildConfig.DEBUG) {
             ids.add(R.id.debug_action_toggle_text_layer_visibility)
@@ -571,15 +566,13 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
             mDocumentState = STATE_END
         }
         enableDisableMenuItem(
-            menu.findItem(R.id.action_open),
-            webViewRelease >= MIN_WEBVIEW_RELEASE
+            menu.findItem(R.id.action_open), webViewRelease >= MIN_WEBVIEW_RELEASE
         )
         enableDisableMenuItem(menu.findItem(R.id.action_share), this@PdfViewer::mUri.isInitialized)
         enableDisableMenuItem(menu.findItem(R.id.action_next), mPage < mNumPages)
         enableDisableMenuItem(menu.findItem(R.id.action_previous), mPage > 1)
         enableDisableMenuItem(
-            menu.findItem(R.id.action_save_as),
-            this@PdfViewer::mUri.isInitialized
+            menu.findItem(R.id.action_save_as), this@PdfViewer::mUri.isInitialized
         )
         return true
     }
@@ -622,14 +615,14 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
             }
 
             R.id.action_view_document_properties -> {
-                newInstance(mDocumentProperties!!)
-                    .show(supportFragmentManager, DocumentPropertiesFragment.TAG)
+                newInstance(mDocumentProperties!!).show(
+                    supportFragmentManager, DocumentPropertiesFragment.TAG
+                )
                 true
             }
 
             R.id.action_jump_to_page -> {
-                JumpToPageFragment()
-                    .show(supportFragmentManager, JumpToPageFragment.TAG)
+                JumpToPageFragment().show(supportFragmentManager, JumpToPageFragment.TAG)
                 true
             }
 
