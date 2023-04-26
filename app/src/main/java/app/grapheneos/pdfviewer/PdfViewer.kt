@@ -257,7 +257,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
                 override fun onTapUp(): Boolean {
                     if (!this@PdfViewer::mUri.isInitialized) return false
                     binding.webview.evaluateJavascript("isTextSelected()") { selection: String? ->
-                        if (!java.lang.Boolean.parseBoolean(selection)) {
+                        if (!selection.toBoolean()) {
                             if (supportActionBar!!.isShowing) {
                                 hideSystemUi()
                             } else {
