@@ -464,7 +464,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
     private fun zoomIn(value: Float, end: Boolean) {
         val maxZoomRatio = 1.5f
         if (zoomRatio < maxZoomRatio) {
-            zoomRatio = Math.min(zoomRatio + value, maxZoomRatio)
+            zoomRatio = (zoomRatio + value).coerceAtMost(maxZoomRatio)
             renderPage(if (end) 1 else 2)
             invalidateOptionsMenu()
         }
@@ -473,7 +473,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
     private fun zoomOut(value: Float, end: Boolean) {
         val minZoomRatio = 0.5f
         if (zoomRatio > minZoomRatio) {
-            zoomRatio = Math.max(zoomRatio - value, minZoomRatio)
+            zoomRatio = (zoomRatio - value).coerceAtLeast(minZoomRatio)
             renderPage(if (end) 1 else 2)
             invalidateOptionsMenu()
         }
