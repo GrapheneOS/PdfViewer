@@ -157,7 +157,7 @@ class PdfViewer : AppCompatActivity(), LoaderManager.LoaderCallbacks<List<CharSe
 
         @get:JavascriptInterface
         val password: String
-            get() = if (mEncryptedDocumentPassword != null) mEncryptedDocumentPassword!! else ""
+            get() = mEncryptedDocumentPassword ?: ""
     }
 
     @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
