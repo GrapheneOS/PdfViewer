@@ -72,6 +72,13 @@ function setLayerTransform(pageWidth, pageHeight, layerDiv) {
     layerDiv.style.translate = `${translate.X}px ${translate.Y}px`;
 }
 
+function getDefaultZoomRatio(page, orientationDegrees) {
+    const viewport = page.getViewport({scale: 1, rotation: orientationDegrees});
+    const widthZoomRatio = document.body.clientWidth / viewport.width;
+    const heightZoomRatio = document.body.clientHeight / viewport.height;
+    return Math.max(Math.min(widthZoomRatio, heightZoomRatio, channel.getMaxZoomRatio()), channel.getMinZoomRatio());
+}
+
 function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
     pageRendering = true;
     useRender = !prerender;
@@ -106,6 +113,14 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
     pdfDoc.getPage(pageNumber).then(function(page) {
         if (maybeRenderNextPage()) {
             return;
+        }
+
+        const defaultZoomRatio = getDefaultZoomRatio(page, orientationDegrees);
+
+        if (cache.length === 0) {
+            zoomRatio = defaultZoomRatio;
+            newZoomRatio = defaultZoomRatio;
+            channel.setZoomRatio(defaultZoomRatio);
         }
 
         const viewport = page.getViewport({scale: newZoomRatio, rotation: orientationDegrees});
