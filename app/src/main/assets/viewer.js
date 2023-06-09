@@ -181,7 +181,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
                 }
 
                 if (cache.length === maxCached) {
-                    cache.shift()
+                    cache.shift();
                 }
                 cache.push({
                     pageNumber: pageNumber,
@@ -244,7 +244,7 @@ function loadDocument() {
         } else if (error === pdfjsLib.PasswordResponses.INCORRECT_PASSWORD) {
             channel.invalidPassword();
         }
-    }
+    };
 
     loadingTask.promise.then(function (newDoc) {
         channel.onLoaded();
@@ -263,4 +263,4 @@ function loadDocument() {
 
 window.onresize = () => {
     setLayerTransform(canvas.clientWidth, canvas.clientHeight, textLayerDiv);
-}
+};
