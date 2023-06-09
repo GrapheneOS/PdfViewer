@@ -173,6 +173,21 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
 
         @JavascriptInterface
+        public void setZoomRatio(final float ratio) {
+            mZoomRatio = Math.max(Math.min(ratio, MAX_ZOOM_RATIO), MIN_ZOOM_RATIO);
+        }
+
+        @JavascriptInterface
+        public float getMinZoomRatio() {
+            return MIN_ZOOM_RATIO;
+        }
+
+        @JavascriptInterface
+        public float getMaxZoomRatio() {
+            return MAX_ZOOM_RATIO;
+        }
+
+        @JavascriptInterface
         public int getDocumentOrientationDegrees() {
             return mDocumentOrientationDegrees;
         }
