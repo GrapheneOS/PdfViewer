@@ -1,0 +1,40 @@
+{
+    "env": {
+        "browser": true,
+        "es2022": true
+    },
+    "extends": "eslint:recommended",
+    "parserOptions": {
+        "ecmaVersion": 2022,
+        "sourceType": "module"
+    },
+    "rules": {
+        "indent": [
+            "error",
+            4
+        ],
+        "linebreak-style": [
+            "error",
+            "unix"
+        ],
+        "quotes": [
+            "error",
+            "double"
+        ],
+        "semi": [
+            "error",
+            "always"
+        ],
+        "no-var": [
+            "error"
+        ]
+    },
+    "globals": {
+        "pdfjsLib": "readonly",
+        "channel": "readonly"
+    },
+    "ignorePatterns": [
+        "pdf.js",
+        "pdf.worker.js"
+    ]
+}
