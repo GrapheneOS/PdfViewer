@@ -9,6 +9,7 @@ import android.text.Spanned
 import android.text.format.Formatter
 import android.text.style.StyleSpan
 import android.util.Log
+import androidx.core.database.getLongOrNull
 import app.grapheneos.pdfviewer.R
 import org.json.JSONException
 
@@ -102,8 +103,9 @@ class DocumentPropertiesLoader(
 
             val indexSize: Int = cursor.getColumnIndex(OpenableColumns.SIZE)
             if (indexSize >= 0) {
-                val fileSize: Long = cursor.getString(indexSize).toLong()
-                collections[DocumentProperty.FileSize] = Formatter.formatShortFileSize(context, fileSize)
+                val fileSize = cursor.getLongOrNull(indexSize)
+                collections[DocumentProperty.FileSize] =
+                    fileSize?.let { Formatter.formatFileSize(context, it) } ?: context.getString(R.string.unknown_file_size)
             }
         }
         return collections
