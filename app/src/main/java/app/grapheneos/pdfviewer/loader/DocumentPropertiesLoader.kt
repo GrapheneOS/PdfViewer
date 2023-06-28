@@ -40,7 +40,7 @@ class DocumentPropertiesLoader(
         }
     }
 
-    fun load(): Map<DocumentProperty, String> {
+    private fun load(): Map<DocumentProperty, String> {
         val result = mutableMapOf<DocumentProperty, String>()
         result.addFileProperties()
         result.addPageSizeProperty()
