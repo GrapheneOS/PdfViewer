@@ -44,4 +44,6 @@
     <string name="creator">Creator</string>
     <string name="pdf_version">PDF version</string>
     <string name="pages">Pages</string>
+
+    <string name="unknown_file_size">Unknown</string>
 </resources>
