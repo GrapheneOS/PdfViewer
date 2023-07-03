@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "pdfjs-dist": "3.7.107"
+    "pdfjs-dist": "3.8.162"
   },
   "devDependencies": {
     "eslint": "^8.44.0"
