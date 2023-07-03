@@ -108,7 +108,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         "usb=(), " +
         "xr-spatial-tracking=()";
 
-    private static final float MIN_ZOOM_RATIO = 0.5f;
+    private static final float MIN_ZOOM_RATIO = 0.2f;
     private static final float MAX_ZOOM_RATIO = 1.5f;
     private static final int ALPHA_LOW = 130;
     private static final int ALPHA_HIGH = 255;
