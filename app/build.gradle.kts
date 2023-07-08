@@ -1,5 +1,6 @@
-import java.util.Properties
+import org.apache.tools.ant.taskdefs.condition.Os
 import java.io.FileInputStream
+import java.util.Properties
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val useKeystoreProperties = keystorePropertiesFile.canRead()
@@ -93,4 +94,31 @@ android {
 dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.9.0")
+}
+
+fun getCommand(command: String, winExt: String = "cmd"): String {
+    return if (Os.isFamily(Os.FAMILY_WINDOWS)) "$command.$winExt" else command
+}
+
+val npmSetup = tasks.register("npmSetup", Exec::class) {
+    workingDir = rootDir
+    commandLine(getCommand("npm"), "ci", "--ignore-scripts")
+}
+
+val processStatic = tasks.register("processStatic", Exec::class) {
+    workingDir = rootDir
+    dependsOn(npmSetup)
+    commandLine(getCommand("node_modules/.bin/ts-node-esm"), "process_static.ts")
+}
+
+val cleanStatic = tasks.register("cleanStatic", Delete::class) {
+    delete("src/main/assets/viewer", "src/debug/assets/viewer")
+}
+
+tasks.preBuild {
+    dependsOn(processStatic)
+}
+
+tasks.clean {
+    dependsOn(cleanStatic)
 }

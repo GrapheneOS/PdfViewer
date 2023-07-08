@@ -56,7 +56,7 @@ canvas {
 .textLayer .highlight {
     margin: -1px;
     padding: 1px;
-    background-color: rgba(180, 0, 170, 1);
+    background-color: rgb(180 0 170 / 100%);
     border-radius: 4px;
 }
 
@@ -77,20 +77,17 @@ canvas {
 }
 
 .textLayer .highlight.selected {
-    background-color: rgba(0, 100, 0, 1);
+    background-color: rgb(0 100 0 / 100%);
 }
 
 .textLayer ::selection {
-    background: rgba(0, 0, 255, 1);
+    background: rgb(0 0 255 / 100%);
 }
 
 .textLayer .endOfContent {
     display: block;
     position: absolute;
-    left: 0;
-    top: 100%;
-    right: 0;
-    bottom: 0;
+    inset: 0 100% 0 0;
     z-index: -1;
     cursor: default;
     user-select: none;
@@ -103,9 +100,11 @@ canvas {
 [data-main-rotation="90"] {
     transform: rotate(90deg);
 }
+
 [data-main-rotation="180"] {
     transform: rotate(180deg);
 }
+
 [data-main-rotation="270"] {
     transform: rotate(270deg);
 }

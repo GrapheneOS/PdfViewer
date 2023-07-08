@@ -161,6 +161,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 }
             });
 
+    /**
+     * Implements Android JavaScript interface defined in {@code viewer/channel.ts}. Both the
+     * interface definition and implementation must be kept in sync.
+     */
     private class Channel {
         @JavascriptInterface
         public int getPage() {
@@ -309,7 +313,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     return new WebResourceResponse("application/pdf", null, mInputStream);
                 }
 
-                if ("/viewer.html".equals(path)) {
+                if ("/viewer/index.html".equals(path)) {
                     final WebResourceResponse response = fromAsset("text/html", path);
                     HashMap<String, String> headers = new HashMap<>();
                     headers.put("Content-Security-Policy", CONTENT_SECURITY_POLICY);
@@ -319,11 +323,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     return response;
                 }
 
-                if ("/viewer.css".equals(path)) {
+                if ("/viewer/main.css".equals(path)) {
                     return fromAsset("text/css", path);
                 }
 
-                if ("/viewer.js".equals(path) || "/pdf.js".equals(path) || "/pdf.worker.js".equals(path)) {
+                if ("/viewer/js/index.js".equals(path) || "/viewer/js/worker.js".equals(path)) {
                     return fromAsset("application/javascript", path);
                 }
 
@@ -520,7 +524,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         mDocumentState = 0;
         showSystemUi();
         invalidateOptionsMenu();
-        binding.webview.loadUrl("https://localhost/viewer.html");
+        binding.webview.loadUrl("https://localhost/viewer/index.html");
     }
 
     public void loadPdfWithPassword(final String password) {
