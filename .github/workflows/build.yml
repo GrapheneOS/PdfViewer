@@ -18,7 +18,6 @@ jobs:
           java-version: 20
           cache: gradle
 
-      - run: npm ci --ignore-scripts
       - name: Build with Gradle
         run: ./gradlew build --no-daemon
   
