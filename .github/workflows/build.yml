@@ -3,7 +3,7 @@ name: Build application
 on: [pull_request, push]
 
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,3 +21,17 @@ jobs:
       - run: npm ci --ignore-scripts
       - name: Build with Gradle
         run: ./gradlew build --no-daemon
+  
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          cache: npm
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: 17 # Build is broken with JDK 20
+          cache: gradle
+      - run: ./gradlew.bat build --no-daemon
