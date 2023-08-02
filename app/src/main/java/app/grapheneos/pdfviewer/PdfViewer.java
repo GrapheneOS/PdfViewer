@@ -491,7 +491,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     @NonNull
     @Override
     public Loader<List<CharSequence>> onCreateLoader(int id, Bundle args) {
-        return new DocumentPropertiesAsyncTaskLoader(this, args.getString(KEY_PROPERTIES), mNumPages, mUri);
+        return new DocumentPropertiesAsyncTaskLoader(this, args.getString(KEY_PROPERTIES), mNumPages, mUri).asLoader();
     }
 
     @Override
