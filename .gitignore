@@ -7,3 +7,4 @@ keystore.properties
 /.idea
 /releases
 /node_modules
+/app/src/*/assets/viewer
