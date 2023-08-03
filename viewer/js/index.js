@@ -144,7 +144,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
         }
 
         const newCanvas = document.createElement("canvas");
-        const ratio = window.devicePixelRatio;
+        const ratio = globalThis.devicePixelRatio;
         newCanvas.height = viewport.height * ratio;
         newCanvas.width = viewport.width * ratio;
         newCanvas.style.height = viewport.height + "px";
@@ -240,7 +240,7 @@ globalThis.onRenderPage = function (zoom) {
 };
 
 globalThis.isTextSelected = function () {
-    return window.getSelection().toString() !== "";
+    return globalThis.getSelection().toString() !== "";
 };
 
 globalThis.toggleTextLayerVisibility = function () {
@@ -281,6 +281,6 @@ globalThis.loadDocument = function () {
     });
 };
 
-window.onresize = () => {
+globalThis.onresize = () => {
     setLayerTransform(canvas.clientWidth, canvas.clientHeight, textLayerDiv);
 };
