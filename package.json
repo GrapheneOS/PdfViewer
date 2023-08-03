@@ -1,6 +1,7 @@
 {
   "type": "module",
   "devDependencies": {
+    "esbuild": "^0.19.2",
     "eslint": "^8.49.0",
     "pdfjs-dist": "^3.10.111"
   }

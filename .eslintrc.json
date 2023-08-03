@@ -30,11 +30,10 @@
         ]
     },
     "globals": {
-        "pdfjsLib": "readonly",
         "channel": "readonly"
     },
     "ignorePatterns": [
-        "pdf.js",
-        "pdf.worker.js"
+        "/app/src/*/assets/viewer",
+        "build/"
     ]
 }
