@@ -3,6 +3,6 @@
     "pdfjs-dist": "3.10.111"
   },
   "devDependencies": {
-    "eslint": "^8.48.0"
+    "eslint": "^8.49.0"
   }
 }
