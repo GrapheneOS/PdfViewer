@@ -1,0 +1,47 @@
+html,
+body {
+    height: 100%;
+}
+
+body,
+canvas {
+    padding: 0;
+    margin: 0;
+}
+
+body {
+    background-color: #c0c0c0;
+}
+
+#container {
+    --scale-factor: 1;
+
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+}
+
+#container canvas,
+#container .textLayer {
+    /* overlay child elements on top of each other */
+    grid-row-start: 1;
+    grid-column-start: 1;
+}
+
+canvas {
+    display: inline-block;
+    position: relative;
+}
+
+[data-main-rotation="90"] {
+    transform: rotate(90deg);
+}
+
+[data-main-rotation="180"] {
+    transform: rotate(180deg);
+}
+
+[data-main-rotation="270"] {
+    transform: rotate(270deg);
+}
