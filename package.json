@@ -3,6 +3,6 @@
   "devDependencies": {
     "esbuild": "^0.19.7",
     "eslint": "^8.54.0",
-    "pdfjs-dist": "^3.11.174"
+    "pdfjs-dist": "^4.0.189"
   }
 }
