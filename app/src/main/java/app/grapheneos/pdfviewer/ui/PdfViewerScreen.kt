@@ -262,7 +262,6 @@ class Channel(
 
     @JavascriptInterface
     fun setZoomRatio(ratio: Float) {
-        println(ratio)
         pdfViewModel.setZoomRatio(ratio)
     }
 

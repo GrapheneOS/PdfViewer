@@ -114,7 +114,6 @@ class PdfViewModel(private val savedStateHandle: SavedStateHandle) : ViewModel()
 
     fun setZoomRatio(ratio: Float) {
         _uiState.value.zoomRatio = ratio.coerceAtMost(MAX_ZOOM_RATIO).coerceAtLeast(MIN_ZOOM_RATIO)
-        println(_uiState.value.zoomRatio)
     }
 
     fun zoomIn(value: Float, end: Boolean) {
