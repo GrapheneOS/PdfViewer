@@ -656,7 +656,7 @@ fun PdfViewerApp(
                             onClick = {
                                 propertiesDialogShown = false
                             },
-                            enabled = pdfUiState.encryptedDocumentPassword.isNotEmpty(),
+                            enabled = true,
                             content = {
                                 Text(
                                     text = stringResource(android.R.string.ok)
