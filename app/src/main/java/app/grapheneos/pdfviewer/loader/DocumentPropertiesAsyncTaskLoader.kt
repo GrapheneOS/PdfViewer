@@ -1,48 +1,34 @@
-package app.grapheneos.pdfviewer.loader;
+package app.grapheneos.pdfviewer.loader
 
-import android.content.Context;
-import android.net.Uri;
+import android.content.Context
+import android.net.Uri
+import androidx.loader.content.AsyncTaskLoader
 
-import androidx.annotation.Nullable;
-import androidx.loader.content.AsyncTaskLoader;
-
-import java.util.List;
-
-public class DocumentPropertiesAsyncTaskLoader extends AsyncTaskLoader<List<CharSequence>> {
-
-    public static final String TAG = "DocumentPropertiesLoader";
-
-    public static final int ID = 1;
-
-    private final String mProperties;
-    private final int mNumPages;
-    private final Uri mUri;
-
-    public DocumentPropertiesAsyncTaskLoader(Context context, String properties, int numPages, Uri uri) {
-        super(context);
-
-        mProperties = properties;
-        mNumPages = numPages;
-        mUri = uri;
+class DocumentPropertiesAsyncTaskLoader(
+    context: Context?,
+    private val mProperties: String,
+    private val mNumPages: Int,
+    private val mUri: Uri
+) :
+    AsyncTaskLoader<List<CharSequence>?>(context!!) {
+    override fun onStartLoading() {
+        forceLoad()
     }
 
+    override fun loadInBackground(): List<CharSequence> {
+        val loader = DocumentPropertiesLoader(
+            context,
+            mProperties,
+            mNumPages,
+            mUri
+        )
 
-    @Override
-    protected void onStartLoading() {
-        forceLoad();
+        return loader.loadAsList()
     }
 
-    @Nullable
-    @Override
-    public List<CharSequence> loadInBackground() {
+    companion object {
+        const val TAG: String = "DocumentPropertiesLoader"
 
-        DocumentPropertiesLoader loader = new DocumentPropertiesLoader(
-                getContext(),
-                mProperties,
-                mNumPages,
-                mUri
-        );
-
-        return loader.loadAsList();
+        const val ID: Int = 1
     }
 }

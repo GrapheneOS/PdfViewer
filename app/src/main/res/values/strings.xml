@@ -29,6 +29,7 @@
 
     <string name="password_prompt_hint">Password</string>
     <string name="password_prompt_description">Enter the password to decrypt this PDF file</string>
+    <string name="password_invalid_password">Invalid password</string>
     <string name="open">Open</string>
     <string name="cancel">Cancel</string>
 
@@ -46,4 +47,7 @@
     <string name="pages">Pages</string>
 
     <string name="unknown_file_size">Unknown</string>
+    <string name="start">Start</string>
+    <string name="back_button">Back</string>
+    <string name="options_dropdown_menu">Options dropdown menu</string>
 </resources>

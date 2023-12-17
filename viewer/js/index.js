@@ -80,7 +80,7 @@ function setLayerTransform(pageWidth, pageHeight, layerDiv) {
 function getDefaultZoomRatio(page, orientationDegrees) {
     const viewport = page.getViewport({scale: 1, rotation: orientationDegrees});
     const widthZoomRatio = document.body.clientWidth / viewport.width;
-    const heightZoomRatio = document.body.clientHeight / viewport.height;
+    const heightZoomRatio = window.innerHeight / viewport.height;
     return Math.max(Math.min(widthZoomRatio, heightZoomRatio, channel.getMaxZoomRatio()), channel.getMinZoomRatio());
 }
 
