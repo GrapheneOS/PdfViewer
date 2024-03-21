@@ -211,7 +211,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
         @JavascriptInterface
         public void showPasswordPrompt() {
-            if (!getPasswordPromptFragment().isAdded()){
+            if (!getPasswordPromptFragment().isAdded()) {
                 getPasswordPromptFragment().show(getSupportFragmentManager(), PasswordPromptFragment.class.getName());
             }
             passwordValidationViewModel.passwordMissing();
@@ -360,6 +360,16 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                             return true;
                         }
                         return false;
+                    }
+
+                    @Override
+                    public void onSwipeLeft() {
+                        onJumpToPageInDocument(mPage + 1);
+                    }
+
+                    @Override
+                    public void onSwipeRight() {
+                        onJumpToPageInDocument(mPage - 1);
                     }
 
                     @Override
