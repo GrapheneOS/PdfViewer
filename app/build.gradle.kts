@@ -48,7 +48,7 @@ android {
         applicationId = "app.grapheneos.pdfviewer"
         minSdk = 26
         targetSdk = 34
-        versionCode = 18
+        versionCode = 19
         versionName = versionCode.toString()
         resourceConfigurations.add("en")
     }
