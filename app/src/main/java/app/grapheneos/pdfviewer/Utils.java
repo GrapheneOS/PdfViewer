@@ -155,11 +155,11 @@ public class Utils {
                         throw new ParseException("Invalid UTC offset minutes", position);
                     }
                     position += 2;
-                }
 
-                // Apostrophe shall succeed mm
-                if (date.charAt(position) != '\'') {
-                    throw new ParseException("Expected apostrophe", position);
+                    // Apostrophe shall succeed mm
+                    if (date.charAt(position) != '\'') {
+                        throw new ParseException("Expected apostrophe", position);
+                    }
                 }
             }
 
