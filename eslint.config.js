@@ -26,6 +26,7 @@ export default [
         ignores: [
             "app/build/",
             "app/src/*/assets/viewer",
+            "build/",
             "releases/"
         ]
     }
