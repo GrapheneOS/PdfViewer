@@ -257,7 +257,8 @@ globalThis.toggleTextLayerVisibility = function () {
 
 globalThis.loadDocument = function () {
     const pdfPassword = channel.getPassword();
-    const loadingTask = getDocument({ url: "https://localhost/placeholder.pdf", password: pdfPassword });
+    const loadingTask = getDocument({ url: "https://localhost/placeholder.pdf", password: pdfPassword, isEvalSupported: false });
+    
     loadingTask.onPassword = (_, error) => {
         if (error === PasswordResponses.NEED_PASSWORD) {
             channel.showPasswordPrompt();
