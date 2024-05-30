@@ -27,7 +27,7 @@ class PasswordPromptFragment : DialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val passwordPrompt = MaterialAlertDialogBuilder(requireContext())
         val passwordDialogFragmentBinding =
-            PasswordDialogFragmentBinding.inflate(LayoutInflater.from(requireContext()))
+            PasswordDialogFragmentBinding.inflate(getLayoutInflater())
         passwordLayout = passwordDialogFragmentBinding.pdfPasswordTextInputLayout
         passwordEditText = passwordDialogFragmentBinding.pdfPasswordEditText
         passwordPrompt.setView(passwordDialogFragmentBinding.root)
