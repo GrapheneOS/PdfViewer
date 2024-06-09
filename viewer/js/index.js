@@ -1,8 +1,8 @@
 import {
     GlobalWorkerOptions,
     PasswordResponses,
+    TextLayer,
     getDocument,
-    renderTextLayer,
 } from "pdfjs-dist";
 
 GlobalWorkerOptions.workerSrc = "/viewer/js/worker.js";
@@ -171,11 +171,15 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
             render();
 
             const newTextLayerDiv = textLayerDiv.cloneNode();
-            task = renderTextLayer({
+            const textLayer = new TextLayer({
                 textContentSource: page.streamTextContent(),
                 container: newTextLayerDiv,
                 viewport: viewport
             });
+            task = {
+                promise: textLayer.render(),
+                cancel: () => textLayer.cancel()
+            };
             task.promise.then(function() {
                 task = null;
 
