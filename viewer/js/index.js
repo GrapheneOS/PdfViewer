@@ -107,6 +107,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
                 textLayerDiv = cached.textLayerDiv;
                 setLayerTransform(cached.pageWidth, cached.pageHeight, textLayerDiv);
                 container.style.setProperty("--scale-factor", newZoomRatio.toString());
+                textLayerDiv.hidden = false;
             }
 
             pageRendering = false;
@@ -139,6 +140,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
         }
 
         if (zoom === 2) {
+            textLayerDiv.hidden = true;
             pageRendering = false;
             return;
         }
@@ -190,6 +192,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
                     textLayerDiv.replaceWith(newTextLayerDiv);
                     textLayerDiv = newTextLayerDiv;
                     container.style.setProperty("--scale-factor", newZoomRatio.toString());
+                    textLayerDiv.hidden = false;
                 }
 
                 if (cache.length === maxCached) {
