@@ -349,7 +349,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 new GestureHelper.GestureListener() {
                     @Override
                     public boolean onTapUp() {
-                        Log.d("Tap Up", "The onTapUp method has been called");
                         if (mUri != null) {
                             binding.webview.evaluateJavascript("isTextSelected()", selection -> {
                                 if (!Boolean.parseBoolean(selection)) {
