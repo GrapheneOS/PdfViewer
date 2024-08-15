@@ -13,6 +13,7 @@ import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
@@ -28,6 +29,7 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -347,6 +349,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 new GestureHelper.GestureListener() {
                     @Override
                     public boolean onTapUp() {
+                        Log.d("Tap Up", "The onTapUp method has been called");
                         if (mUri != null) {
                             binding.webview.evaluateJavascript("isTextSelected()", selection -> {
                                 if (!Boolean.parseBoolean(selection)) {
@@ -360,6 +363,35 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                             return true;
                         }
                         return false;
+                    }
+
+                    // investigate more into the onFlight method for gestures in android. The interface will also be required to link in with the listener and gestures 
+                    @Override
+                    public boolean onFling(@Nullable MotionEvent e1, @NonNull MotionEvent e2, float velocityX, float velocityY) {
+                        float deltaX = e2.getX() - e1.getX();
+                        float deltaY = e2.getY() - e1.getY();
+
+                        if (Math.abs(deltaX) > Math.abs(deltaY)){
+                            if (deltaX > 0) {
+                                Log.d("Horizontal", "Right movement Position");
+                                onJumpToPageInDocument(mPage - 1);
+                            } else {
+                                Log.d("Horizontal", "Left movement Position");
+                                onJumpToPageInDocument(mPage + 1);
+                            }
+                        } else {
+                            if (deltaY > 0) {
+                                Log.d("Vertical", "Down movement Position");
+                            } else {
+                                Log.d("Horizontal", "Up movement Position");
+                            }
+                        }
+                        return true;
+                    }
+
+                    @Override
+                    public boolean onDown() {
+                        return true;
                     }
 
                     @Override
