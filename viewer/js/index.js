@@ -58,15 +58,12 @@ function doPrerender(pageNumber, prerenderTrigger) {
     }
 }
 
-function display(newCanvas, zoom) {
+function display(newCanvas) {
     canvas.height = newCanvas.height;
     canvas.width = newCanvas.width;
     canvas.style.height = newCanvas.style.height;
     canvas.style.width = newCanvas.style.width;
     canvas.getContext("2d", { alpha: false }).drawImage(newCanvas, 0, 0);
-    if (!zoom) {
-        scrollTo(0, 0);
-    }
 }
 
 function setLayerTransform(pageWidth, pageHeight, layerDiv) {
@@ -101,7 +98,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
                 cache.splice(i, 1);
                 cache.push(cached);
 
-                display(cached.canvas, zoom);
+                display(cached.canvas);
 
                 textLayerDiv.replaceWith(cached.textLayerDiv);
                 textLayerDiv = cached.textLayerDiv;
@@ -179,7 +176,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
                 if (!useRender || rendered) {
                     return;
                 }
-                display(newCanvas, zoom);
+                display(newCanvas);
                 rendered = true;
             }
             render();
