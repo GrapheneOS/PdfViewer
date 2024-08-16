@@ -120,6 +120,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     public int mPage;
     public int mNumPages;
     private float mZoomRatio = 1f;
+    private float mZoomFocusX = 0f;
+    private float mZoomFocusY = 0f;
     private int mDocumentOrientationDegrees;
     private int mDocumentState;
     private String mEncryptedDocumentPassword;
@@ -175,6 +177,16 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         @JavascriptInterface
         public void setZoomRatio(final float ratio) {
             mZoomRatio = Math.max(Math.min(ratio, MAX_ZOOM_RATIO), MIN_ZOOM_RATIO);
+        }
+
+        @JavascriptInterface
+        public float getZoomFocusX() {
+            return mZoomFocusX;
+        }
+
+        @JavascriptInterface
+        public float getZoomFocusY() {
+            return mZoomFocusY;
         }
 
         @JavascriptInterface
@@ -363,13 +375,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     }
 
                     @Override
-                    public void onZoomIn(float value) {
-                        zoomIn(value, false);
-                    }
-
-                    @Override
-                    public void onZoomOut(float value) {
-                        zoomOut(value, false);
+                    public void onZoom(float scaleFactor, float focusX, float focusY) {
+                        zoom(scaleFactor, focusX, focusY, false);
                     }
 
                     @Override
@@ -559,20 +566,12 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
     }
 
-    private void zoomIn(float value, boolean end) {
-        if (mZoomRatio < MAX_ZOOM_RATIO) {
-            mZoomRatio = Math.min(mZoomRatio + value, MAX_ZOOM_RATIO);
-            renderPage(end ? 1 : 2);
-            invalidateOptionsMenu();
-        }
-    }
-
-    private void zoomOut(float value, boolean end) {
-        if (mZoomRatio > MIN_ZOOM_RATIO) {
-            mZoomRatio = Math.max(mZoomRatio - value, MIN_ZOOM_RATIO);
-            renderPage(end ? 1 : 2);
-            invalidateOptionsMenu();
-        }
+    private void zoom(float scaleFactor, float focusX, float focusY, boolean end) {
+        mZoomRatio = Math.min(Math.max(mZoomRatio * scaleFactor, MIN_ZOOM_RATIO), MAX_ZOOM_RATIO);
+        mZoomFocusX = focusX;
+        mZoomFocusY = focusY;
+        renderPage(end ? 1 : 2);
+        invalidateOptionsMenu();
     }
 
     private void zoomEnd() {
