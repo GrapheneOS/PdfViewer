@@ -131,6 +131,9 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
 
         const viewport = page.getViewport({scale: newZoomRatio, rotation: orientationDegrees});
 
+        const scaleFactor = newZoomRatio / zoomRatio;
+        const ratio = globalThis.devicePixelRatio;
+
         if (useRender) {
             if (newZoomRatio !== zoomRatio) {
                 canvas.style.height = viewport.height + "px";
@@ -142,11 +145,20 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
         if (zoom === 2) {
             textLayerDiv.hidden = true;
             pageRendering = false;
+
+            // zoom focus relative to page origin, rather than screen origin
+            const globalFocusX = channel.getZoomFocusX() / ratio + globalThis.scrollX;
+            const globalFocusY = channel.getZoomFocusY() / ratio + globalThis.scrollY;
+
+            const translationFactor = scaleFactor - 1;
+            const scrollX = globalFocusX * translationFactor;
+            const scrollY = globalFocusY * translationFactor;
+            scrollBy(scrollX, scrollY);
+
             return;
         }
 
         const newCanvas = document.createElement("canvas");
-        const ratio = globalThis.devicePixelRatio;
         newCanvas.height = viewport.height * ratio;
         newCanvas.width = viewport.width * ratio;
         newCanvas.style.height = viewport.height + "px";
