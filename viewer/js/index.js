@@ -58,15 +58,12 @@ function doPrerender(pageNumber, prerenderTrigger) {
     }
 }
 
-function display(newCanvas, zoom) {
+function display(newCanvas) {
     canvas.height = newCanvas.height;
     canvas.width = newCanvas.width;
     canvas.style.height = newCanvas.style.height;
     canvas.style.width = newCanvas.style.width;
     canvas.getContext("2d", { alpha: false }).drawImage(newCanvas, 0, 0);
-    if (!zoom) {
-        scrollTo(0, 0);
-    }
 }
 
 function setLayerTransform(pageWidth, pageHeight, layerDiv) {
@@ -101,12 +98,13 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
                 cache.splice(i, 1);
                 cache.push(cached);
 
-                display(cached.canvas, zoom);
+                display(cached.canvas);
 
                 textLayerDiv.replaceWith(cached.textLayerDiv);
                 textLayerDiv = cached.textLayerDiv;
                 setLayerTransform(cached.pageWidth, cached.pageHeight, textLayerDiv);
                 container.style.setProperty("--scale-factor", newZoomRatio.toString());
+                textLayerDiv.hidden = false;
             }
 
             pageRendering = false;
@@ -130,6 +128,9 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
 
         const viewport = page.getViewport({scale: newZoomRatio, rotation: orientationDegrees});
 
+        const scaleFactor = newZoomRatio / zoomRatio;
+        const ratio = globalThis.devicePixelRatio;
+
         if (useRender) {
             if (newZoomRatio !== zoomRatio) {
                 canvas.style.height = viewport.height + "px";
@@ -139,12 +140,22 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
         }
 
         if (zoom === 2) {
+            textLayerDiv.hidden = true;
             pageRendering = false;
+
+            // zoom focus relative to page origin, rather than screen origin
+            const globalFocusX = channel.getZoomFocusX() / ratio + globalThis.scrollX;
+            const globalFocusY = channel.getZoomFocusY() / ratio + globalThis.scrollY;
+
+            const translationFactor = scaleFactor - 1;
+            const scrollX = globalFocusX * translationFactor;
+            const scrollY = globalFocusY * translationFactor;
+            scrollBy(scrollX, scrollY);
+
             return;
         }
 
         const newCanvas = document.createElement("canvas");
-        const ratio = globalThis.devicePixelRatio;
         newCanvas.height = viewport.height * ratio;
         newCanvas.width = viewport.width * ratio;
         newCanvas.style.height = viewport.height + "px";
@@ -165,7 +176,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
                 if (!useRender || rendered) {
                     return;
                 }
-                display(newCanvas, zoom);
+                display(newCanvas);
                 rendered = true;
             }
             render();
@@ -185,23 +196,12 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
 
                 render();
 
-                // We use CSS transform to rotate a text layer div of zero
-                // degrees rotation. So, when the rotation is 90 or 270
-                // degrees, set width and height of the text layer div to the
-                // height and width of the canvas, respectively, to prevent
-                // text layer misalignment.
-                if (orientationDegrees % 180 === 0) {
-                    newTextLayerDiv.style.height = newCanvas.style.height;
-                    newTextLayerDiv.style.width = newCanvas.style.width;
-                } else {
-                    newTextLayerDiv.style.height = newCanvas.style.width;
-                    newTextLayerDiv.style.width = newCanvas.style.height;
-                }
                 setLayerTransform(viewport.width, viewport.height, newTextLayerDiv);
                 if (useRender) {
                     textLayerDiv.replaceWith(newTextLayerDiv);
                     textLayerDiv = newTextLayerDiv;
                     container.style.setProperty("--scale-factor", newZoomRatio.toString());
+                    textLayerDiv.hidden = false;
                 }
 
                 if (cache.length === maxCached) {
