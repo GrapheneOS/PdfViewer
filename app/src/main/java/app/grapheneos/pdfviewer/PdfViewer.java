@@ -393,7 +393,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
         final Intent intent = getIntent();
         if (Intent.ACTION_VIEW.equals(intent.getAction())) {
-            if (!"application/pdf".equals(intent.getType())) {
+            final String type = intent.getType();
+            if (!"application/pdf".equals(type) && (type != null)) {
                 snackbar.setText(R.string.invalid_mime_type).show();
                 return;
             }
