@@ -398,6 +398,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 snackbar.setText(R.string.invalid_mime_type).show();
                 return;
             }
+            if (type == null) {
+                Log.w(TAG, "MIME type is null, but we'll try to load it anyway");
+            }
             mUri = intent.getData();
             mPage = 1;
         }
