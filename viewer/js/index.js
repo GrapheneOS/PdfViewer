@@ -84,7 +84,7 @@ function getDefaultZoomRatio(page, orientationDegrees) {
     return Math.max(Math.min(widthZoomRatio, heightZoomRatio, channel.getMaxZoomRatio()), channel.getMinZoomRatio());
 }
 
-function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
+function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
     pageRendering = true;
     useRender = !prerender;
 
