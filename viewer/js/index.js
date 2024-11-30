@@ -158,9 +158,25 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
             return;
         }
 
+        const resolutionY = viewport.height * ratio;
+        const resolutionX = viewport.width * ratio;
+        const renderPixels = resolutionY * resolutionX;
+
+        let newViewport = viewport;
+        const maxRenderPixels = channel.getMaxRenderPixels();
+        if (renderPixels > maxRenderPixels) {
+            console.log(`resolution ${renderPixels} exceeds maximum allowed ${maxRenderPixels}`);
+            const adjustedScale = Math.sqrt(maxRenderPixels / renderPixels);
+            newViewport = page.getViewport({
+                scale: newZoomRatio * adjustedScale,
+                rotation: orientationDegrees
+            });
+        }
+
         const newCanvas = document.createElement("canvas");
-        newCanvas.height = viewport.height * ratio;
-        newCanvas.width = viewport.width * ratio;
+        newCanvas.height = newViewport.height * ratio;
+        newCanvas.width = newViewport.width * ratio;
+        // use original viewport height for CSS zoom
         newCanvas.style.height = viewport.height + "px";
         newCanvas.style.width = viewport.width + "px";
         const newContext = newCanvas.getContext("2d", { alpha: false });
@@ -168,7 +184,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
 
         task = page.render({
             canvasContext: newContext,
-            viewport: viewport
+            viewport: newViewport
         });
 
         task.promise.then(function() {
