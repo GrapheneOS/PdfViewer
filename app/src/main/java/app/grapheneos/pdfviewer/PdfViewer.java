@@ -109,7 +109,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         "xr-spatial-tracking=()";
 
     private static final float MIN_ZOOM_RATIO = 0.2f;
-    private static final float MAX_ZOOM_RATIO = 1.5f;
+    private static final float MAX_ZOOM_RATIO = 10f;
+    private static final int MAX_RENDER_PIXELS = 1 << 23; // 8 mega-pixels
     private static final int ALPHA_LOW = 130;
     private static final int ALPHA_HIGH = 255;
     private static final int STATE_LOADED = 1;
@@ -177,6 +178,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         @JavascriptInterface
         public void setZoomRatio(final float ratio) {
             mZoomRatio = Math.max(Math.min(ratio, MAX_ZOOM_RATIO), MIN_ZOOM_RATIO);
+        }
+
+        @JavascriptInterface
+        public int getMaxRenderPixels() {
+            return MAX_RENDER_PIXELS;
         }
 
         @JavascriptInterface
