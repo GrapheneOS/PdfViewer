@@ -266,6 +266,8 @@ globalThis.loadDocument = function () {
     const pdfPassword = channel.getPassword();
     const loadingTask = getDocument({
         url: "https://localhost/placeholder.pdf",
+        cMapUrl: "https://localhost/cmaps/",
+        cMapPacked: true,
         password: pdfPassword,
         isEvalSupported: false
     });

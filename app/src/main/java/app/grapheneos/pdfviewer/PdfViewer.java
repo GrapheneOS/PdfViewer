@@ -70,7 +70,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final String CONTENT_SECURITY_POLICY =
         "default-src 'none'; " +
         "form-action 'none'; " +
-        "connect-src https://localhost/placeholder.pdf; " +
+        "connect-src 'self'; " +
         "img-src blob: 'self'; " +
         "script-src 'self'; " +
         "style-src 'self'; " +
@@ -337,6 +337,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
                 if ("/viewer/js/index.js".equals(path) || "/viewer/js/worker.js".equals(path)) {
                     return fromAsset("application/javascript", path);
+                }
+
+                if (path != null && path.matches("^/cmaps/.*\\.bcmap$")) {
+                    return fromAsset("application/octet-stream", path);
                 }
 
                 return null;
