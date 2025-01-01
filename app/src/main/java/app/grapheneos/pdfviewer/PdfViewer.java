@@ -81,7 +81,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         "accelerometer=(), " +
         "ambient-light-sensor=(), " +
         "autoplay=(), " +
-        "battery=(), " +
+        "battery=(), " 
+        "browsing-topics=(), " +
         "camera=(), " +
         "clipboard-read=(), " +
         "clipboard-write=(), " +
@@ -94,7 +95,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         "gyroscope=(), " +
         "hid=(), " +
         "idle-detection=(), " +
-        "interest-cohort=(), " +
         "magnetometer=(), " +
         "microphone=(), " +
         "midi=(), " +
