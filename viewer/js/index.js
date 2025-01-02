@@ -85,6 +85,113 @@ function getDefaultZoomRatio(page, orientationDegrees) {
     return Math.max(Math.min(widthZoomRatio, heightZoomRatio, channel.getMaxZoomRatio()), channel.getMinZoomRatio());
 }
 
+/**
+ * Does an iterative breadth-first-like traversal of all of the nodes in the
+ * outline tree to convert the tree so that the nodes are of a simpler form.
+ * The simple outline nodes have the following structure:
+ *
+ * ```
+ *  {
+ *      title: String,
+ *      pageNumber: int (-1 means unknown),
+ *      children: Array of simple outline nodes,
+ *  }
+ * ```
+ *
+ * @param {Array} pdfJsOutline The root node of the outline tree as obtained by
+ * pdfDoc.getOutline. This is assumed to be an ordered tree.
+ *
+ * @return {Promise} A promise that is resolved with an {Array} that contains
+ * all the top-level nodes of the outline in simplified form (i.e., a simplified
+ * version of the original outline).
+ */
+async function getSimplifiedOutline(pdfJsOutline) {
+    if (pdfJsOutline === undefined || pdfJsOutline === null || pdfJsOutline.length === 0) {
+        return null;
+    }
+
+    const pageNumberPromises = [];
+    const topLevelEntries = [];
+
+    // Each item in this queue represents a PDF.js outline node with a
+    // reference to an array of its children in simple node form.
+    const outlineQueue = [{
+        pdfJsChildren: pdfJsOutline,
+        // The parent's array of simple children. Items at the top/root
+        // do not have a parent, so it starts out as null for them.
+        parentSimpleChildrenArray: null,
+    }];
+
+    while (outlineQueue.length > 0) {
+        const currentOutlinePayload = outlineQueue.shift();
+        const parentChildrenArray = currentOutlinePayload.parentSimpleChildrenArray;
+        const currentPdfJsChildren = currentOutlinePayload.pdfJsChildren;
+        for (const pdfJsChild of currentPdfJsChildren) {
+
+            const simpleChild = {
+                title: pdfJsChild.title,
+                // The pageNumber is resolved later.
+                pageNumber: -1,
+                children: [],
+            };
+
+            if (parentChildrenArray !== null) {
+                parentChildrenArray.push(simpleChild);
+            } else {
+                topLevelEntries.push(simpleChild);
+            }
+
+            // Push any children of pdfJsChild to the queue.
+            if (pdfJsChild.items.length > 0) {
+                outlineQueue.push({
+                    pdfJsChildren: pdfJsChild.items,
+                    parentSimpleChildrenArray: simpleChild.children,
+                });
+            }
+
+            // Resolve the page number. Note that dest options can be a string
+            // or an object from the PDF spec.
+            const dest = (typeof pdfJsChild.dest === "string")
+                ? await pdfDoc.getDestination(pdfJsChild.dest) : pdfJsChild.dest;
+            if (Array.isArray(dest)) {
+                const destRef = dest[0];
+                if (typeof destRef === "object") {
+                    pageNumberPromises.push(
+                        pdfDoc.getPageIndex(destRef).then(function(index) {
+                            simpleChild.pageNumber = parseInt(index) + 1;
+                        }).catch(function(error) {
+                            console.log("pdfDoc.getPageIndex error: " + error);
+                            simpleChild.pageNumber = -1;
+                        })
+                    );
+                } else {
+                    simpleChild.pageNumber = Number.isInteger(destRef) ? destRef + 1 : -1;
+                }
+            }
+        }
+    }
+
+    await Promise.all(pageNumberPromises);
+
+    return topLevelEntries;
+}
+
+function getDocumentOutline() {
+    pdfDoc.getOutline().then(function(outline) {
+        getSimplifiedOutline(outline).then(function(outlineEntries) {
+            if (outlineEntries !== null) {
+                //channel.setOutline(JSON.stringify(outlineEntries));
+            } else {
+                //channel.setOutline(null);
+            }
+        }).catch(function(error) {
+            console.log("convertOutlineToSimplifiedOutline error: " + error);
+        });
+    }).catch(function(error) {
+        console.log("getOutline error: " + error);
+    });
+}
+
 function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
     pageRendering = true;
     useRender = !prerender;
@@ -306,6 +413,7 @@ globalThis.loadDocument = function () {
         }).catch(function (error) {
             console.log("getMetadata error: " + error);
         });
+        getDocumentOutline();
         renderPage(channel.getPage(), false, false);
     }, function (reason) {
         console.error(reason.name + ": " + reason.message);

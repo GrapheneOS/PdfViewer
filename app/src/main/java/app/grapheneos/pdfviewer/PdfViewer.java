@@ -166,6 +166,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     private class Channel {
         @JavascriptInterface
+        public void setDocumentOutline(final String outline) {
+            Log.d(TAG, outline);
+        }
+
+        @JavascriptInterface
         public int getPage() {
             return mPage;
         }
