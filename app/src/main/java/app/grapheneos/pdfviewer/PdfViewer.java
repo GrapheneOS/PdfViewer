@@ -46,7 +46,7 @@ import app.grapheneos.pdfviewer.fragment.PasswordPromptFragment;
 import app.grapheneos.pdfviewer.fragment.JumpToPageFragment;
 import app.grapheneos.pdfviewer.ktx.ViewKt;
 import app.grapheneos.pdfviewer.loader.DocumentPropertiesAsyncTaskLoader;
-import app.grapheneos.pdfviewer.viewModel.PasswordStatus;
+import app.grapheneos.pdfviewer.viewModel.PdfViewModel;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -134,7 +134,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private Toast mToast;
     private Snackbar snackbar;
     private PasswordPromptFragment mPasswordPromptFragment;
-    public PasswordStatus passwordValidationViewModel;
+    public PdfViewModel viewModel;
 
     private final ActivityResultLauncher<Intent> openDocumentLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -232,17 +232,17 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             if (!getPasswordPromptFragment().isAdded()){
                 getPasswordPromptFragment().show(getSupportFragmentManager(), PasswordPromptFragment.class.getName());
             }
-            passwordValidationViewModel.passwordMissing();
+            viewModel.passwordMissing();
         }
 
         @JavascriptInterface
         public void invalidPassword() {
-            runOnUiThread(() -> passwordValidationViewModel.invalid());
+            runOnUiThread(() -> viewModel.invalid());
         }
 
         @JavascriptInterface
         public void onLoaded() {
-            passwordValidationViewModel.validated();
+            viewModel.validated();
             if (getPasswordPromptFragment().isAdded()) {
                 getPasswordPromptFragment().dismiss();
             }
@@ -261,7 +261,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         binding = PdfviewerBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         setSupportActionBar(binding.toolbar);
-        passwordValidationViewModel = new ViewModelProvider(this, ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication())).get(PasswordStatus.class);
+        viewModel = new ViewModelProvider(this, ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication())).get(PdfViewModel.class);
 
         EdgeToEdge.enable(this);
 

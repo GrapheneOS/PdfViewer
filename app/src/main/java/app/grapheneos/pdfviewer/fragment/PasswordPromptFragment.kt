@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextUtils
 import android.text.TextWatcher
-import android.view.LayoutInflater
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo.IME_ACTION_DONE
 import androidx.appcompat.app.AlertDialog
@@ -14,7 +13,7 @@ import androidx.fragment.app.DialogFragment
 import app.grapheneos.pdfviewer.PdfViewer
 import app.grapheneos.pdfviewer.R
 import app.grapheneos.pdfviewer.databinding.PasswordDialogFragmentBinding
-import app.grapheneos.pdfviewer.viewModel.PasswordStatus
+import app.grapheneos.pdfviewer.viewModel.PdfViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -50,20 +49,20 @@ class PasswordPromptFragment : DialogFragment() {
         isCancelable = false
         dialog.setCanceledOnTouchOutside(false)
         dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
-        (requireActivity() as PdfViewer).passwordValidationViewModel.status.observe(
+        (requireActivity() as PdfViewer).viewModel.status.observe(
             this
         ) {
             when (it) {
-                PasswordStatus.Status.MissingPassword -> {
+                PdfViewModel.Status.MissingPassword -> {
                     passwordEditText.editableText.clear()
                     passwordDialogFragmentBinding.title.setText(R.string.password_prompt_description)
                 }
-                PasswordStatus.Status.InvalidPassword -> {
+                PdfViewModel.Status.InvalidPassword -> {
                     passwordEditText.editableText.clear()
                     passwordDialogFragmentBinding.pdfPasswordTextInputLayout.error =
                         "invalid password"
                 }
-                PasswordStatus.Status.Validated -> {
+                PdfViewModel.Status.Validated -> {
                     //Activity will dismiss the dialog
                 }
                 else -> {
