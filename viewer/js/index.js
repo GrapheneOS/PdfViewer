@@ -78,8 +78,7 @@ function setLayerTransform(pageWidth, pageHeight, layerDiv) {
 }
 
 function getDefaultZoomRatio(page, orientationDegrees) {
-    const totalRotation = (orientationDegrees + page.rotate) % 360;
-    const viewport = page.getViewport({scale: 1, rotation: totalRotation});
+    const viewport = page.getViewport({scale: 1, rotation: orientationDegrees});
     const widthZoomRatio = document.body.clientWidth / viewport.width;
     const heightZoomRatio = document.body.clientHeight / viewport.height;
     return Math.max(Math.min(widthZoomRatio, heightZoomRatio, channel.getMaxZoomRatio()), channel.getMinZoomRatio());
@@ -130,8 +129,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
             channel.setZoomRatio(defaultZoomRatio);
         }
 
-        const totalRotation = (orientationDegrees + page.rotate) % 360;
-        const viewport = page.getViewport({scale: newZoomRatio, rotation: totalRotation});
+        const viewport = page.getViewport({scale: newZoomRatio, rotation: orientationDegrees});
 
         const scaleFactor = newZoomRatio / zoomRatio;
         const ratio = globalThis.devicePixelRatio;
