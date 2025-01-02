@@ -3,7 +3,7 @@ package app.grapheneos.pdfviewer.viewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 
-class PasswordStatus : ViewModel() {
+class PdfViewModel : ViewModel() {
 
     enum class Status {
         MissingPassword,
