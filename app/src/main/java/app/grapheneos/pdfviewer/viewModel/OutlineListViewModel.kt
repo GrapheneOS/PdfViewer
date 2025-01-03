@@ -15,6 +15,8 @@ class OutlineListViewModel : ViewModel() {
 
     val currentChild = MutableLiveData<OutlineNode?>(null)
 
+    fun getSubtitleString() = outlineStack.lastOrNull()?.title?.trim()
+
     fun setupDocument(topLevel: List<OutlineNode>, currentPage: Int) {
         if (isSetup) return
         isSetup = true
@@ -23,10 +25,10 @@ class OutlineListViewModel : ViewModel() {
         outlineStack.clear()
         scrollPositionStack.clear()
 
-        // if not found, returns the position where it would be found
+        // if no exact match, binarySearchBy returns the position where it would be found
         if (currentPage > 0) {
             val position = topLevel.binarySearchBy(currentPage) { it.pageNumber }
-            lastRemovedPosition = abs(position)
+            lastRemovedPosition = abs(position - 2).coerceAtLeast(0)
         }
     }
 
