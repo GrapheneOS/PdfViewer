@@ -68,6 +68,10 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/action_outline"
+        android:title="@string/action_outline" />
+
+    <item
         android:id="@+id/action_view_document_properties"
         android:title="@string/action_view_document_properties"
         app:showAsAction="never" />

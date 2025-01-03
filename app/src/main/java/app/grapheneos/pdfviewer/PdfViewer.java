@@ -46,6 +46,7 @@ import app.grapheneos.pdfviewer.fragment.PasswordPromptFragment;
 import app.grapheneos.pdfviewer.fragment.JumpToPageFragment;
 import app.grapheneos.pdfviewer.ktx.ViewKt;
 import app.grapheneos.pdfviewer.loader.DocumentPropertiesAsyncTaskLoader;
+import app.grapheneos.pdfviewer.outline.OutlineFragment;
 import app.grapheneos.pdfviewer.viewModel.PdfViewModel;
 
 import java.io.IOException;
@@ -167,7 +168,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private class Channel {
         @JavascriptInterface
         public void setDocumentOutline(final String outline) {
-            Log.d(TAG, outline);
+            viewModel.parseOutlineString(outline);
         }
 
         @JavascriptInterface
@@ -269,6 +270,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         viewModel = new ViewModelProvider(this, ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication())).get(PdfViewModel.class);
 
         EdgeToEdge.enable(this);
+        getSupportFragmentManager().setFragmentResultListener(OutlineFragment.RESULT_KEY, this,
+                (requestKey, result) -> {
+            final int newPage = result.getInt(OutlineFragment.PAGE_KEY, -1);
+            onJumpToPageInDocument(newPage);
+        });
 
         // Margins for the toolbar are needed, so that content of the toolbar
         // is not covered by a system button navigation bar when in landscape.
@@ -664,7 +670,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         final ArrayList<Integer> ids = new ArrayList<>(Arrays.asList(R.id.action_jump_to_page,
                 R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
                 R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
-                R.id.action_view_document_properties, R.id.action_share, R.id.action_save_as));
+                R.id.action_view_document_properties, R.id.action_share, R.id.action_save_as,
+                R.id.action_outline));
         if (BuildConfig.DEBUG) {
             ids.add(R.id.debug_action_toggle_text_layer_visibility);
         }
@@ -717,6 +724,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             return true;
         } else if (itemId == R.id.action_rotate_counterclockwise) {
             documentOrientationChanged(-90);
+            return true;
+        } else if (itemId == R.id.action_outline) {
+            OutlineFragment
+                .newInstance(mPage)
+                .show(getSupportFragmentManager(), OutlineFragment.TAG);
             return true;
         } else if (itemId == R.id.action_view_document_properties) {
             DocumentPropertiesFragment

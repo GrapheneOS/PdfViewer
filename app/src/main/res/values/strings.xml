@@ -12,7 +12,10 @@
     <string name="action_rotate_counterclockwise">Rotate counterclockwise</string>
     <string name="action_share">Share</string>
     <string name="action_save_as">Save as</string>
+    <string name="action_outline">Outline</string>
     <string name="action_view_document_properties">Properties</string>
+
+    <string name="outline_child_button_description">View child nodes</string>
 
     <string name="debug_action_toggle_text_layer_visibility">Toggle text layer visibility</string>
 
