@@ -49,20 +49,20 @@ class PasswordPromptFragment : DialogFragment() {
         isCancelable = false
         dialog.setCanceledOnTouchOutside(false)
         dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
-        (requireActivity() as PdfViewer).viewModel.status.observe(
+        (requireActivity() as PdfViewer).viewModel.passwordStatus.observe(
             this
         ) {
             when (it) {
-                PdfViewModel.Status.MissingPassword -> {
+                PdfViewModel.PasswordStatus.MissingPassword -> {
                     passwordEditText.editableText.clear()
                     passwordDialogFragmentBinding.title.setText(R.string.password_prompt_description)
                 }
-                PdfViewModel.Status.InvalidPassword -> {
+                PdfViewModel.PasswordStatus.InvalidPassword -> {
                     passwordEditText.editableText.clear()
                     passwordDialogFragmentBinding.pdfPasswordTextInputLayout.error =
                         "invalid password"
                 }
-                PdfViewModel.Status.Validated -> {
+                PdfViewModel.PasswordStatus.Validated -> {
                     //Activity will dismiss the dialog
                 }
                 else -> {

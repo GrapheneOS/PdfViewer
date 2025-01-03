@@ -16,6 +16,7 @@
     <string name="action_view_document_properties">Properties</string>
 
     <string name="outline_child_button_description">View child nodes</string>
+    <string name="outline_not_available">No outline available</string>
 
     <string name="debug_action_toggle_text_layer_visibility">Toggle text layer visibility</string>
 

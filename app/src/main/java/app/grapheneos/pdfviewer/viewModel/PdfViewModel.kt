@@ -1,6 +1,5 @@
 package app.grapheneos.pdfviewer.viewModel
 
-import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import app.grapheneos.pdfviewer.outline.OutlineNode
@@ -8,19 +7,25 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class PdfViewModel : ViewModel() {
 
-    enum class Status {
+    enum class PasswordStatus {
         MissingPassword,
         InvalidPassword,
         Validated
     }
 
-    val status: MutableLiveData<Status> = MutableLiveData(Status.MissingPassword)
+    val passwordStatus: MutableLiveData<PasswordStatus> = MutableLiveData(PasswordStatus.MissingPassword)
 
-    val outline: MutableLiveData<List<OutlineNode>?> = MutableLiveData(null)
+    sealed class OutlineStatus {
+        data object NotLoaded : OutlineStatus()
+        data object Requested : OutlineStatus()
+        data object Loading : OutlineStatus()
+        class Loaded(val outline: List<OutlineNode>) : OutlineStatus()
+    }
+
+    val outline: MutableLiveData<OutlineStatus> = MutableLiveData(OutlineStatus.NotLoaded)
 
     private val scope = CoroutineScope(Dispatchers.IO)
 
@@ -29,27 +34,40 @@ class PdfViewModel : ViewModel() {
         scope.cancel()
     }
 
+    fun requestOutlineIfNotAvailable() {
+        if (outline.value == OutlineStatus.NotLoaded) {
+            outline.value = OutlineStatus.Requested
+        }
+    }
+
+    fun setLoadingOutline() {
+        outline.value = OutlineStatus.Loading
+    }
+
     fun passwordMissing() {
-        status.postValue(Status.MissingPassword)
+        passwordStatus.postValue(PasswordStatus.MissingPassword)
     }
 
     fun invalid() {
-        status.postValue(Status.InvalidPassword)
+        passwordStatus.postValue(PasswordStatus.InvalidPassword)
     }
 
     fun validated() {
-        status.postValue(Status.Validated)
+        passwordStatus.postValue(PasswordStatus.Validated)
     }
 
     fun clearOutline() {
-        outline.postValue(null)
+        outline.postValue(OutlineStatus.NotLoaded)
     }
 
     fun parseOutlineString(outlineString: String?) {
+
         if (outlineString != null) {
-            scope.launch { outline.postValue(OutlineNode.parse(outlineString)) }
+            scope.launch {
+                outline.postValue(OutlineStatus.Loaded(OutlineNode.parse(outlineString)))
+            }
         } else {
-            outline.postValue(emptyList())
+            outline.postValue(OutlineStatus.Loaded(emptyList()))
         }
     }
 }

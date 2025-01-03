@@ -6,6 +6,8 @@ import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ProgressBar
+import android.widget.TextView
 import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
@@ -15,12 +17,15 @@ import app.grapheneos.pdfviewer.PdfViewer
 import app.grapheneos.pdfviewer.R
 import app.grapheneos.pdfviewer.databinding.OutlineListFragmentBinding
 import app.grapheneos.pdfviewer.viewModel.OutlineListViewModel
+import app.grapheneos.pdfviewer.viewModel.PdfViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.divider.MaterialDividerItemDecoration
 
 class OutlineFragment : DialogFragment() {
 
     private lateinit var list: RecyclerView
+    private lateinit var noOutlineText: TextView
+    private lateinit var loadingBar: ProgressBar
 
     private lateinit var viewModel: OutlineListViewModel
 
@@ -47,22 +52,44 @@ class OutlineFragment : DialogFragment() {
         list.addItemDecoration(dividerItemDecoration)
         list.layoutManager = layoutManager
 
-        (requireActivity() as PdfViewer).viewModel.outline.observe(this) { incomingList ->
-            val outlineList = incomingList ?: emptyList()
-            val currentPage = arguments?.getInt(ARG_CURRENT_PAGE_KEY, -1) ?: -1
-            viewModel.onNewDocument(outlineList, currentPage)
+        noOutlineText = binding.noOutlineText
+        loadingBar = binding.loadingBar
 
-            list.adapter = OutlineRecyclerViewAdapter(
-                outlineList,
-                childrenButtonClickListener,
-                itemClickListener
-            )
+        val activityViewModel = (requireActivity() as PdfViewer).viewModel
+        activityViewModel.requestOutlineIfNotAvailable()
+        activityViewModel.outline.observe(this) { outlineState ->
+            if (outlineState is PdfViewModel.OutlineStatus.Loaded) {
+                val incomingList = outlineState.outline
+                if (incomingList.isEmpty()) {
+                    noOutlineText.visibility = View.VISIBLE
+                    loadingBar.visibility = View.GONE
+                    list.visibility = View.GONE
+                } else {
+                    noOutlineText.visibility = View.GONE
+                    loadingBar.visibility = View.GONE
+                    list.visibility = View.VISIBLE
+
+                    val currentPage = arguments?.getInt(ARG_CURRENT_PAGE_KEY, -1) ?: -1
+                    viewModel.setupDocument(incomingList, currentPage)
+
+                    list.adapter = OutlineRecyclerViewAdapter(
+                        incomingList,
+                        childrenButtonClickListener,
+                        itemClickListener
+                    )
+                }
+            } else {
+                noOutlineText.visibility = View.GONE
+                loadingBar.visibility = View.VISIBLE
+                list.visibility = View.GONE
+            }
         }
 
-        dialogBuilder.setOnKeyListener { a, keyCode, c ->
+        dialogBuilder.setOnKeyListener { _, keyCode, keyEvent ->
             if (
                 keyCode == KeyEvent.KEYCODE_BACK
-                && c.action == KeyEvent.ACTION_UP
+                // ACTION_UP and ACTION_DOWN will both be sent; check to prevent double calling
+                && keyEvent.action == KeyEvent.ACTION_UP
                 && viewModel.hasPrevious()
             ) {
                 viewModel.goBack()
@@ -85,10 +112,11 @@ class OutlineFragment : DialogFragment() {
     ): View? {
         val view = super.onCreateView(inflater, container, savedInstanceState)
 
-        viewModel.currentChildAndPosition.observe(this) { current ->
+        viewModel.currentChild.observe(this) { current ->
+            val outlineStatus = (requireActivity() as PdfViewer).viewModel.outline.value
             list.adapter = OutlineRecyclerViewAdapter(
                     current?.children
-                        ?: (requireActivity() as PdfViewer).viewModel.outline.value
+                        ?: (outlineStatus as? PdfViewModel.OutlineStatus.Loaded)?.outline
                         ?: emptyList(),
                     childrenButtonClickListener,
                     itemClickListener

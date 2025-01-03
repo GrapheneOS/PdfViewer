@@ -269,12 +269,21 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         setSupportActionBar(binding.toolbar);
         viewModel = new ViewModelProvider(this, ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication())).get(PdfViewModel.class);
 
-        EdgeToEdge.enable(this);
+        viewModel.getOutline().observe(this, requested -> {
+            if (requested instanceof PdfViewModel.OutlineStatus.Requested) {
+                viewModel.setLoadingOutline();
+                binding.webview.evaluateJavascript("getDocumentOutline()", null);
+            }
+        });
+
+
         getSupportFragmentManager().setFragmentResultListener(OutlineFragment.RESULT_KEY, this,
                 (requestKey, result) -> {
             final int newPage = result.getInt(OutlineFragment.PAGE_KEY, -1);
             onJumpToPageInDocument(newPage);
         });
+
+        EdgeToEdge.enable(this);
 
         // Margins for the toolbar are needed, so that content of the toolbar
         // is not covered by a system button navigation bar when in landscape.
@@ -553,6 +562,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         showSystemUi();
         invalidateOptionsMenu();
         binding.webview.loadUrl("https://localhost/viewer/index.html");
+        viewModel.clearOutline();
     }
 
     public void loadPdfWithPassword(final String password) {

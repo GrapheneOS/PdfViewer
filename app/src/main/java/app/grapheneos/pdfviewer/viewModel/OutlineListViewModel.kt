@@ -11,10 +11,15 @@ class OutlineListViewModel : ViewModel() {
     var lastRemovedPosition = 0
         private set
 
-    val currentChildAndPosition = MutableLiveData<OutlineNode?>(null)
+    private var isSetup = false
 
-    fun onNewDocument(topLevel: List<OutlineNode>, currentPage: Int) {
-        currentChildAndPosition.postValue(null)
+    val currentChild = MutableLiveData<OutlineNode?>(null)
+
+    fun setupDocument(topLevel: List<OutlineNode>, currentPage: Int) {
+        if (isSetup) return
+        isSetup = true
+
+        currentChild.postValue(null)
         outlineStack.clear()
         scrollPositionStack.clear()
 
@@ -28,13 +33,13 @@ class OutlineListViewModel : ViewModel() {
     fun setCurrent(current: OutlineNode, position: Int) {
         outlineStack.add(current)
         scrollPositionStack.add(position)
-        currentChildAndPosition.postValue(current)
+        currentChild.postValue(current)
     }
 
     fun goBack() {
         outlineStack.removeLastOrNull()
         lastRemovedPosition = scrollPositionStack.removeLastOrNull() ?: 0
-        currentChildAndPosition.postValue(outlineStack.lastOrNull())
+        currentChild.postValue(outlineStack.lastOrNull())
     }
 
     fun hasPrevious(): Boolean = outlineStack.isNotEmpty()
