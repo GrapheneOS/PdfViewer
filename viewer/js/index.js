@@ -86,9 +86,8 @@ function getDefaultZoomRatio(page, orientationDegrees) {
 }
 
 /**
- * Does an iterative breadth-first-like traversal of all of the nodes in the
- * outline tree to convert the tree so that the nodes are of a simpler form.
- * The simple outline nodes have the following structure:
+ * Does BFS traversal of all of the nodes in the outline tree to convert the tree so that the
+ * nodes are of a simpler form. The simple outline nodes have the following structure:
  *
  * ```
  *  {
@@ -102,8 +101,7 @@ function getDefaultZoomRatio(page, orientationDegrees) {
  * pdfDoc.getOutline. This is assumed to be an ordered tree.
  *
  * @return {Promise} A promise that is resolved with an {Array} that contains
- * all the top-level nodes of the outline in simplified form (i.e., a simplified
- * version of the original outline).
+ * all the top-level nodes of the outline in simplified form
  */
 async function getSimplifiedOutline(pdfJsOutline) {
     if (pdfJsOutline === undefined || pdfJsOutline === null || pdfJsOutline.length === 0) {
@@ -114,11 +112,10 @@ async function getSimplifiedOutline(pdfJsOutline) {
     const topLevelEntries = [];
 
     // Each item in this queue represents a PDF.js outline node with a
-    // reference to an array of its children in simple node form.
+    // reference to an array of its children in the simplified node form.
     const outlineQueue = [{
         pdfJsChildren: pdfJsOutline,
-        // The parent's array of simple children. Items at the top/root
-        // do not have a parent, so it starts out as null for them.
+        // No parents for at top/root, so it starts out as null for them.
         parentSimpleChildrenArray: null,
     }];
 
@@ -141,7 +138,6 @@ async function getSimplifiedOutline(pdfJsOutline) {
                 topLevelEntries.push(simpleChild);
             }
 
-            // Push any children of pdfJsChild to the queue.
             if (pdfJsChild.items.length > 0) {
                 outlineQueue.push({
                     pdfJsChildren: pdfJsChild.items,
@@ -150,7 +146,7 @@ async function getSimplifiedOutline(pdfJsOutline) {
             }
 
             // Resolve the page number. Note that dest options can be a string
-            // or an object from the PDF spec.
+            // or an object according to the the PDF spec.
             const dest = (typeof pdfJsChild.dest === "string")
                 ? await pdfDoc.getDestination(pdfJsChild.dest) : pdfJsChild.dest;
             if (Array.isArray(dest)) {
@@ -180,15 +176,13 @@ function getDocumentOutline() {
     pdfDoc.getOutline().then(function(outline) {
         getSimplifiedOutline(outline).then(function(outlineEntries) {
             if (outlineEntries !== null) {
-                //channel.setOutline(JSON.stringify(outlineEntries));
+                channel.setDocumentOutline(JSON.stringify(outlineEntries));
             } else {
-                //channel.setOutline(null);
+                channel.setDocumentOutline(null);
             }
-        }).catch(function(error) {
-            console.log("convertOutlineToSimplifiedOutline error: " + error);
         });
     }).catch(function(error) {
-        console.log("getOutline error: " + error);
+        console.log("getDocumentOutline error: " + error);
     });
 }
 
