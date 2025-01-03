@@ -34,28 +34,29 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
 
 import com.google.android.material.snackbar.Snackbar;
 
-import app.grapheneos.pdfviewer.databinding.PdfviewerBinding;
-import app.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
-import app.grapheneos.pdfviewer.fragment.PasswordPromptFragment;
-import app.grapheneos.pdfviewer.fragment.JumpToPageFragment;
-import app.grapheneos.pdfviewer.ktx.ViewKt;
-import app.grapheneos.pdfviewer.loader.DocumentPropertiesAsyncTaskLoader;
-import app.grapheneos.pdfviewer.outline.OutlineFragment;
-import app.grapheneos.pdfviewer.viewModel.PdfViewModel;
-
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+
+import app.grapheneos.pdfviewer.databinding.PdfviewerBinding;
+import app.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
+import app.grapheneos.pdfviewer.fragment.JumpToPageFragment;
+import app.grapheneos.pdfviewer.fragment.PasswordPromptFragment;
+import app.grapheneos.pdfviewer.ktx.ViewKt;
+import app.grapheneos.pdfviewer.loader.DocumentPropertiesAsyncTaskLoader;
+import app.grapheneos.pdfviewer.outline.OutlineFragment;
+import app.grapheneos.pdfviewer.viewModel.PdfViewModel;
 
 public class PdfViewer extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<CharSequence>> {
     public static final String TAG = "PdfViewer";
@@ -147,6 +148,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     mPage = 1;
                     mDocumentProperties = null;
                     mEncryptedDocumentPassword = "";
+                    viewModel.clearOutline();
                     loadPdf();
                     invalidateOptionsMenu();
                 }
@@ -562,7 +564,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         showSystemUi();
         invalidateOptionsMenu();
         binding.webview.loadUrl("https://localhost/viewer/index.html");
-        viewModel.clearOutline();
     }
 
     public void loadPdfWithPassword(final String password) {
@@ -736,9 +737,14 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             documentOrientationChanged(-90);
             return true;
         } else if (itemId == R.id.action_outline) {
-            OutlineFragment
-                .newInstance(mPage)
-                .show(getSupportFragmentManager(), OutlineFragment.TAG);
+            OutlineFragment outlineFragment =
+                    OutlineFragment.newInstance(mPage, getCurrentDocumentName());
+            getSupportFragmentManager().beginTransaction()
+                    .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
+                    // fullscreen fragment, since content root view == activity's root view
+                    .add(android.R.id.content, outlineFragment)
+                    .addToBackStack(null)
+                    .commit();
             return true;
         } else if (itemId == R.id.action_view_document_properties) {
             DocumentPropertiesFragment
