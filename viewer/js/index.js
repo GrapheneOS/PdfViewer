@@ -172,20 +172,6 @@ async function getSimplifiedOutline(pdfJsOutline) {
     return topLevelEntries;
 }
 
-function getDocumentOutline() {
-    pdfDoc.getOutline().then(function(outline) {
-        getSimplifiedOutline(outline).then(function(outlineEntries) {
-            if (outlineEntries !== null) {
-                channel.setDocumentOutline(JSON.stringify(outlineEntries));
-            } else {
-                channel.setDocumentOutline(null);
-            }
-        });
-    }).catch(function(error) {
-        console.log("getDocumentOutline error: " + error);
-    });
-}
-
 function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
     pageRendering = true;
     useRender = !prerender;
@@ -369,6 +355,20 @@ globalThis.isTextSelected = function () {
     return globalThis.getSelection().toString() !== "";
 };
 
+globalThis.getDocumentOutline = function () {
+    pdfDoc.getOutline().then(function(outline) {
+        getSimplifiedOutline(outline).then(function(outlineEntries) {
+            if (outlineEntries !== null) {
+                channel.setDocumentOutline(JSON.stringify(outlineEntries));
+            } else {
+                channel.setDocumentOutline(null);
+            }
+        });
+    }).catch(function(error) {
+        console.log("getDocumentOutline error: " + error);
+    });
+};
+
 globalThis.toggleTextLayerVisibility = function () {
     let textLayerForeground = "red";
     let textLayerOpacity = 1;
@@ -407,7 +407,6 @@ globalThis.loadDocument = function () {
         }).catch(function (error) {
             console.log("getMetadata error: " + error);
         });
-        getDocumentOutline();
         renderPage(channel.getPage(), false, false);
     }, function (reason) {
         console.error(reason.name + ": " + reason.message);
