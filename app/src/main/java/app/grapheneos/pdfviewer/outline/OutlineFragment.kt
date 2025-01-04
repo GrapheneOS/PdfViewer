@@ -13,6 +13,7 @@ import androidx.fragment.app.FragmentContainerView
 import androidx.fragment.app.viewModels
 import app.grapheneos.pdfviewer.PdfViewer
 import app.grapheneos.pdfviewer.R
+import app.grapheneos.pdfviewer.applySystemBarMargins
 import app.grapheneos.pdfviewer.databinding.OutlineFragmentBinding
 import app.grapheneos.pdfviewer.viewModel.OutlineViewModel
 import app.grapheneos.pdfviewer.viewModel.PdfViewModel
@@ -61,6 +62,11 @@ class OutlineFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         val binding = OutlineFragmentBinding.inflate(layoutInflater, container, false)
+
+        // Prevent outline entries in portrait and next child button in landscape from being hidden
+        // under system nav bars
+        applySystemBarMargins(binding.dialogToolbar, applyBottom = false)
+        applySystemBarMargins(binding.outlineListContainer, applyBottom = true)
 
         listContainer = binding.outlineListContainer
 
