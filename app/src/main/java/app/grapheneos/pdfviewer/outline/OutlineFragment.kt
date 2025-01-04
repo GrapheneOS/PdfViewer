@@ -27,6 +27,13 @@ class OutlineFragment : Fragment() {
 
     private val viewModel by viewModels<OutlineViewModel>()
 
+    private fun dismissOutlineFragment(pageNumber: Int? = null) {
+        parentFragmentManager.apply {
+            setFragmentResult(RESULT_KEY, bundleOf(PAGE_KEY to (pageNumber ?: -1)))
+            popBackStack()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
 
@@ -34,18 +41,15 @@ class OutlineFragment : Fragment() {
             isFocusableInTouchMode = true
             requestFocus()
             setOnKeyListener { _, keyCode, keyEvent ->
-                if (
-                    keyCode == KeyEvent.KEYCODE_BACK
-                    // ACTION_UP and ACTION_DOWN will both be sent
-                    && keyEvent.action == KeyEvent.ACTION_UP
-                    && viewModel.hasPrevious()
-                ) {
-                    viewModel.submitAction(OutlineViewModel.Action.Back)
-                    // consume back button event
-                    true
-                } else {
-                    false
+                // ACTION_UP and ACTION_DOWN will both be sent
+                if (keyEvent.action == KeyEvent.ACTION_UP) {
+                    if (keyCode == KeyEvent.KEYCODE_BACK && viewModel.hasPrevious()) {
+                        viewModel.submitAction(OutlineViewModel.Action.Back)
+                    } else {
+                        dismissOutlineFragment()
+                    }
                 }
+                true
             }
         }
 
@@ -63,7 +67,7 @@ class OutlineFragment : Fragment() {
         topBar = binding.dialogToolbar
         topBar.inflateMenu(R.menu.outlines)
         topBar.setOnMenuItemClickListener {
-            parentFragmentManager.popBackStack()
+            dismissOutlineFragment(null)
             true
         }
         topBar.title = requireContext().getString(R.string.action_outline)
@@ -104,13 +108,10 @@ class OutlineFragment : Fragment() {
                     childFragmentManager.popBackStack()
                 }
                 OutlineViewModel.Action.Close -> {
-                    parentFragmentManager.popBackStack()
+                    dismissOutlineFragment()
                 }
                 is OutlineViewModel.Action.OpenPage -> {
-                    parentFragmentManager.apply {
-                        setFragmentResult(RESULT_KEY, bundleOf(PAGE_KEY to action.page))
-                        popBackStack()
-                    }
+                    dismissOutlineFragment(pageNumber = action.page)
                 }
                 is OutlineViewModel.Action.ViewChildren -> {
                     val parent = action.parent

@@ -1,6 +1,9 @@
 package app.grapheneos.pdfviewer.outline
 
 import android.util.JsonReader
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.isActive
 import java.io.StringReader
 
 data class OutlineNode(
@@ -17,33 +20,39 @@ data class OutlineNode(
             }
         }
 
-        @JvmStatic
-        fun parse(input: String): List<OutlineNode> {
+        suspend fun parse(input: String): List<OutlineNode> {
             val idTracker = IdTracker()
+
             StringReader(input).use { sr ->
                 JsonReader(sr).use { reader ->
-                    return parseOutlineArray(reader, idTracker)
+                    return coroutineScope { parseOutlineArray(reader, idTracker) }
                 }
             }
         }
 
-        private fun parseOutlineArray(reader: JsonReader, id: IdTracker): List<OutlineNode> = with(reader) {
+        private fun CoroutineScope.parseOutlineArray(
+            reader: JsonReader,
+            id: IdTracker
+        ): List<OutlineNode> = with(reader) {
             val topLevelNodes = arrayListOf<OutlineNode>()
             beginArray()
-            while (hasNext()) {
+            while (hasNext() && isActive) {
                 topLevelNodes.add(parseOutlineObject(this, id))
             }
             endArray()
             topLevelNodes
         }
 
-        private fun parseOutlineObject(reader: JsonReader, id: IdTracker): OutlineNode = with(reader) {
+        private fun CoroutineScope.parseOutlineObject(
+            reader: JsonReader,
+            id: IdTracker
+        ): OutlineNode = with(reader) {
             var title = ""
             var pageNumber = -1
             var children = emptyList<OutlineNode>()
 
             beginObject()
-            while (hasNext()) {
+            while (hasNext() && isActive) {
                 when (nextName()) {
                     "title" -> title = reader.nextString()
                     "pageNumber" -> pageNumber = reader.nextInt()
