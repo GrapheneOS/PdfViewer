@@ -12,7 +12,7 @@ import app.grapheneos.pdfviewer.databinding.OutlineListItemBinding
 
 class OutlineRecyclerViewAdapter(
     private val values: List<OutlineNode>,
-    private val onChildrenButtonClick: (OutlineNode, position: Int) -> Unit,
+    private val onChildrenButtonClick: (OutlineNode) -> Unit,
     private val onItemClick: (OutlineNode) -> Unit
 ) : RecyclerView.Adapter<OutlineRecyclerViewAdapter.ViewHolder>() {
 
@@ -37,7 +37,7 @@ class OutlineRecyclerViewAdapter(
             holder.childrenButton.setOnClickListener(null)
         } else {
             holder.childrenButton.visibility = View.VISIBLE
-            holder.childrenButton.setOnClickListener { onChildrenButtonClick(item, position) }
+            holder.childrenButton.setOnClickListener { onChildrenButtonClick(item) }
         }
     }
 
@@ -59,5 +59,4 @@ class OutlineRecyclerViewAdapter(
             return super.toString() + " '" + pageNumberView.text + "'"
         }
     }
-
 }
