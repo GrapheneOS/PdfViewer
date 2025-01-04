@@ -8,6 +8,7 @@ import {
 GlobalWorkerOptions.workerSrc = "/viewer/js/worker.js";
 
 let pdfDoc = null;
+let outlineAbort = new AbortController();
 let pageRendering = false;
 let renderPending = false;
 let renderPendingZoom = 0;
@@ -103,7 +104,7 @@ function getDefaultZoomRatio(page, orientationDegrees) {
  * @return {Promise} A promise that is resolved with an {Array} that contains
  * all the top-level nodes of the outline in simplified form
  */
-async function getSimplifiedOutline(pdfJsOutline) {
+async function getSimplifiedOutline(pdfJsOutline, abortController) {
     if (pdfJsOutline === undefined || pdfJsOutline === null || pdfJsOutline.length === 0) {
         return null;
     }
@@ -120,10 +121,13 @@ async function getSimplifiedOutline(pdfJsOutline) {
     }];
 
     while (outlineQueue.length > 0) {
+        abortController.signal.throwIfAborted();
+
         const currentOutlinePayload = outlineQueue.shift();
         const parentChildrenArray = currentOutlinePayload.parentSimpleChildrenArray;
         const currentPdfJsChildren = currentOutlinePayload.pdfJsChildren;
         for (const pdfJsChild of currentPdfJsChildren) {
+            abortController.signal.throwIfAborted();
 
             const simpleChild = {
                 title: pdfJsChild.title,
@@ -357,16 +361,23 @@ globalThis.isTextSelected = function () {
 
 globalThis.getDocumentOutline = function () {
     pdfDoc.getOutline().then(function(outline) {
-        getSimplifiedOutline(outline).then(function(outlineEntries) {
+        getSimplifiedOutline(outline, outlineAbort).then(function(outlineEntries) {
             if (outlineEntries !== null) {
                 channel.setDocumentOutline(JSON.stringify(outlineEntries));
             } else {
                 channel.setDocumentOutline(null);
             }
+        }).catch(function(error) {
+            console.log("getSimplifiedOutline error: " + error);
         });
     }).catch(function(error) {
-        console.log("getDocumentOutline error: " + error);
+        console.log("pdfDoc.getOutline error: " + error);
     });
+};
+
+globalThis.abortDocumentOutline = function () {
+    outlineAbort.abort();
+    outlineAbort = new AbortController();
 };
 
 globalThis.toggleTextLayerVisibility = function () {

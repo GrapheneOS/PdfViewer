@@ -6,6 +6,7 @@ import app.grapheneos.pdfviewer.outline.OutlineNode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
 
 class PdfViewModel : ViewModel() {
@@ -26,7 +27,7 @@ class PdfViewModel : ViewModel() {
     }
 
     // Outline state as LiveData, since we require the Activity to observe so it can use the
-    // WebView to get outline
+    // WebView to get outline. Lazily loaded, and will be cached until a different PDF is loaded.
     val outline: MutableLiveData<OutlineStatus> = MutableLiveData(OutlineStatus.NotLoaded)
 
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -34,6 +35,10 @@ class PdfViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         scope.cancel()
+    }
+
+    fun shouldAbortOutline(): Boolean {
+        return outline.value is OutlineStatus.Requested || outline.value is OutlineStatus.Loading
     }
 
     fun requestOutlineIfNotAvailable() {
@@ -60,6 +65,7 @@ class PdfViewModel : ViewModel() {
 
     fun clearOutline() {
         outline.postValue(OutlineStatus.NotLoaded)
+        scope.coroutineContext.cancelChildren()
     }
 
     fun parseOutlineString(outlineString: String?) {

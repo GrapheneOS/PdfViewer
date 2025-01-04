@@ -282,7 +282,13 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         getSupportFragmentManager().setFragmentResultListener(OutlineFragment.RESULT_KEY, this,
                 (requestKey, result) -> {
             final int newPage = result.getInt(OutlineFragment.PAGE_KEY, -1);
-            onJumpToPageInDocument(newPage);
+            if (viewModel.shouldAbortOutline()) {
+                Log.d(TAG, "aborting outline operations");
+                binding.webview.evaluateJavascript("abortDocumentOutline()", null);
+                viewModel.clearOutline();
+            } else {
+                onJumpToPageInDocument(newPage);
+            }
         });
 
         EdgeToEdge.enable(this);
