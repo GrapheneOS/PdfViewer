@@ -92,9 +92,9 @@ function getDefaultZoomRatio(page, orientationDegrees) {
  *
  * ```
  *  {
- *      title: String,
- *      pageNumber: int (-1 means unknown),
- *      children: Array of simple outline nodes,
+ *      t: String, // title
+ *      p: int (-1 means unknown), // pageNumber
+ *      c: Array of simple outline nodes, // children
  *  }
  * ```
  *
@@ -130,10 +130,10 @@ async function getSimplifiedOutline(pdfJsOutline, abortController) {
             abortController.signal.throwIfAborted();
 
             const simpleChild = {
-                title: pdfJsChild.title,
+                t: pdfJsChild.title,
                 // The pageNumber is resolved later.
-                pageNumber: -1,
-                children: [],
+                p: -1,
+                c: [],
             };
 
             if (parentChildrenArray !== null) {
@@ -145,7 +145,7 @@ async function getSimplifiedOutline(pdfJsOutline, abortController) {
             if (pdfJsChild.items.length > 0) {
                 outlineQueue.push({
                     pdfJsChildren: pdfJsChild.items,
-                    parentSimpleChildrenArray: simpleChild.children,
+                    parentSimpleChildrenArray: simpleChild.c,
                 });
             }
 
@@ -158,14 +158,14 @@ async function getSimplifiedOutline(pdfJsOutline, abortController) {
                 if (typeof destRef === "object") {
                     pageNumberPromises.push(
                         pdfDoc.getPageIndex(destRef).then(function(index) {
-                            simpleChild.pageNumber = parseInt(index) + 1;
+                            simpleChild.p = parseInt(index) + 1;
                         }).catch(function(error) {
                             console.log("pdfDoc.getPageIndex error: " + error);
-                            simpleChild.pageNumber = -1;
+                            simpleChild.p = -1;
                         })
                     );
                 } else {
-                    simpleChild.pageNumber = Number.isInteger(destRef) ? destRef + 1 : -1;
+                    simpleChild.p = Number.isInteger(destRef) ? destRef + 1 : -1;
                 }
             }
         }

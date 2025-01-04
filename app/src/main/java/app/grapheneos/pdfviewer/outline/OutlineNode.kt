@@ -13,6 +13,10 @@ data class OutlineNode(
     val children: List<OutlineNode>
 ) {
     companion object {
+        private const val KEY_TITLE = "t"
+        private const val KEY_PAGE_NUMBER = "p"
+        private const val KEY_CHILDREN = "c"
+
         data class IdTracker(private var currentId: Int = 0) {
             fun getAndIncrement(): Int {
                 currentId++
@@ -54,9 +58,9 @@ data class OutlineNode(
             beginObject()
             while (hasNext() && isActive) {
                 when (nextName()) {
-                    "title" -> title = reader.nextString()
-                    "pageNumber" -> pageNumber = reader.nextInt()
-                    "children" -> children = parseOutlineArray(reader, id)
+                    KEY_TITLE -> title = reader.nextString()
+                    KEY_PAGE_NUMBER -> pageNumber = reader.nextInt()
+                    KEY_CHILDREN -> children = parseOutlineArray(reader, id)
                     else -> reader.skipValue()
                 }
             }
