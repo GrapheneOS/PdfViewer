@@ -25,6 +25,8 @@ class PdfViewModel : ViewModel() {
         class Loaded(val outline: List<OutlineNode>) : OutlineStatus()
     }
 
+    // Outline state as LiveData, since we require the Activity to observe so it can use the
+    // WebView to get outline
     val outline: MutableLiveData<OutlineStatus> = MutableLiveData(OutlineStatus.NotLoaded)
 
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -61,7 +63,6 @@ class PdfViewModel : ViewModel() {
     }
 
     fun parseOutlineString(outlineString: String?) {
-
         if (outlineString != null) {
             scope.launch {
                 outline.postValue(OutlineStatus.Loaded(OutlineNode.parse(outlineString)))
