@@ -22,6 +22,7 @@ class GestureHelper {
         // Can be replaced with ratio when supported
         void onZoomIn(float value);
         void onZoomOut(float value);
+        void onZoom(float scaleFactor, float focusX, float focusY);
         void onZoomEnd();
     }
 
@@ -49,29 +50,10 @@ class GestureHelper {
 
         final ScaleGestureDetector scaleDetector = new ScaleGestureDetector(context,
                 new ScaleGestureDetector.SimpleOnScaleGestureListener() {
-                    final float SPAN_RATIO = 600;
-                    float initialSpan;
-                    float prevNbStep;
-
-                    @Override
-                    public boolean onScaleBegin(ScaleGestureDetector detector) {
-                        initialSpan = detector.getCurrentSpan();
-                        prevNbStep = 0;
-                        return true;
-                    }
-
                     @Override
                     public boolean onScale(ScaleGestureDetector detector) {
-                        float spanDiff = initialSpan - detector.getCurrentSpan();
-                        float curNbStep = spanDiff / SPAN_RATIO;
-
-                        float stepDiff = curNbStep - prevNbStep;
-                        if (stepDiff > 0) {
-                            listener.onZoomOut(stepDiff);
-                        } else {
-                            listener.onZoomIn(Math.abs(stepDiff));
-                        }
-                        prevNbStep = curNbStep;
+                        listener.onZoom(detector.getScaleFactor(), detector.getFocusX(),
+                                detector.getFocusY());
 
                         return true;
                     }

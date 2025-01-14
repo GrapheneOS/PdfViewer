@@ -26,6 +26,7 @@ import android.webkit.WebViewClient;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -33,7 +34,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
@@ -72,7 +72,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final String CONTENT_SECURITY_POLICY =
         "default-src 'none'; " +
         "form-action 'none'; " +
-        "connect-src https://localhost/placeholder.pdf; " +
+        "connect-src 'self'; " +
         "img-src blob: 'self'; " +
         "script-src 'self'; " +
         "style-src 'self'; " +
@@ -111,7 +111,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         "xr-spatial-tracking=()";
 
     private static final float MIN_ZOOM_RATIO = 0.2f;
-    private static final float MAX_ZOOM_RATIO = 1.5f;
+    private static final float MAX_ZOOM_RATIO = 10f;
+    private static final int MAX_RENDER_PIXELS = 1 << 23; // 8 mega-pixels
     private static final int ALPHA_LOW = 130;
     private static final int ALPHA_HIGH = 255;
     private static final int STATE_LOADED = 1;
@@ -122,6 +123,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     public int mPage;
     public int mNumPages;
     private float mZoomRatio = 1f;
+    private float mZoomFocusX = 0f;
+    private float mZoomFocusY = 0f;
     private int mDocumentOrientationDegrees;
     private int mDocumentState;
     private String mEncryptedDocumentPassword;
@@ -177,6 +180,21 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         @JavascriptInterface
         public void setZoomRatio(final float ratio) {
             mZoomRatio = Math.max(Math.min(ratio, MAX_ZOOM_RATIO), MIN_ZOOM_RATIO);
+        }
+
+        @JavascriptInterface
+        public int getMaxRenderPixels() {
+            return MAX_RENDER_PIXELS;
+        }
+
+        @JavascriptInterface
+        public float getZoomFocusX() {
+            return mZoomFocusX;
+        }
+
+        @JavascriptInterface
+        public float getZoomFocusY() {
+            return mZoomFocusY;
         }
 
         @JavascriptInterface
@@ -247,7 +265,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         setSupportActionBar(binding.toolbar);
         passwordValidationViewModel = new ViewModelProvider(this, ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication())).get(PasswordStatus.class);
 
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        EdgeToEdge.enable(this);
 
         // Margins for the toolbar are needed, so that content of the toolbar
         // is not covered by a system button navigation bar when in landscape.
@@ -329,6 +347,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     return fromAsset("application/javascript", path);
                 }
 
+                if (path != null && path.matches("^/cmaps/.*\\.bcmap$")) {
+                    return fromAsset("application/octet-stream", path);
+                }
+
                 return null;
             }
 
@@ -365,6 +387,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     }
 
                     @Override
+
                     public boolean onFling(@Nullable MotionEvent e1, @NonNull MotionEvent e2, float velocityX, float velocityY) {
                         assert e1 != null;
                         float maxXVelocity = 4000;
@@ -396,6 +419,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     @Override
                     public void onZoomOut(float value) {
                         zoomOut(value, false);
+
+                    public void onZoom(float scaleFactor, float focusX, float focusY) {
+                        zoom(scaleFactor, focusX, focusY, false); 
                     }
 
                     @Override
@@ -419,9 +445,13 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
         final Intent intent = getIntent();
         if (Intent.ACTION_VIEW.equals(intent.getAction())) {
-            if (!"application/pdf".equals(intent.getType())) {
+            final String type = intent.getType();
+            if (!"application/pdf".equals(type) && type != null) {
                 snackbar.setText(R.string.invalid_mime_type).show();
                 return;
+            }
+            if (type == null) {
+                Log.w(TAG, "MIME type is null, but we'll try to load it anyway");
             }
             mUri = intent.getData();
             mPage = 1;
@@ -585,20 +615,12 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
     }
 
-    private void zoomIn(float value, boolean end) {
-        if (mZoomRatio < MAX_ZOOM_RATIO) {
-            mZoomRatio = Math.min(mZoomRatio + value, MAX_ZOOM_RATIO);
-            renderPage(end ? 1 : 2);
-            invalidateOptionsMenu();
-        }
-    }
-
-    private void zoomOut(float value, boolean end) {
-        if (mZoomRatio > MIN_ZOOM_RATIO) {
-            mZoomRatio = Math.max(mZoomRatio - value, MIN_ZOOM_RATIO);
-            renderPage(end ? 1 : 2);
-            invalidateOptionsMenu();
-        }
+    private void zoom(float scaleFactor, float focusX, float focusY, boolean end) {
+        mZoomRatio = Math.min(Math.max(mZoomRatio * scaleFactor, MIN_ZOOM_RATIO), MAX_ZOOM_RATIO);
+        mZoomFocusX = focusX;
+        mZoomFocusY = focusY;
+        renderPage(end ? 1 : 2);
+        invalidateOptionsMenu();
     }
 
     private void zoomEnd() {

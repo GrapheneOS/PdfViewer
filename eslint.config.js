@@ -1,9 +1,13 @@
 import js from "@eslint/js";
 import globals from "globals";
+import stylistic from "@stylistic/eslint-plugin";
 
 export default [
     js.configs.recommended,
     {
+        plugins: {
+            "@stylistic": stylistic
+        },
         languageOptions: {
             globals: {
                 channel: "readonly",
@@ -13,12 +17,12 @@ export default [
             sourceType: "module"
         },
         rules: {
-            indent: ["error", 4],
-            "linebreak-style": ["error", "unix"],
-            quotes: ["error", "double"],
-            semi: ["error", "always"],
-            "no-unused-vars": ["error", {caughtErrors: "none"}],
-            "no-var": ["error"]
+            "no-var": ["error"],
+            "@stylistic/brace-style": ["error", "1tbs"],
+            "@stylistic/indent": ["error", 4],
+            "@stylistic/linebreak-style": ["error", "unix"],
+            "@stylistic/quotes": ["error", "double"],
+            "@stylistic/semi": ["error", "always"],
         },
 
     },

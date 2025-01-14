@@ -78,13 +78,14 @@ function setLayerTransform(pageWidth, pageHeight, layerDiv) {
 }
 
 function getDefaultZoomRatio(page, orientationDegrees) {
-    const viewport = page.getViewport({scale: 1, rotation: orientationDegrees});
+    const totalRotation = (orientationDegrees + page.rotate) % 360;
+    const viewport = page.getViewport({scale: 1, rotation: totalRotation});
     const widthZoomRatio = document.body.clientWidth / viewport.width;
     const heightZoomRatio = document.body.clientHeight / viewport.height;
     return Math.max(Math.min(widthZoomRatio, heightZoomRatio, channel.getMaxZoomRatio()), channel.getMinZoomRatio());
 }
 
-function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
+function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
     pageRendering = true;
     useRender = !prerender;
 
@@ -107,6 +108,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
                 textLayerDiv = cached.textLayerDiv;
                 setLayerTransform(cached.pageWidth, cached.pageHeight, textLayerDiv);
                 container.style.setProperty("--scale-factor", newZoomRatio.toString());
+                textLayerDiv.hidden = false;
             }
 
             pageRendering = false;
@@ -128,7 +130,11 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
             channel.setZoomRatio(defaultZoomRatio);
         }
 
-        const viewport = page.getViewport({scale: newZoomRatio, rotation: orientationDegrees});
+        const totalRotation = (orientationDegrees + page.rotate) % 360;
+        const viewport = page.getViewport({scale: newZoomRatio, rotation: totalRotation});
+
+        const scaleFactor = newZoomRatio / zoomRatio;
+        const ratio = globalThis.devicePixelRatio;
 
         if (useRender) {
             if (newZoomRatio !== zoomRatio) {
@@ -139,14 +145,40 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
         }
 
         if (zoom === 2) {
+            textLayerDiv.hidden = true;
             pageRendering = false;
+
+            // zoom focus relative to page origin, rather than screen origin
+            const globalFocusX = channel.getZoomFocusX() / ratio + globalThis.scrollX;
+            const globalFocusY = channel.getZoomFocusY() / ratio + globalThis.scrollY;
+
+            const translationFactor = scaleFactor - 1;
+            const scrollX = globalFocusX * translationFactor;
+            const scrollY = globalFocusY * translationFactor;
+            scrollBy(scrollX, scrollY);
+
             return;
         }
 
+        const resolutionY = viewport.height * ratio;
+        const resolutionX = viewport.width * ratio;
+        const renderPixels = resolutionY * resolutionX;
+
+        let newViewport = viewport;
+        const maxRenderPixels = channel.getMaxRenderPixels();
+        if (renderPixels > maxRenderPixels) {
+            console.log(`resolution ${renderPixels} exceeds maximum allowed ${maxRenderPixels}`);
+            const adjustedScale = Math.sqrt(maxRenderPixels / renderPixels);
+            newViewport = page.getViewport({
+                scale: newZoomRatio * adjustedScale,
+                rotation: totalRotation
+            });
+        }
+
         const newCanvas = document.createElement("canvas");
-        const ratio = globalThis.devicePixelRatio;
-        newCanvas.height = viewport.height * ratio;
-        newCanvas.width = viewport.width * ratio;
+        newCanvas.height = newViewport.height * ratio;
+        newCanvas.width = newViewport.width * ratio;
+        // use original viewport height for CSS zoom
         newCanvas.style.height = viewport.height + "px";
         newCanvas.style.width = viewport.width + "px";
         const newContext = newCanvas.getContext("2d", { alpha: false });
@@ -154,7 +186,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
 
         task = page.render({
             canvasContext: newContext,
-            viewport: viewport
+            viewport: newViewport
         });
 
         task.promise.then(function() {
@@ -185,23 +217,12 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger=0) {
 
                 render();
 
-                // We use CSS transform to rotate a text layer div of zero
-                // degrees rotation. So, when the rotation is 90 or 270
-                // degrees, set width and height of the text layer div to the
-                // height and width of the canvas, respectively, to prevent
-                // text layer misalignment.
-                if (orientationDegrees % 180 === 0) {
-                    newTextLayerDiv.style.height = newCanvas.style.height;
-                    newTextLayerDiv.style.width = newCanvas.style.width;
-                } else {
-                    newTextLayerDiv.style.height = newCanvas.style.width;
-                    newTextLayerDiv.style.width = newCanvas.style.height;
-                }
                 setLayerTransform(viewport.width, viewport.height, newTextLayerDiv);
                 if (useRender) {
                     textLayerDiv.replaceWith(newTextLayerDiv);
                     textLayerDiv = newTextLayerDiv;
                     container.style.setProperty("--scale-factor", newZoomRatio.toString());
+                    textLayerDiv.hidden = false;
                 }
 
                 if (cache.length === maxCached) {
@@ -263,6 +284,8 @@ globalThis.loadDocument = function () {
     const pdfPassword = channel.getPassword();
     const loadingTask = getDocument({
         url: "https://localhost/placeholder.pdf",
+        cMapUrl: "https://localhost/cmaps/",
+        cMapPacked: true,
         password: pdfPassword,
         isEvalSupported: false
     });

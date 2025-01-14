@@ -99,6 +99,7 @@ async function processStyles(options) {
  * @param {ProcessOptions} options
  */
 async function processHtml(options) {
+    await fs.mkdir(options.outDir, { recursive: true });
     for (const entryPoint of options.entryPoints) {
         await fs.copyFile(path.join(options.rootDir, entryPoint), path.join(options.outDir, entryPoint));
     }

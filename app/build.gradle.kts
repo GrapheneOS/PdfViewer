@@ -28,6 +28,7 @@ android {
                 storePassword = keystoreProperties["storePassword"] as String
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
+                enableV4Signing = true
             }
 
             create("play") {
@@ -39,7 +40,7 @@ android {
         }
     }
 
-    compileSdk = 34
+    compileSdk = 35
     buildToolsVersion = "35.0.0"
 
     namespace = "app.grapheneos.pdfviewer"
@@ -47,7 +48,7 @@ android {
     defaultConfig {
         applicationId = "app.grapheneos.pdfviewer"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 20
         versionName = versionCode.toString()
         resourceConfigurations.add("en")
@@ -84,7 +85,7 @@ android {
 
 dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("androidx.core:core:1.13.1")
+    implementation("androidx.core:core-ktx:1.15.0")
     implementation("com.google.android.material:material:1.12.0")
 }
 
