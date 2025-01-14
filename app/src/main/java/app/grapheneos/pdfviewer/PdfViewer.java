@@ -364,25 +364,20 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                         return false;
                     }
 
-                    // investigate more into the onFlight method for gestures in android. The interface will also be required to link in with the listener and gestures 
                     @Override
                     public boolean onFling(@Nullable MotionEvent e1, @NonNull MotionEvent e2, float velocityX, float velocityY) {
+                        assert e1 != null;
+                        float maxXVelocity = 4000;
                         float deltaX = e2.getX() - e1.getX();
                         float deltaY = e2.getY() - e1.getY();
 
                         if (Math.abs(deltaX) > Math.abs(deltaY)){
-                            if (deltaX > 0) {
+                            if ((deltaX > 0) & (Math.abs(velocityX) > maxXVelocity)) {
                                 Log.d("Horizontal", "Right movement Position");
                                 onJumpToPageInDocument(mPage - 1);
-                            } else {
+                            } else if ((Math.abs(velocityX) > maxXVelocity)) {
                                 Log.d("Horizontal", "Left movement Position");
                                 onJumpToPageInDocument(mPage + 1);
-                            }
-                        } else {
-                            if (deltaY > 0) {
-                                Log.d("Vertical", "Down movement Position");
-                            } else {
-                                Log.d("Horizontal", "Up movement Position");
                             }
                         }
                         return true;
