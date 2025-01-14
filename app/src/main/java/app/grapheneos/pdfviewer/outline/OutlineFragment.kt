@@ -127,10 +127,10 @@ class OutlineFragment : Fragment() {
                         listContainer.visibility = View.VISIBLE
                         childFragmentManager.beginTransaction()
                             .setCustomAnimations(
-                                if (action.firstOpen) android.R.anim.fade_in else R.anim.slide_in_right,
-                                android.R.anim.fade_out,
-                                android.R.anim.fade_in,
-                                android.R.anim.slide_out_right,
+                                if (action.firstOpen) android.R.anim.fade_in else R.anim.slide_next_in,
+                                R.anim.slide_next_out,
+                                R.anim.slide_back_in,
+                                R.anim.slide_back_out,
                             )
                             .replace(R.id.outline_list_container, fragment, parent.id.toString())
                             .addToBackStack(null)
