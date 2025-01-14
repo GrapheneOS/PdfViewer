@@ -10,8 +10,8 @@ import android.widget.TextView
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentContainerView
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
-import app.grapheneos.pdfviewer.PdfViewer
 import app.grapheneos.pdfviewer.R
 import app.grapheneos.pdfviewer.applySystemBarMargins
 import app.grapheneos.pdfviewer.databinding.OutlineFragmentBinding
@@ -26,6 +26,7 @@ class OutlineFragment : Fragment() {
     private lateinit var topBar: MaterialToolbar
     private lateinit var listContainer: FragmentContainerView
 
+    private val activityViewModel by activityViewModels<PdfViewModel>()
     private val viewModel by viewModels<OutlineViewModel>()
 
     private fun dismissOutlineFragment(pageNumber: Int? = null) {
@@ -84,7 +85,6 @@ class OutlineFragment : Fragment() {
 
         val docTitle = arguments?.getString(ARG_DOC_TITLE_KEY, "") ?: ""
 
-        val activityViewModel = (requireActivity() as PdfViewer).viewModel
         activityViewModel.requestOutlineIfNotAvailable()
         activityViewModel.outline.observe(viewLifecycleOwner) { outlineState ->
             if (outlineState is PdfViewModel.OutlineStatus.Loaded) {
@@ -122,6 +122,7 @@ class OutlineFragment : Fragment() {
                 is OutlineViewModel.Action.ViewChildren -> {
                     val parent = action.parent
                     val fragment = OutlineListFragment.makeInstance(parent.id)
+                    // could be replaced with androidx.navigation
                     if (childFragmentManager.findFragmentByTag(parent.id.toString()) == null) {
                         listContainer.visibility = View.VISIBLE
                         childFragmentManager.beginTransaction()
