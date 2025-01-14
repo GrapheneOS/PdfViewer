@@ -44,6 +44,8 @@ class OutlineViewModel : ViewModel() {
 
     val currentChild = MutableLiveData<OutlineNode?>(null)
 
+    fun findNodeOrNull(id: Int): OutlineNode? = outlineStack.find { it.id == id }
+
     fun getSubtitleString() = outlineStack.lastOrNull()?.title?.trim() ?: docTitle
 
     private var docTitle = ""
