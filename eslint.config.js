@@ -1,9 +1,11 @@
 import js from "@eslint/js";
 import globals from "globals";
 import stylistic from "@stylistic/eslint-plugin";
+import tseslint from "typescript-eslint";
 
-export default [
+export default tseslint.config(
     js.configs.recommended,
+    tseslint.configs.recommended,
     {
         plugins: {
             "@stylistic": stylistic
@@ -34,4 +36,4 @@ export default [
             "releases/"
         ]
     }
-];
+);
