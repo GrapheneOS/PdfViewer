@@ -1,7 +1,6 @@
 package app.grapheneos.pdfviewer.outline
 
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -19,8 +18,10 @@ import com.google.android.material.divider.MaterialDividerItemDecoration
 class OutlineListViewModel : ViewModel() {
     val outlineContents = MutableLiveData<List<OutlineNode>?>(null)
 
+    fun needsToLoadContents() = outlineContents.value == null
+
     fun updateOutlineContents(contents: List<OutlineNode>?) {
-        if (contents != null && outlineContents.value == null) {
+        if (contents != null && needsToLoadContents()) {
             outlineContents.value = contents
         }
     }
@@ -52,15 +53,13 @@ class OutlineListFragment : Fragment() {
         val parentNodeId = arguments?.getInt(ARG_OUTLINE_ID, -2) ?: -2
 
         outlineViewModel.currentChild.observe(viewLifecycleOwner) { child ->
-            val contents = if (child?.id == parentNodeId) {
-                child.children
-            } else {
-                outlineViewModel.findNodeOrNull(parentNodeId)?.children
-            }
-            viewModel.updateOutlineContents(contents)
-            if (contents == null) {
-                Log.d(TAG, "unable to find child with id $parentNodeId")
-                outlineViewModel.submitAction(OutlineViewModel.Action.Back)
+            if (viewModel.needsToLoadContents()) {
+                val contents = if (child?.id == parentNodeId) {
+                    child.children
+                } else {
+                    outlineViewModel.findNodeOrNull(parentNodeId)?.children
+                }
+                viewModel.updateOutlineContents(contents)
             }
         }
 
