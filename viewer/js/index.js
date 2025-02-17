@@ -399,7 +399,12 @@ globalThis.loadDocument = function () {
         cMapUrl: "https://localhost/cmaps/",
         cMapPacked: true,
         password: pdfPassword,
-        isEvalSupported: false
+        isEvalSupported: false,
+        // If font not embedded in PDF, the viewer falls back to default system fonts. Apparently
+        // on Android, won't be able to find a good substitution.
+        // https://github.com/mozilla/pdf.js/pull/18465, https://bugzilla.mozilla.org/show_bug.cgi?id=1882613
+        useSystemFonts: false,
+        standardFontDataUrl: "https://localhost/standard_fonts/"
     });
     loadingTask.onPassword = (_, error) => {
         if (error === PasswordResponses.NEED_PASSWORD) {

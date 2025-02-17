@@ -371,6 +371,14 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     return fromAsset("application/octet-stream", path);
                 }
 
+                if (path != null && path.matches("^/standard_fonts/.*\\.pfb$")) {
+                    return fromAsset("application/octet-stream", path);
+                }
+
+                if (path != null && path.matches("^/standard_fonts/.*\\.ttf$")) {
+                    return fromAsset("font/sfnt", path);
+                }
+
                 return null;
             }
 
