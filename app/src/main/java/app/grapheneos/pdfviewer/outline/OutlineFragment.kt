@@ -87,24 +87,32 @@ class OutlineFragment : Fragment() {
 
         activityViewModel.requestOutlineIfNotAvailable()
         activityViewModel.outline.observe(viewLifecycleOwner) { outlineState ->
-            if (outlineState is PdfViewModel.OutlineStatus.Loaded) {
-                val incomingList = outlineState.outline
-                if (incomingList.isEmpty()) {
+            when (outlineState) {
+                is PdfViewModel.OutlineStatus.Loaded -> {
+                    val incomingList = outlineState.outline
+                    if (incomingList.isEmpty()) {
+                        noOutlineText.visibility = View.VISIBLE
+                        loadingBar.visibility = View.GONE
+                        listContainer.visibility = View.GONE
+                    } else {
+                        noOutlineText.visibility = View.GONE
+                        loadingBar.visibility = View.GONE
+                        listContainer.visibility = View.VISIBLE
+
+                        val currentPage = arguments?.getInt(ARG_CURRENT_PAGE_KEY, -1) ?: -1
+                        viewModel.setupDocument(incomingList, currentPage, docTitle)
+                    }
+                }
+                is PdfViewModel.OutlineStatus.NoOutline -> {
                     noOutlineText.visibility = View.VISIBLE
                     loadingBar.visibility = View.GONE
                     listContainer.visibility = View.GONE
-                } else {
-                    noOutlineText.visibility = View.GONE
-                    loadingBar.visibility = View.GONE
-                    listContainer.visibility = View.VISIBLE
-
-                    val currentPage = arguments?.getInt(ARG_CURRENT_PAGE_KEY, -1) ?: -1
-                    viewModel.setupDocument(incomingList, currentPage, docTitle)
                 }
-            } else {
-                noOutlineText.visibility = View.GONE
-                loadingBar.visibility = View.VISIBLE
-                listContainer.visibility = View.GONE
+                else -> {
+                    noOutlineText.visibility = View.GONE
+                    loadingBar.visibility = View.VISIBLE
+                    listContainer.visibility = View.GONE
+                }
             }
         }
 

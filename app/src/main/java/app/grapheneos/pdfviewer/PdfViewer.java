@@ -165,6 +165,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     private class Channel {
         @JavascriptInterface
+        public void setHasDocumentOutline(final boolean hasOutline) {
+            viewModel.setHasOutline(hasOutline);
+        }
+
+        @JavascriptInterface
         public void setDocumentOutline(final String outline) {
             viewModel.parseOutlineString(outline);
         }
@@ -702,6 +707,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         enableDisableMenuItem(menu.findItem(R.id.action_next), mPage < mNumPages);
         enableDisableMenuItem(menu.findItem(R.id.action_previous), mPage > 1);
         enableDisableMenuItem(menu.findItem(R.id.action_save_as), mUri != null);
+
+        menu.findItem(R.id.action_outline).setVisible(viewModel.hasOutline());
 
         return true;
     }
