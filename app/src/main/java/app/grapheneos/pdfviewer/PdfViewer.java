@@ -612,12 +612,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     private static void enableDisableMenuItem(MenuItem item, boolean enable) {
-        if (enable) {
-            item.setEnabled(true);
-            item.getIcon().setAlpha(ALPHA_HIGH);
-        } else {
-            item.setEnabled(false);
-            item.getIcon().setAlpha(ALPHA_LOW);
+        item.setEnabled(enable);
+        if (item.getIcon() != null) {
+            item.getIcon().setAlpha(enable ? ALPHA_HIGH : ALPHA_LOW);
         }
     }
 
