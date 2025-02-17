@@ -418,6 +418,11 @@ globalThis.loadDocument = function () {
         }).catch(function (error) {
             console.log("getMetadata error: " + error);
         });
+        pdfDoc.getOutline().then(function(outline) {
+            channel.setHasDocumentOutline(outline && outline.length > 0);
+        }).catch(function(error) {
+            console.log("getOutline error: " + error);
+        });
         renderPage(channel.getPage(), false, false);
     }, function (reason) {
         console.error(reason.name + ": " + reason.message);

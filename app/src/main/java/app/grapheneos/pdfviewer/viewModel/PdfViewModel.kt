@@ -21,6 +21,8 @@ class PdfViewModel : ViewModel() {
 
     sealed class OutlineStatus {
         data object NotLoaded : OutlineStatus()
+        data object NoOutline : OutlineStatus()
+        data object Available : OutlineStatus()
         data object Requested : OutlineStatus()
         data object Loading : OutlineStatus()
         class Loaded(val outline: List<OutlineNode>) : OutlineStatus()
@@ -37,12 +39,17 @@ class PdfViewModel : ViewModel() {
         scope.cancel()
     }
 
+    fun hasOutline(): Boolean {
+        return outline.value != OutlineStatus.NoOutline &&
+                outline.value != OutlineStatus.NotLoaded
+    }
+
     fun shouldAbortOutline(): Boolean {
         return outline.value is OutlineStatus.Requested || outline.value is OutlineStatus.Loading
     }
 
     fun requestOutlineIfNotAvailable() {
-        if (outline.value == OutlineStatus.NotLoaded) {
+        if (outline.value == OutlineStatus.Available) {
             outline.value = OutlineStatus.Requested
         }
     }
@@ -75,6 +82,12 @@ class PdfViewModel : ViewModel() {
             }
         } else {
             outline.postValue(OutlineStatus.Loaded(emptyList()))
+        }
+    }
+
+    fun setHasOutline(hasOutline: Boolean) {
+        if (outline.value == OutlineStatus.NotLoaded) {
+            outline.postValue(if (hasOutline) OutlineStatus.Available else OutlineStatus.NoOutline)
         }
     }
 }
