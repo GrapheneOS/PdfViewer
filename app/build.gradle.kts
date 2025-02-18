@@ -49,7 +49,7 @@ android {
         applicationId = "app.grapheneos.pdfviewer"
         minSdk = 26
         targetSdk = 35
-        versionCode = 23
+        versionCode = 24
         versionName = versionCode.toString()
     }
 
