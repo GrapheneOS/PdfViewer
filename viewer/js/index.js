@@ -400,9 +400,12 @@ globalThis.loadDocument = function () {
         cMapPacked: true,
         password: pdfPassword,
         isEvalSupported: false,
-        // If font not embedded in PDF, the viewer falls back to default system fonts. Apparently
-        // on Android, won't be able to find a good substitution.
-        // https://github.com/mozilla/pdf.js/pull/18465, https://bugzilla.mozilla.org/show_bug.cgi?id=1882613
+        // If a font isn't embedded, the viewer falls back to default system fonts. On Android,
+        // there often isn't a good substitution provided by the OS, so we need to bundle standard
+        // fonts to improve the rendering of certain PDFs:
+        //
+        // https://github.com/mozilla/pdf.js/pull/18465
+        // https://bugzilla.mozilla.org/show_bug.cgi?id=1882613
         useSystemFonts: false,
         standardFontDataUrl: "https://localhost/standard_fonts/"
     });
