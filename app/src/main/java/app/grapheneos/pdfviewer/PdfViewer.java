@@ -664,7 +664,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mToast.cancel();
         }
         mTextView.setText(String.format("%s/%s", mPage, mNumPages));
-        mToast = new Toast(getApplicationContext());
+        mToast = new Toast(this);
         mToast.setGravity(Gravity.BOTTOM | Gravity.END, PADDING, PADDING);
         mToast.setDuration(Toast.LENGTH_SHORT);
         mToast.setView(mTextView);
