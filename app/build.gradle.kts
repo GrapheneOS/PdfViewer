@@ -56,6 +56,7 @@ android {
     buildTypes {
         getByName("debug") {
             applicationIdSuffix = ".debug"
+            resValue("string", "app_name", "PDF Viewer d")
         }
 
         getByName("release") {
