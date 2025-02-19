@@ -279,7 +279,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             }
         });
 
-
         getSupportFragmentManager().setFragmentResultListener(OutlineFragment.RESULT_KEY, this,
                 (requestKey, result) -> {
             final int newPage = result.getInt(OutlineFragment.PAGE_KEY, -1);
