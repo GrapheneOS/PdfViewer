@@ -264,7 +264,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     @Override
-    @SuppressLint({"SetJavaScriptEnabled", "ClickableViewAccessibility"})
+    @SuppressLint({"SetJavaScriptEnabled"})
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = PdfviewerBinding.inflate(getLayoutInflater());
