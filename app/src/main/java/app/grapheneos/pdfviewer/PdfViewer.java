@@ -342,8 +342,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     maybeCloseInputStream();
                     try {
                         mInputStream = getContentResolver().openInputStream(mUri);
-                    } catch (FileNotFoundException ignored) {
+                    } catch (final FileNotFoundException ignored) {
                         snackbar.setText(R.string.error_while_opening).show();
+                        return null;
                     }
                     return new WebResourceResponse("application/pdf", null, mInputStream);
                 }
