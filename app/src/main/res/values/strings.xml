@@ -26,8 +26,8 @@
 
     <string name="invalid_mime_type">Cannot open file with invalid MIME type</string>
     <string name="legacy_file_uri">Cannot open legacy file paths from insecure apps</string>
-    <string name="error_while_opening">Error encountered trying to open content</string>
-    <string name="error_while_saving">Error encountered while saving</string>
+    <string name="error_while_opening">Error encountered while opening file</string>
+    <string name="error_while_saving">Error encountered while saving file</string>
 
     <string name="webview_out_of_date_title">WebView out-of-date</string>
     <string name="webview_out_of_date_message" tools:ignore="PluralsCandidate">Your current WebView version is %1$d. The WebView should be at least version %2$d for the PDF Viewer to work.</string>
