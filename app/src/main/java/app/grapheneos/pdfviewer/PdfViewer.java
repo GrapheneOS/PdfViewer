@@ -346,7 +346,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                         if (mInputStream == null) {
                             throw new FileNotFoundException();
                         }
-                    } catch (final FileNotFoundException ignored) {
+                    } catch (final FileNotFoundException | IllegalArgumentException |
+                            IllegalStateException | SecurityException ignored) {
                         snackbar.setText(R.string.error_while_opening).show();
                         return null;
                     }
