@@ -684,6 +684,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 R.id.action_outline));
         if (BuildConfig.DEBUG) {
             ids.add(R.id.debug_action_toggle_text_layer_visibility);
+            ids.add(R.id.debug_action_crash_webview);
         }
         if (mDocumentState < STATE_LOADED) {
             for (final int id : ids) {
@@ -763,6 +764,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             saveDocument();
         } else if (itemId == R.id.debug_action_toggle_text_layer_visibility) {
             binding.webview.evaluateJavascript("toggleTextLayerVisibility()", null);
+            return true;
+        } else if (itemId == R.id.debug_action_crash_webview) {
+            binding.webview.loadUrl("chrome://crash");
             return true;
         }
 
