@@ -33,6 +33,11 @@
     <string name="webview_out_of_date_title">WebView out-of-date</string>
     <string name="webview_out_of_date_message" tools:ignore="PluralsCandidate">Your current WebView version is %1$d. The WebView should be at least version %2$d for the PDF Viewer to work.</string>
 
+    <string name="webview_crash_title">WebView crashed</string>
+    <string name="webview_crash_message">Android WebView render process crashed.</string>
+
+    <string name="reload">Reload</string>
+
     <string name="password_prompt_hint">Password</string>
     <string name="password_prompt_description">Enter the password to decrypt this PDF file</string>
     <string name="open">Open</string>

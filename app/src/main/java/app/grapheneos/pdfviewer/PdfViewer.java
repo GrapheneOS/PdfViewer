@@ -16,6 +16,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -58,6 +59,7 @@ import app.grapheneos.pdfviewer.viewModel.PdfViewModel;
 public class PdfViewer extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<CharSequence>> {
     private static final String TAG = "PdfViewer";
 
+    private static final String STATE_WEBVIEW_CRASHED = "webview_crashed";
     private static final String STATE_URI = "uri";
     private static final String STATE_PAGE = "page";
     private static final String STATE_ZOOM_RATIO = "zoomRatio";
@@ -116,6 +118,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final int STATE_END = 2;
     private static final int PADDING = 10;
 
+    private boolean webViewCrashed;
     private Uri mUri;
     public int mPage;
     public int mNumPages;
@@ -264,10 +267,19 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
     }
 
+    private void showWebViewCrashed() {
+        binding.webviewAlertTitle.setText(getString(R.string.webview_crash_title));
+        binding.webviewAlertMessage.setText(getString(R.string.webview_crash_message));
+        binding.webviewAlertLayout.setVisibility(View.VISIBLE);
+        binding.webviewAlertReload.setVisibility(View.VISIBLE);
+        binding.webview.setVisibility(View.GONE);
+    }
+
     @Override
     @SuppressLint({"SetJavaScriptEnabled"})
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         binding = PdfviewerBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         setSupportActionBar(binding.toolbar);
@@ -395,6 +407,18 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 invalidateOptionsMenu();
                 loadPdfWithPassword(mEncryptedDocumentPassword);
             }
+
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                if (detail.didCrash()) {
+                    webViewCrashed = true;
+                    showWebViewCrashed();
+                    invalidateOptionsMenu();
+                    purgeWebView();
+                    return true;
+                }
+                return false;
+            }
         });
 
         GestureHelper.attach(PdfViewer.this, binding.webview,
@@ -455,6 +479,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
 
         if (savedInstanceState != null) {
+            webViewCrashed = savedInstanceState.getBoolean(STATE_WEBVIEW_CRASHED);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 mUri = savedInstanceState.getParcelable(STATE_URI, Uri.class);
             } else {
@@ -468,7 +493,14 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mEncryptedDocumentPassword = savedInstanceState.getString(STATE_ENCRYPTED_DOCUMENT_PASSWORD);
         }
 
-        if (mUri != null) {
+        binding.webviewAlertReload.setOnClickListener(v -> {
+            webViewCrashed = false;
+            recreate();
+        });
+
+        if (webViewCrashed) {
+            showWebViewCrashed();
+        } else if (mUri != null) {
             if ("file".equals(mUri.getScheme())) {
                 snackbar.setText(R.string.legacy_file_uri).show();
                 return;
@@ -478,14 +510,16 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
     }
 
-
+    private void purgeWebView() {
+        binding.webview.removeJavascriptInterface("channel");
+        binding.getRoot().removeView(binding.webview);
+        binding.webview.destroy();
+    }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        binding.webview.removeJavascriptInterface("channel");
-        binding.getRoot().removeView(binding.webview);
-        binding.webview.destroy();
+        purgeWebView();
         maybeCloseInputStream();
     }
 
@@ -525,15 +559,18 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     protected void onResume() {
         super.onResume();
 
-        // The user could have left the activity to update the WebView
-        invalidateOptionsMenu();
-        if (getWebViewRelease() >= MIN_WEBVIEW_RELEASE) {
-            binding.webviewOutOfDateLayout.setVisibility(View.GONE);
-            binding.webview.setVisibility(View.VISIBLE);
-        } else {
-            binding.webview.setVisibility(View.GONE);
-            binding.webviewOutOfDateMessage.setText(getString(R.string.webview_out_of_date_message, getWebViewRelease(), MIN_WEBVIEW_RELEASE));
-            binding.webviewOutOfDateLayout.setVisibility(View.VISIBLE);
+        if (!webViewCrashed) {
+            // The user could have left the activity to update the WebView
+            invalidateOptionsMenu();
+            if (getWebViewRelease() >= MIN_WEBVIEW_RELEASE) {
+                binding.webviewAlertLayout.setVisibility(View.GONE);
+                binding.webview.setVisibility(View.VISIBLE);
+            } else {
+                binding.webview.setVisibility(View.GONE);
+                binding.webviewAlertTitle.setText(getString(R.string.webview_out_of_date_title));
+                binding.webviewAlertMessage.setText(getString(R.string.webview_out_of_date_message, getWebViewRelease(), MIN_WEBVIEW_RELEASE));
+                binding.webviewAlertLayout.setVisibility(View.VISIBLE);
+            }
         }
     }
 
@@ -645,6 +682,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     @Override
     public void onSaveInstanceState(@NonNull Bundle savedInstanceState) {
         super.onSaveInstanceState(savedInstanceState);
+        savedInstanceState.putBoolean(STATE_WEBVIEW_CRASHED, webViewCrashed);
         savedInstanceState.putParcelable(STATE_URI, mUri);
         savedInstanceState.putInt(STATE_PAGE, mPage);
         savedInstanceState.putFloat(STATE_ZOOM_RATIO, mZoomRatio);
@@ -703,13 +741,21 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mDocumentState = STATE_END;
         }
 
-        enableDisableMenuItem(menu.findItem(R.id.action_open), getWebViewRelease() >= MIN_WEBVIEW_RELEASE);
+
+        enableDisableMenuItem(menu.findItem(R.id.action_open),
+                !webViewCrashed && getWebViewRelease() >= MIN_WEBVIEW_RELEASE);
         enableDisableMenuItem(menu.findItem(R.id.action_share), mUri != null);
         enableDisableMenuItem(menu.findItem(R.id.action_next), mPage < mNumPages);
         enableDisableMenuItem(menu.findItem(R.id.action_previous), mPage > 1);
         enableDisableMenuItem(menu.findItem(R.id.action_save_as), mUri != null);
 
         menu.findItem(R.id.action_outline).setVisible(viewModel.hasOutline());
+
+        if (webViewCrashed) {
+            for (final int id : ids) {
+                enableDisableMenuItem(menu.findItem(id), false);
+            }
+        }
 
         return true;
     }
