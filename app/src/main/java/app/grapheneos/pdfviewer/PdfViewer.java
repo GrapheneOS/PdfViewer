@@ -300,10 +300,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
         binding.webview.setBackgroundColor(Color.TRANSPARENT);
 
-        if (BuildConfig.DEBUG) {
-            WebView.setWebContentsDebuggingEnabled(true);
-        }
-
         final WebSettings settings = binding.webview.getSettings();
         settings.setAllowContentAccess(false);
         settings.setAllowFileAccess(false);
