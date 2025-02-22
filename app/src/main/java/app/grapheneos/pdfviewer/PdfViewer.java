@@ -560,16 +560,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     private void loadPdf() {
-        try {
-            if (mInputStream != null) {
-                mInputStream.close();
-            }
-            mInputStream = getContentResolver().openInputStream(mUri);
-        } catch (IOException e) {
-            snackbar.setText(R.string.error_while_opening).show();
-            return;
-        }
-
         mDocumentState = 0;
         showSystemUi();
         invalidateOptionsMenu();
