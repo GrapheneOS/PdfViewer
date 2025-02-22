@@ -56,7 +56,7 @@ import app.grapheneos.pdfviewer.outline.OutlineFragment;
 import app.grapheneos.pdfviewer.viewModel.PdfViewModel;
 
 public class PdfViewer extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<CharSequence>> {
-    public static final String TAG = "PdfViewer";
+    private static final String TAG = "PdfViewer";
 
     private static final String STATE_URI = "uri";
     private static final String STATE_PAGE = "page";
