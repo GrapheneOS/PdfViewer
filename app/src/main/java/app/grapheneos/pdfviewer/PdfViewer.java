@@ -589,6 +589,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     @Override
     public void onLoadFinished(@NonNull Loader<List<CharSequence>> loader, List<CharSequence> data) {
         mDocumentProperties = data;
+        invalidateOptionsMenu();
         setToolbarTitleWithDocumentName();
         LoaderManager.getInstance(this).destroyLoader(DocumentPropertiesAsyncTaskLoader.ID);
     }
@@ -748,6 +749,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         enableDisableMenuItem(menu.findItem(R.id.action_next), mPage < mNumPages);
         enableDisableMenuItem(menu.findItem(R.id.action_previous), mPage > 1);
         enableDisableMenuItem(menu.findItem(R.id.action_save_as), mUri != null);
+        enableDisableMenuItem(menu.findItem(R.id.action_view_document_properties),
+                mDocumentProperties != null);
 
         menu.findItem(R.id.action_outline).setVisible(viewModel.hasOutline());
 
