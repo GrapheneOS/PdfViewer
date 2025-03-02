@@ -315,6 +315,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         final WebSettings settings = binding.webview.getSettings();
         settings.setAllowContentAccess(false);
         settings.setAllowFileAccess(false);
+        settings.setBlockNetworkLoads(true);
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         settings.setJavaScriptEnabled(true);
         settings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.NORMAL);
