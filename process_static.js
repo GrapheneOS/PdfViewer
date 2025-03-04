@@ -75,7 +75,7 @@ async function processScripts(options) {
         bundle: true,
         format: "esm",
         platform: "browser",
-        target: "es2022",
+        target: "chrome133",
         outdir: path.join(options.outDir, "js"),
         minify: options.production,
         sourcemap: options.production ? false : "inline",
