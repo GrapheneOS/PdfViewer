@@ -21,13 +21,13 @@ async function processStatic() {
 
     await processScripts({
         rootDir,
-        entryPoints: ["js/index.js", "js/worker.ts"],
+        entryPoints: ["js/index.ts", "js/worker.ts"],
         outDir,
         production: true,
     });
     await processScripts({
         rootDir,
-        entryPoints: ["js/index.js", "js/worker.ts"],
+        entryPoints: ["js/index.ts", "js/worker.ts"],
         outDir: outDirDebug,
         production: false,
     });
