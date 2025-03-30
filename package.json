@@ -4,6 +4,6 @@
     "@stylistic/eslint-plugin": "^4.2.0",
     "esbuild": "^0.25.1",
     "eslint": "^9.23.0",
-    "pdfjs-dist": "^5.0.375"
+    "pdfjs-dist": "^5.1.91"
   }
 }
