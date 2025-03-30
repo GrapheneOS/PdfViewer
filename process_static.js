@@ -17,16 +17,17 @@ async function processStatic() {
     const outDirDebug = "app/src/debug/assets/viewer";
 
     await commandLine(getCommand("node_modules/.bin/eslint"), ".");
+    await commandLine(getCommand("node_modules/.bin/tsc"));
 
     await processScripts({
         rootDir,
-        entryPoints: ["js/index.js", "js/worker.js"],
+        entryPoints: ["js/index.ts", "js/worker.ts"],
         outDir,
         production: true,
     });
     await processScripts({
         rootDir,
-        entryPoints: ["js/index.js", "js/worker.js"],
+        entryPoints: ["js/index.ts", "js/worker.ts"],
         outDir: outDirDebug,
         production: false,
     });
