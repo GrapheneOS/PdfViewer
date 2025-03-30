@@ -1,9 +1,12 @@
 {
   "type": "module",
   "devDependencies": {
+    "@eslint/js": "^9.23.0",
     "@stylistic/eslint-plugin": "^4.2.0",
     "esbuild": "^0.25.1",
     "eslint": "^9.23.0",
-    "pdfjs-dist": "^5.1.91"
+    "pdfjs-dist": "^5.1.91",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.28.0"
   }
 }
