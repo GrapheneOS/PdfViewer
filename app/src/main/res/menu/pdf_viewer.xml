@@ -44,6 +44,12 @@
         app:showAsAction="ifRoom" />
 
     <item
+        android:id="@+id/action_set_zoom"
+        android:icon="@drawable/ic_zoom_in_24dp"
+        android:title="@string/action_set_zoom"
+        app:showAsAction="ifRoom" />
+
+    <item
         android:id="@+id/action_rotate_clockwise"
         android:icon="@drawable/ic_rotate_right_24dp"
         android:title="@string/action_rotate_clockwise"
