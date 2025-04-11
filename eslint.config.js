@@ -30,6 +30,7 @@ export default [
         ignores: [
             "app/build/",
             "app/src/*/assets/viewer",
+            "app/src/*/assets/wasm",
             "build/",
             "releases/"
         ]

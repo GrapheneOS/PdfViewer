@@ -399,6 +399,7 @@ globalThis.loadDocument = function () {
         cMapUrl: "https://localhost/cmaps/",
         cMapPacked: true,
         password: pdfPassword,
+        iccUrl: "https://localhost/iccs/",
         isEvalSupported: false,
         // If a font isn't embedded, the viewer falls back to default system fonts. On Android,
         // there often isn't a good substitution provided by the OS, so we need to bundle standard
@@ -407,7 +408,8 @@ globalThis.loadDocument = function () {
         // https://github.com/mozilla/pdf.js/pull/18465
         // https://bugzilla.mozilla.org/show_bug.cgi?id=1882613
         useSystemFonts: false,
-        standardFontDataUrl: "https://localhost/standard_fonts/"
+        standardFontDataUrl: "https://localhost/standard_fonts/",
+        wasmUrl: "https://localhost/wasm/"
     });
     loadingTask.onPassword = (_, error) => {
         if (error === PasswordResponses.NEED_PASSWORD) {
