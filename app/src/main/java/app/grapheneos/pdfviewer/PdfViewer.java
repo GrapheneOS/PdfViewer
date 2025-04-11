@@ -379,27 +379,28 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 }
 
                 if ("/viewer/js/index.js".equals(path) || "/viewer/js/worker.js".equals(path) ||
-                        "/wasm/openjpeg_nowasm_fallback.js".equals(path)) {
+                        "/viewer/wasm/openjpeg_nowasm_fallback.js".equals(path)) {
                     return fromAsset("application/javascript", path);
                 }
 
-                if ("/wasm/openjpeg.wasm".equals(path) || "/wasm/qcms_bg.wasm".equals(path)) {
+                if ("/viewer/wasm/openjpeg.wasm".equals(path) ||
+                        "/viewer/wasm/qcms_bg.wasm".equals(path)) {
                     return fromAsset("application/wasm", path);
                 }
 
-                if (path != null && path.matches("^/iccs/.*\\.icc$")) {
+                if (path != null && path.matches("^/viewer/iccs/.*\\.icc$")) {
                     return fromAsset("application/vnd.iccprofile", path);
                 }
 
-                if (path != null && path.matches("^/cmaps/.*\\.bcmap$")) {
+                if (path != null && path.matches("^/viewer/cmaps/.*\\.bcmap$")) {
                     return fromAsset("application/octet-stream", path);
                 }
 
-                if (path != null && path.matches("^/standard_fonts/.*\\.pfb$")) {
+                if (path != null && path.matches("^/viewer/standard_fonts/.*\\.pfb$")) {
                     return fromAsset("application/octet-stream", path);
                 }
 
-                if (path != null && path.matches("^/standard_fonts/.*\\.ttf$")) {
+                if (path != null && path.matches("^/viewer/standard_fonts/.*\\.ttf$")) {
                     return fromAsset("font/sfnt", path);
                 }
 

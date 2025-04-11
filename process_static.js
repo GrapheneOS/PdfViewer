@@ -42,6 +42,11 @@ async function processStatic() {
         outDir,
         production: true,
     });
+
+    const pdfJsAssets = ["cmaps", "iccs", "standard_fonts", "wasm"];
+    for (const asset of pdfJsAssets) {
+        await fs.cp(path.join("node_modules/pdfjs-dist", asset), path.join(outDir, asset), {recursive: true});
+    }
 }
 
 /**
