@@ -382,13 +382,10 @@ globalThis.abortDocumentOutline = function () {
 
 globalThis.toggleTextLayerVisibility = function () {
     let textLayerForeground = "red";
-    let textLayerOpacity = 1;
     if (isTextLayerVisible) {
         textLayerForeground = "transparent";
-        textLayerOpacity = 0.2;
     }
     document.documentElement.style.setProperty("--text-layer-foreground", textLayerForeground);
-    document.documentElement.style.setProperty("--text-layer-opacity", textLayerOpacity.toString());
     isTextLayerVisible = !isTextLayerVisible;
 };
 
