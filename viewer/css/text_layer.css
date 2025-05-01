@@ -1,5 +1,4 @@
 :root {
-    --text-layer-opacity: 0.2;
     --text-layer-foreground: transparent;
 }
 
@@ -7,7 +6,7 @@
     text-align: initial;
     position: absolute;
     overflow: clip;
-    opacity: var(--text-layer-opacity);
+    opacity: 1;
     line-height: 1;
     text-size-adjust: none;
     forced-color-adjust: none;
