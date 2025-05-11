@@ -49,14 +49,14 @@ android {
         applicationId = "app.grapheneos.pdfviewer"
         minSdk = 26
         targetSdk = 35
-        versionCode = 20
+        versionCode = 31
         versionName = versionCode.toString()
-        resourceConfigurations.add("en")
     }
 
     buildTypes {
         getByName("debug") {
             applicationIdSuffix = ".debug"
+            resValue("string", "app_name", "PDF Viewer d")
         }
 
         getByName("release") {
@@ -81,11 +81,16 @@ android {
             buildConfig = true
         }
     }
+
+    androidResources {
+        localeFilters += listOf("en")
+    }
 }
 
 dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.core:core-ktx:1.16.0")
+    implementation("androidx.fragment:fragment-ktx:1.8.6")
     implementation("com.google.android.material:material:1.12.0")
 }
 

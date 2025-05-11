@@ -8,6 +8,7 @@ import {
 GlobalWorkerOptions.workerSrc = "/viewer/js/worker.js";
 
 let pdfDoc = null;
+let outlineAbort = new AbortController();
 let pageRendering = false;
 let renderPending = false;
 let renderPendingZoom = 0;
@@ -83,6 +84,96 @@ function getDefaultZoomRatio(page, orientationDegrees) {
     const widthZoomRatio = document.body.clientWidth / viewport.width;
     const heightZoomRatio = document.body.clientHeight / viewport.height;
     return Math.max(Math.min(widthZoomRatio, heightZoomRatio, channel.getMaxZoomRatio()), channel.getMinZoomRatio());
+}
+
+/**
+ * Does BFS traversal of all of the nodes in the outline tree to convert the tree so that the
+ * nodes are of a simpler form. The simple outline nodes have the following structure:
+ *
+ * ```
+ *  {
+ *      t: String, // title
+ *      p: int (-1 means unknown), // pageNumber
+ *      c: Array of simple outline nodes, // children
+ *  }
+ * ```
+ *
+ * @param {Array} pdfJsOutline The root node of the outline tree as obtained by
+ * pdfDoc.getOutline. This is assumed to be an ordered tree.
+ *
+ * @return {Promise} A promise that is resolved with an {Array} that contains
+ * all the top-level nodes of the outline in simplified form
+ */
+async function getSimplifiedOutline(pdfJsOutline, abortController) {
+    if (pdfJsOutline === undefined || pdfJsOutline === null || pdfJsOutline.length === 0) {
+        return null;
+    }
+
+    const pageNumberPromises = [];
+    const topLevelEntries = [];
+
+    // Each item in this queue represents a PDF.js outline node with a
+    // reference to an array of its children in the simplified node form.
+    const outlineQueue = [{
+        pdfJsChildren: pdfJsOutline,
+        // No parents for at top/root, so it starts out as null for them.
+        parentSimpleChildrenArray: null,
+    }];
+
+    while (outlineQueue.length > 0) {
+        abortController.signal.throwIfAborted();
+
+        const currentOutlinePayload = outlineQueue.shift();
+        const parentChildrenArray = currentOutlinePayload.parentSimpleChildrenArray;
+        const currentPdfJsChildren = currentOutlinePayload.pdfJsChildren;
+        for (const pdfJsChild of currentPdfJsChildren) {
+            abortController.signal.throwIfAborted();
+
+            const simpleChild = {
+                t: pdfJsChild.title,
+                // The pageNumber is resolved later.
+                p: -1,
+                c: [],
+            };
+
+            if (parentChildrenArray !== null) {
+                parentChildrenArray.push(simpleChild);
+            } else {
+                topLevelEntries.push(simpleChild);
+            }
+
+            if (pdfJsChild.items.length > 0) {
+                outlineQueue.push({
+                    pdfJsChildren: pdfJsChild.items,
+                    parentSimpleChildrenArray: simpleChild.c,
+                });
+            }
+
+            // Resolve the page number. Note that dest options can be a string
+            // or an object according to the the PDF spec.
+            const dest = (typeof pdfJsChild.dest === "string")
+                ? await pdfDoc.getDestination(pdfJsChild.dest) : pdfJsChild.dest;
+            if (Array.isArray(dest)) {
+                const destRef = dest[0];
+                if (typeof destRef === "object") {
+                    pageNumberPromises.push(
+                        pdfDoc.getPageIndex(destRef).then(function(index) {
+                            simpleChild.p = parseInt(index) + 1;
+                        }).catch(function(error) {
+                            console.log("pdfDoc.getPageIndex error: " + error);
+                            simpleChild.p = -1;
+                        })
+                    );
+                } else {
+                    simpleChild.p = Number.isInteger(destRef) ? destRef + 1 : -1;
+                }
+            }
+        }
+    }
+
+    await Promise.all(pageNumberPromises);
+
+    return topLevelEntries;
 }
 
 function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
@@ -268,15 +359,33 @@ globalThis.isTextSelected = function () {
     return globalThis.getSelection().toString() !== "";
 };
 
+globalThis.getDocumentOutline = function () {
+    pdfDoc.getOutline().then(function(outline) {
+        getSimplifiedOutline(outline, outlineAbort).then(function(outlineEntries) {
+            if (outlineEntries !== null) {
+                channel.setDocumentOutline(JSON.stringify(outlineEntries));
+            } else {
+                channel.setDocumentOutline(null);
+            }
+        }).catch(function(error) {
+            console.log("getSimplifiedOutline error: " + error);
+        });
+    }).catch(function(error) {
+        console.log("pdfDoc.getOutline error: " + error);
+    });
+};
+
+globalThis.abortDocumentOutline = function () {
+    outlineAbort.abort();
+    outlineAbort = new AbortController();
+};
+
 globalThis.toggleTextLayerVisibility = function () {
     let textLayerForeground = "red";
-    let textLayerOpacity = 1;
     if (isTextLayerVisible) {
         textLayerForeground = "transparent";
-        textLayerOpacity = 0.2;
     }
     document.documentElement.style.setProperty("--text-layer-foreground", textLayerForeground);
-    document.documentElement.style.setProperty("--text-layer-opacity", textLayerOpacity.toString());
     isTextLayerVisible = !isTextLayerVisible;
 };
 
@@ -284,10 +393,20 @@ globalThis.loadDocument = function () {
     const pdfPassword = channel.getPassword();
     const loadingTask = getDocument({
         url: "https://localhost/placeholder.pdf",
-        cMapUrl: "https://localhost/cmaps/",
+        cMapUrl: "https://localhost/viewer/cmaps/",
         cMapPacked: true,
         password: pdfPassword,
-        isEvalSupported: false
+        iccUrl: "https://localhost/viewer/iccs/",
+        isEvalSupported: false,
+        // If a font isn't embedded, the viewer falls back to default system fonts. On Android,
+        // there often isn't a good substitution provided by the OS, so we need to bundle standard
+        // fonts to improve the rendering of certain PDFs:
+        //
+        // https://github.com/mozilla/pdf.js/pull/18465
+        // https://bugzilla.mozilla.org/show_bug.cgi?id=1882613
+        useSystemFonts: false,
+        standardFontDataUrl: "https://localhost/viewer/standard_fonts/",
+        wasmUrl: "https://localhost/viewer/wasm/"
     });
     loadingTask.onPassword = (_, error) => {
         if (error === PasswordResponses.NEED_PASSWORD) {
@@ -305,6 +424,11 @@ globalThis.loadDocument = function () {
             channel.setDocumentProperties(JSON.stringify(data.info));
         }).catch(function (error) {
             console.log("getMetadata error: " + error);
+        });
+        pdfDoc.getOutline().then(function(outline) {
+            channel.setHasDocumentOutline(outline && outline.length > 0);
+        }).catch(function(error) {
+            console.log("getOutline error: " + error);
         });
         renderPage(channel.getPage(), false, false);
     }, function (reason) {

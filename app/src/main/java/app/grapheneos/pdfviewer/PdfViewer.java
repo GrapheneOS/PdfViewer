@@ -15,9 +15,9 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -32,42 +32,43 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
 
 import com.google.android.material.snackbar.Snackbar;
 
-import app.grapheneos.pdfviewer.databinding.PdfviewerBinding;
-import app.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
-import app.grapheneos.pdfviewer.fragment.PasswordPromptFragment;
-import app.grapheneos.pdfviewer.fragment.JumpToPageFragment;
-import app.grapheneos.pdfviewer.ktx.ViewKt;
-import app.grapheneos.pdfviewer.loader.DocumentPropertiesAsyncTaskLoader;
-import app.grapheneos.pdfviewer.viewModel.PasswordStatus;
-
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.FileNotFoundException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-public class PdfViewer extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<CharSequence>> {
-    public static final String TAG = "PdfViewer";
+import app.grapheneos.pdfviewer.databinding.PdfviewerBinding;
+import app.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
+import app.grapheneos.pdfviewer.fragment.JumpToPageFragment;
+import app.grapheneos.pdfviewer.fragment.PasswordPromptFragment;
+import app.grapheneos.pdfviewer.ktx.ViewKt;
+import app.grapheneos.pdfviewer.loader.DocumentPropertiesAsyncTaskLoader;
+import app.grapheneos.pdfviewer.outline.OutlineFragment;
+import app.grapheneos.pdfviewer.viewModel.PdfViewModel;
 
+public class PdfViewer extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<CharSequence>> {
+    private static final String TAG = "PdfViewer";
+
+    private static final String STATE_WEBVIEW_CRASHED = "webview_crashed";
     private static final String STATE_URI = "uri";
     private static final String STATE_PAGE = "page";
     private static final String STATE_ZOOM_RATIO = "zoomRatio";
     private static final String STATE_DOCUMENT_ORIENTATION_DEGREES = "documentOrientationDegrees";
     private static final String STATE_ENCRYPTED_DOCUMENT_PASSWORD = "encrypted_document_password";
     private static final String KEY_PROPERTIES = "properties";
-    private static final int MIN_WEBVIEW_RELEASE = 119;
+    private static final int MIN_WEBVIEW_RELEASE = 133;
 
     private static final String CONTENT_SECURITY_POLICY =
         "default-src 'none'; " +
@@ -119,6 +120,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final int STATE_END = 2;
     private static final int PADDING = 10;
 
+    private boolean webViewCrashed;
     private Uri mUri;
     public int mPage;
     public int mNumPages;
@@ -136,7 +138,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private Toast mToast;
     private Snackbar snackbar;
     private PasswordPromptFragment mPasswordPromptFragment;
-    public PasswordStatus passwordValidationViewModel;
+    public PdfViewModel viewModel;
 
     private final ActivityResultLauncher<Intent> openDocumentLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -148,6 +150,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     mPage = 1;
                     mDocumentProperties = null;
                     mEncryptedDocumentPassword = "";
+                    viewModel.clearOutline();
                     loadPdf();
                     invalidateOptionsMenu();
                 }
@@ -167,6 +170,16 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             });
 
     private class Channel {
+        @JavascriptInterface
+        public void setHasDocumentOutline(final boolean hasOutline) {
+            viewModel.setHasOutline(hasOutline);
+        }
+
+        @JavascriptInterface
+        public void setDocumentOutline(final String outline) {
+            viewModel.parseOutlineString(outline);
+        }
+
         @JavascriptInterface
         public int getPage() {
             return mPage;
@@ -234,17 +247,17 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             if (!getPasswordPromptFragment().isAdded()){
                 getPasswordPromptFragment().show(getSupportFragmentManager(), PasswordPromptFragment.class.getName());
             }
-            passwordValidationViewModel.passwordMissing();
+            viewModel.passwordMissing();
         }
 
         @JavascriptInterface
         public void invalidPassword() {
-            runOnUiThread(() -> passwordValidationViewModel.invalid());
+            runOnUiThread(() -> viewModel.invalid());
         }
 
         @JavascriptInterface
         public void onLoaded() {
-            passwordValidationViewModel.validated();
+            viewModel.validated();
             if (getPasswordPromptFragment().isAdded()) {
                 getPasswordPromptFragment().dismiss();
             }
@@ -256,39 +269,58 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
     }
 
+    private void showWebViewCrashed() {
+        binding.webviewAlertTitle.setText(getString(R.string.webview_crash_title));
+        binding.webviewAlertMessage.setText(getString(R.string.webview_crash_message));
+        binding.webviewAlertLayout.setVisibility(View.VISIBLE);
+        binding.webviewAlertReload.setVisibility(View.VISIBLE);
+        binding.webview.setVisibility(View.GONE);
+    }
+
     @Override
-    @SuppressLint({"SetJavaScriptEnabled", "ClickableViewAccessibility"})
+    @SuppressLint({"SetJavaScriptEnabled"})
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         binding = PdfviewerBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         setSupportActionBar(binding.toolbar);
-        passwordValidationViewModel = new ViewModelProvider(this, ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication())).get(PasswordStatus.class);
+        viewModel = new ViewModelProvider(this, ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication())).get(PdfViewModel.class);
+
+        viewModel.getOutline().observe(this, requested -> {
+            if (requested instanceof PdfViewModel.OutlineStatus.Requested) {
+                viewModel.setLoadingOutline();
+                binding.webview.evaluateJavascript("getDocumentOutline()", null);
+            }
+        });
+
+        getSupportFragmentManager().setFragmentResultListener(OutlineFragment.RESULT_KEY, this,
+                (requestKey, result) -> {
+            final int newPage = result.getInt(OutlineFragment.PAGE_KEY, -1);
+            if (viewModel.shouldAbortOutline()) {
+                Log.d(TAG, "aborting outline operations");
+                binding.webview.evaluateJavascript("abortDocumentOutline()", null);
+                viewModel.clearOutline();
+            } else {
+                onJumpToPageInDocument(newPage);
+            }
+        });
 
         EdgeToEdge.enable(this);
 
         // Margins for the toolbar are needed, so that content of the toolbar
         // is not covered by a system button navigation bar when in landscape.
-        ViewCompat.setOnApplyWindowInsetsListener(binding.toolbar, (v, windowInsets) -> {
-            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-            ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
-            mlp.leftMargin = insets.left;
-            mlp.rightMargin = insets.right;
-            v.setLayoutParams(mlp);
-            return windowInsets;
-        });
+        KtUtilsKt.applySystemBarMargins(binding.toolbar, false);
 
         binding.webview.setBackgroundColor(Color.TRANSPARENT);
-
-        if (BuildConfig.DEBUG) {
-            WebView.setWebContentsDebuggingEnabled(true);
-        }
 
         final WebSettings settings = binding.webview.getSettings();
         settings.setAllowContentAccess(false);
         settings.setAllowFileAccess(false);
+        settings.setBlockNetworkLoads(true);
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         settings.setJavaScriptEnabled(true);
+        settings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.NORMAL);
         settings.setMinimumFontSize(1);
 
         CookieManager.getInstance().setAcceptCookie(false);
@@ -323,8 +355,13 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     maybeCloseInputStream();
                     try {
                         mInputStream = getContentResolver().openInputStream(mUri);
-                    } catch (FileNotFoundException ignored) {
+                        if (mInputStream == null) {
+                            throw new FileNotFoundException();
+                        }
+                    } catch (final FileNotFoundException | IllegalArgumentException |
+                            IllegalStateException | SecurityException ignored) {
                         snackbar.setText(R.string.error_while_opening).show();
+                        return null;
                     }
                     return new WebResourceResponse("application/pdf", null, mInputStream);
                 }
@@ -343,12 +380,30 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     return fromAsset("text/css", path);
                 }
 
-                if ("/viewer/js/index.js".equals(path) || "/viewer/js/worker.js".equals(path)) {
+                if ("/viewer/js/index.js".equals(path) || "/viewer/js/worker.js".equals(path) ||
+                        "/viewer/wasm/openjpeg_nowasm_fallback.js".equals(path)) {
                     return fromAsset("application/javascript", path);
                 }
 
-                if (path != null && path.matches("^/cmaps/.*\\.bcmap$")) {
+                if ("/viewer/wasm/openjpeg.wasm".equals(path) ||
+                        "/viewer/wasm/qcms_bg.wasm".equals(path)) {
+                    return fromAsset("application/wasm", path);
+                }
+
+                if (path != null && path.matches("^/viewer/iccs/.*\\.icc$")) {
+                    return fromAsset("application/vnd.iccprofile", path);
+                }
+
+                if (path != null && path.matches("^/viewer/cmaps/.*\\.bcmap$")) {
                     return fromAsset("application/octet-stream", path);
+                }
+
+                if (path != null && path.matches("^/viewer/standard_fonts/.*\\.pfb$")) {
+                    return fromAsset("application/octet-stream", path);
+                }
+
+                if (path != null && path.matches("^/viewer/standard_fonts/.*\\.ttf$")) {
+                    return fromAsset("font/sfnt", path);
                 }
 
                 return null;
@@ -364,6 +419,18 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 mDocumentState = STATE_LOADED;
                 invalidateOptionsMenu();
                 loadPdfWithPassword(mEncryptedDocumentPassword);
+            }
+
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                if (detail.didCrash()) {
+                    webViewCrashed = true;
+                    showWebViewCrashed();
+                    invalidateOptionsMenu();
+                    purgeWebView();
+                    return true;
+                }
+                return false;
             }
         });
 
@@ -458,12 +525,13 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
 
         if (savedInstanceState != null) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            webViewCrashed = savedInstanceState.getBoolean(STATE_WEBVIEW_CRASHED);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                mUri = savedInstanceState.getParcelable(STATE_URI, Uri.class);
+            } else {
                 @SuppressWarnings("deprecation")
                 final Uri uri = savedInstanceState.getParcelable(STATE_URI);
                 mUri = uri;
-            } else {
-                mUri = savedInstanceState.getParcelable(STATE_URI, Uri.class);
             }
             mPage = savedInstanceState.getInt(STATE_PAGE);
             mZoomRatio = savedInstanceState.getFloat(STATE_ZOOM_RATIO);
@@ -471,7 +539,14 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mEncryptedDocumentPassword = savedInstanceState.getString(STATE_ENCRYPTED_DOCUMENT_PASSWORD);
         }
 
-        if (mUri != null) {
+        binding.webviewAlertReload.setOnClickListener(v -> {
+            webViewCrashed = false;
+            recreate();
+        });
+
+        if (webViewCrashed) {
+            showWebViewCrashed();
+        } else if (mUri != null) {
             if ("file".equals(mUri.getScheme())) {
                 snackbar.setText(R.string.legacy_file_uri).show();
                 return;
@@ -481,12 +556,16 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    private void purgeWebView() {
         binding.webview.removeJavascriptInterface("channel");
         binding.getRoot().removeView(binding.webview);
         binding.webview.destroy();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        purgeWebView();
         maybeCloseInputStream();
     }
 
@@ -526,15 +605,18 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     protected void onResume() {
         super.onResume();
 
-        // The user could have left the activity to update the WebView
-        invalidateOptionsMenu();
-        if (getWebViewRelease() >= MIN_WEBVIEW_RELEASE) {
-            binding.webviewOutOfDateLayout.setVisibility(View.GONE);
-            binding.webview.setVisibility(View.VISIBLE);
-        } else {
-            binding.webview.setVisibility(View.GONE);
-            binding.webviewOutOfDateMessage.setText(getString(R.string.webview_out_of_date_message, getWebViewRelease(), MIN_WEBVIEW_RELEASE));
-            binding.webviewOutOfDateLayout.setVisibility(View.VISIBLE);
+        if (!webViewCrashed) {
+            // The user could have left the activity to update the WebView
+            invalidateOptionsMenu();
+            if (getWebViewRelease() >= MIN_WEBVIEW_RELEASE) {
+                binding.webviewAlertLayout.setVisibility(View.GONE);
+                binding.webview.setVisibility(View.VISIBLE);
+            } else {
+                binding.webview.setVisibility(View.GONE);
+                binding.webviewAlertTitle.setText(getString(R.string.webview_out_of_date_title));
+                binding.webviewAlertMessage.setText(getString(R.string.webview_out_of_date_message, getWebViewRelease(), MIN_WEBVIEW_RELEASE));
+                binding.webviewAlertLayout.setVisibility(View.VISIBLE);
+            }
         }
     }
 
@@ -553,6 +635,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     @Override
     public void onLoadFinished(@NonNull Loader<List<CharSequence>> loader, List<CharSequence> data) {
         mDocumentProperties = data;
+        invalidateOptionsMenu();
         setToolbarTitleWithDocumentName();
         LoaderManager.getInstance(this).destroyLoader(DocumentPropertiesAsyncTaskLoader.ID);
     }
@@ -563,16 +646,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     private void loadPdf() {
-        try {
-            if (mInputStream != null) {
-                mInputStream.close();
-            }
-            mInputStream = getContentResolver().openInputStream(mUri);
-        } catch (IOException e) {
-            snackbar.setText(R.string.error_while_opening).show();
-            return;
-        }
-
         mDocumentState = 0;
         showSystemUi();
         invalidateOptionsMenu();
@@ -628,12 +701,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     private static void enableDisableMenuItem(MenuItem item, boolean enable) {
-        if (enable) {
-            item.setEnabled(true);
-            item.getIcon().setAlpha(ALPHA_HIGH);
-        } else {
-            item.setEnabled(false);
-            item.getIcon().setAlpha(ALPHA_LOW);
+        item.setEnabled(enable);
+        if (item.getIcon() != null) {
+            item.getIcon().setAlpha(enable ? ALPHA_HIGH : ALPHA_LOW);
         }
     }
 
@@ -659,6 +729,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     @Override
     public void onSaveInstanceState(@NonNull Bundle savedInstanceState) {
         super.onSaveInstanceState(savedInstanceState);
+        savedInstanceState.putBoolean(STATE_WEBVIEW_CRASHED, webViewCrashed);
         savedInstanceState.putParcelable(STATE_URI, mUri);
         savedInstanceState.putInt(STATE_PAGE, mPage);
         savedInstanceState.putFloat(STATE_ZOOM_RATIO, mZoomRatio);
@@ -671,7 +742,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mToast.cancel();
         }
         mTextView.setText(String.format("%s/%s", mPage, mNumPages));
-        mToast = new Toast(getApplicationContext());
+        mToast = new Toast(this);
         mToast.setGravity(Gravity.BOTTOM | Gravity.END, PADDING, PADDING);
         mToast.setDuration(Toast.LENGTH_SHORT);
         mToast.setView(mTextView);
@@ -694,9 +765,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         final ArrayList<Integer> ids = new ArrayList<>(Arrays.asList(R.id.action_jump_to_page,
                 R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
                 R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
-                R.id.action_view_document_properties, R.id.action_share, R.id.action_save_as));
+                R.id.action_view_document_properties, R.id.action_share, R.id.action_save_as,
+                R.id.action_outline));
         if (BuildConfig.DEBUG) {
             ids.add(R.id.debug_action_toggle_text_layer_visibility);
+            ids.add(R.id.debug_action_crash_webview);
         }
         if (mDocumentState < STATE_LOADED) {
             for (final int id : ids) {
@@ -715,11 +788,23 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mDocumentState = STATE_END;
         }
 
-        enableDisableMenuItem(menu.findItem(R.id.action_open), getWebViewRelease() >= MIN_WEBVIEW_RELEASE);
+
+        enableDisableMenuItem(menu.findItem(R.id.action_open),
+                !webViewCrashed && getWebViewRelease() >= MIN_WEBVIEW_RELEASE);
         enableDisableMenuItem(menu.findItem(R.id.action_share), mUri != null);
         enableDisableMenuItem(menu.findItem(R.id.action_next), mPage < mNumPages);
         enableDisableMenuItem(menu.findItem(R.id.action_previous), mPage > 1);
         enableDisableMenuItem(menu.findItem(R.id.action_save_as), mUri != null);
+        enableDisableMenuItem(menu.findItem(R.id.action_view_document_properties),
+                mDocumentProperties != null);
+
+        menu.findItem(R.id.action_outline).setVisible(viewModel.hasOutline());
+
+        if (webViewCrashed) {
+            for (final int id : ids) {
+                enableDisableMenuItem(menu.findItem(id), false);
+            }
+        }
 
         return true;
     }
@@ -748,6 +833,16 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         } else if (itemId == R.id.action_rotate_counterclockwise) {
             documentOrientationChanged(-90);
             return true;
+        } else if (itemId == R.id.action_outline) {
+            OutlineFragment outlineFragment =
+                    OutlineFragment.newInstance(mPage, getCurrentDocumentName());
+            getSupportFragmentManager().beginTransaction()
+                    .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
+                    // fullscreen fragment, since content root view == activity's root view
+                    .add(android.R.id.content, outlineFragment)
+                    .addToBackStack(null)
+                    .commit();
+            return true;
         } else if (itemId == R.id.action_view_document_properties) {
             DocumentPropertiesFragment
                 .newInstance(mDocumentProperties)
@@ -764,6 +859,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             saveDocument();
         } else if (itemId == R.id.debug_action_toggle_text_layer_visibility) {
             binding.webview.evaluateJavascript("toggleTextLayerVisibility()", null);
+            return true;
+        } else if (itemId == R.id.debug_action_crash_webview) {
+            binding.webview.loadUrl("chrome://crash");
             return true;
         }
 
@@ -793,10 +891,23 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         return fileName.length() > 2 ? fileName : title;
     }
 
-    private void saveDocumentAs(Uri uri) {
-        try {
-            KtUtilsKt.saveAs(this, mUri, uri);
-        } catch (IOException | OutOfMemoryError | IllegalArgumentException e) {
+    private void saveDocumentAs(final Uri uri) {
+        try (final InputStream input = getContentResolver().openInputStream(mUri);
+                final OutputStream output = getContentResolver().openOutputStream(uri)) {
+            if (input == null || output == null) {
+                throw new FileNotFoundException();
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                input.transferTo(output);
+            } else {
+                final byte[] buffer = new byte[16384];
+                int read;
+                while ((read = input.read(buffer)) != -1) {
+                    output.write(buffer, 0, read);
+                }
+            }
+        } catch (final IOException | IllegalArgumentException | IllegalStateException |
+                SecurityException e) {
             snackbar.setText(R.string.error_while_saving).show();
         }
     }

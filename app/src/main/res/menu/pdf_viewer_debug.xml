@@ -7,4 +7,9 @@
         android:title="@string/debug_action_toggle_text_layer_visibility"
         app:showAsAction="never" />
 
+    <item
+        android:id="@+id/debug_action_crash_webview"
+        android:title="@string/debug_action_crash_webview"
+        app:showAsAction="never" />
+
 </menu>

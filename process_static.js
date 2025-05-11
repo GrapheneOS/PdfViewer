@@ -42,6 +42,11 @@ async function processStatic() {
         outDir,
         production: true,
     });
+
+    const pdfJsAssets = ["cmaps", "iccs", "standard_fonts", "wasm"];
+    for (const asset of pdfJsAssets) {
+        await fs.cp(path.join("node_modules/pdfjs-dist", asset), path.join(outDir, asset), {recursive: true});
+    }
 }
 
 /**
@@ -75,7 +80,7 @@ async function processScripts(options) {
         bundle: true,
         format: "esm",
         platform: "browser",
-        target: "es2022",
+        target: "chrome133",
         outdir: path.join(options.outDir, "js"),
         minify: options.production,
         sourcemap: options.production ? false : "inline",

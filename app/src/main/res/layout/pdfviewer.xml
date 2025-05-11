@@ -25,7 +25,7 @@
         app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
     <ScrollView
-        android:id="@+id/webview_out_of_date_layout"
+        android:id="@+id/webview_alert_layout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true"
@@ -43,7 +43,7 @@
                 android:layout_marginTop="32dp"
                 android:importantForAccessibility="no"
                 android:src="@drawable/ic_error_outline_24dp"
-                app:layout_constraintBottom_toTopOf="@id/webview_out_of_date_title"
+                app:layout_constraintBottom_toTopOf="@id/webview_alert_title"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
@@ -51,7 +51,7 @@
                 app:tint="?attr/colorPrimary" />
 
             <TextView
-                android:id="@+id/webview_out_of_date_title"
+                android:id="@+id/webview_alert_title"
                 style="@style/TextAppearance.Material3.TitleLarge"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -60,15 +60,13 @@
                 android:layout_marginEnd="32dp"
                 android:elegantTextHeight="true"
                 android:gravity="center"
-                android:text="@string/webview_out_of_date_title"
-                app:layout_constraintBottom_toTopOf="@id/webview_out_of_date_message"
+                app:layout_constraintBottom_toTopOf="@id/webview_alert_message"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/error_image_view" />
 
-
             <TextView
-                android:id="@+id/webview_out_of_date_message"
+                android:id="@+id/webview_alert_message"
                 style="@style/TextAppearance.Material3.BodyMedium"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -79,11 +77,28 @@
                 android:elegantTextHeight="true"
                 android:gravity="center"
                 android:lineSpacingMultiplier="1.2"
-                android:text="@string/webview_out_of_date_message"
+                app:layout_constraintBottom_toBottomOf="@id/webview_alert_reload"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/webview_alert_title" />
+
+            <Button
+                android:id="@+id/webview_alert_reload"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="32dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="32dp"
+                android:layout_marginBottom="32dp"
+                android:elegantTextHeight="true"
+                android:gravity="center"
+                android:lineSpacingMultiplier="1.2"
+                android:text="@string/reload"
+                android:visibility="gone"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/webview_out_of_date_title" />
+                app:layout_constraintTop_toBottomOf="@id/webview_alert_message" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
