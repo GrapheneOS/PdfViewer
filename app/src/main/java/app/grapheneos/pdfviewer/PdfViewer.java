@@ -279,6 +279,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     @SuppressLint({"SetJavaScriptEnabled"})
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
 
         binding = PdfviewerBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -303,8 +304,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 onJumpToPageInDocument(newPage);
             }
         });
-
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
 
         // Margins for the toolbar are needed, so that content of the toolbar
         // is not covered by a system button navigation bar when in landscape.
