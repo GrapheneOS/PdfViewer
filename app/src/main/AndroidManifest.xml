@@ -6,7 +6,8 @@
     <application android:name=".App"
             android:icon="@mipmap/ic_launcher"
             android:label="@string/app_name"
-            android:theme="@style/AppTheme">
+            android:theme="@style/AppTheme"
+            android:memtagMode="async">
         <activity android:name=".PdfViewer"
                 android:documentLaunchMode="always"
                 android:exported="true">
