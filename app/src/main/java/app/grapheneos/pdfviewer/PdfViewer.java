@@ -65,6 +65,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final String STATE_ZOOM_RATIO = "zoomRatio";
     private static final String STATE_DOCUMENT_ORIENTATION_DEGREES = "documentOrientationDegrees";
     private static final String STATE_ENCRYPTED_DOCUMENT_PASSWORD = "encrypted_document_password";
+    private static final String STATE_VERTICAL_SCROLL_MODE = "vertical_scroll_mode";
     private static final String KEY_PROPERTIES = "properties";
     private static final int MIN_WEBVIEW_RELEASE = 133;
 
@@ -130,6 +131,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private String mEncryptedDocumentPassword;
     private List<CharSequence> mDocumentProperties;
     private InputStream mInputStream;
+    private boolean isVerticalScrollMode = false;
 
     private PdfviewerBinding binding;
     private TextView mTextView;
@@ -264,6 +266,22 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         @JavascriptInterface
         public String getPassword() {
             return mEncryptedDocumentPassword != null ? mEncryptedDocumentPassword : "";
+        }
+
+        @JavascriptInterface
+        public boolean isVerticalScrollMode() {
+            return isVerticalScrollMode;
+        }
+
+        @JavascriptInterface
+        public void onPageChanged(final int pageNumber) {
+            if (isVerticalScrollMode) {
+                mPage = pageNumber;
+                runOnUiThread(() -> {
+                    invalidateOptionsMenu();
+                    showPageNumber();
+                });
+            }
         }
     }
 
@@ -502,6 +520,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mZoomRatio = savedInstanceState.getFloat(STATE_ZOOM_RATIO);
             mDocumentOrientationDegrees = savedInstanceState.getInt(STATE_DOCUMENT_ORIENTATION_DEGREES);
             mEncryptedDocumentPassword = savedInstanceState.getString(STATE_ENCRYPTED_DOCUMENT_PASSWORD);
+            isVerticalScrollMode = savedInstanceState.getBoolean(STATE_VERTICAL_SCROLL_MODE, false);
         }
 
         binding.webviewAlertReload.setOnClickListener(v -> {
@@ -675,10 +694,20 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     public void onJumpToPageInDocument(final int selected_page) {
         if (selected_page >= 1 && selected_page <= mNumPages && mPage != selected_page) {
             mPage = selected_page;
-            renderPage(0);
+            if (isVerticalScrollMode) {
+                binding.webview.evaluateJavascript("scrollToPageInDocument(" + selected_page + ")", null);
+            } else {
+                renderPage(0);
+            }
             showPageNumber();
             invalidateOptionsMenu();
         }
+    }
+
+    private void toggleVerticalScrollMode() {
+        isVerticalScrollMode = !isVerticalScrollMode;
+        binding.webview.evaluateJavascript("setVerticalScrollMode(" + isVerticalScrollMode + ")", null);
+        invalidateOptionsMenu();
     }
 
     private void showSystemUi() {
@@ -700,6 +729,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         savedInstanceState.putFloat(STATE_ZOOM_RATIO, mZoomRatio);
         savedInstanceState.putInt(STATE_DOCUMENT_ORIENTATION_DEGREES, mDocumentOrientationDegrees);
         savedInstanceState.putString(STATE_ENCRYPTED_DOCUMENT_PASSWORD, mEncryptedDocumentPassword);
+        savedInstanceState.putBoolean(STATE_VERTICAL_SCROLL_MODE, isVerticalScrollMode);
     }
 
     private void showPageNumber() {
@@ -731,7 +761,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
                 R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
                 R.id.action_view_document_properties, R.id.action_share, R.id.action_save_as,
-                R.id.action_outline));
+                R.id.action_outline, R.id.action_toggle_vertical_scroll));
         if (BuildConfig.DEBUG) {
             ids.add(R.id.debug_action_toggle_text_layer_visibility);
             ids.add(R.id.debug_action_crash_webview);
@@ -757,8 +787,13 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         enableDisableMenuItem(menu.findItem(R.id.action_open),
                 !webViewCrashed && getWebViewRelease() >= MIN_WEBVIEW_RELEASE);
         enableDisableMenuItem(menu.findItem(R.id.action_share), mUri != null);
-        enableDisableMenuItem(menu.findItem(R.id.action_next), mPage < mNumPages);
-        enableDisableMenuItem(menu.findItem(R.id.action_previous), mPage > 1);
+        
+        // In vertical scroll mode, disable page navigation buttons
+        enableDisableMenuItem(menu.findItem(R.id.action_next), !isVerticalScrollMode && mPage < mNumPages);
+        enableDisableMenuItem(menu.findItem(R.id.action_previous), !isVerticalScrollMode && mPage > 1);
+        enableDisableMenuItem(menu.findItem(R.id.action_first), !isVerticalScrollMode);
+        enableDisableMenuItem(menu.findItem(R.id.action_last), !isVerticalScrollMode);
+        
         enableDisableMenuItem(menu.findItem(R.id.action_save_as), mUri != null);
         enableDisableMenuItem(menu.findItem(R.id.action_view_document_properties),
                 mDocumentProperties != null);
@@ -822,6 +857,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             return true;
         } else if (itemId == R.id.action_save_as) {
             saveDocument();
+        } else if (itemId == R.id.action_toggle_vertical_scroll) {
+            toggleVerticalScrollMode();
+            return true;
         } else if (itemId == R.id.debug_action_toggle_text_layer_visibility) {
             binding.webview.evaluateJavascript("toggleTextLayerVisibility()", null);
             return true;
