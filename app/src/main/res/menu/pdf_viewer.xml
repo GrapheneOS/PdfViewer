@@ -83,4 +83,11 @@
         android:title="@string/action_view_document_properties"
         app:showAsAction="never" />
 
+    <item
+        android:id="@+id/action_keep_screen_on"
+        android:icon="@drawable/ic_screen_lock_portrait_24dp"
+        android:title="@string/action_keep_screen_on"
+        android:checkable="true"
+        app:showAsAction="never" />
+
 </menu>

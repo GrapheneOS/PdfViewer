@@ -8,12 +8,14 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.RenderProcessGoneDetail;
@@ -66,6 +68,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final String STATE_DOCUMENT_ORIENTATION_DEGREES = "documentOrientationDegrees";
     private static final String STATE_ENCRYPTED_DOCUMENT_PASSWORD = "encrypted_document_password";
     private static final String STATE_VERTICAL_SCROLL_MODE = "vertical_scroll_mode";
+    private static final String STATE_KEEP_SCREEN_ON = "keep_screen_on";
     private static final String KEY_PROPERTIES = "properties";
     private static final int MIN_WEBVIEW_RELEASE = 133;
 
@@ -132,6 +135,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private List<CharSequence> mDocumentProperties;
     private InputStream mInputStream;
     private boolean isVerticalScrollMode = false;
+    private boolean mKeepScreenOn = false;
+    private PowerManager.WakeLock mWakeLock;
 
     private PdfviewerBinding binding;
     private TextView mTextView;
@@ -302,6 +307,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         setContentView(binding.getRoot());
         setSupportActionBar(binding.toolbar);
         viewModel = new ViewModelProvider(this, ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication())).get(PdfViewModel.class);
+
+        // Initialize wake lock
+        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+        mWakeLock = powerManager.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "PDFViewer:KeepScreenOn");
+        mWakeLock.setReferenceCounted(false);
 
         viewModel.getOutline().observe(this, requested -> {
             if (requested instanceof PdfViewModel.OutlineStatus.Requested) {
@@ -521,7 +531,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mDocumentOrientationDegrees = savedInstanceState.getInt(STATE_DOCUMENT_ORIENTATION_DEGREES);
             mEncryptedDocumentPassword = savedInstanceState.getString(STATE_ENCRYPTED_DOCUMENT_PASSWORD);
             isVerticalScrollMode = savedInstanceState.getBoolean(STATE_VERTICAL_SCROLL_MODE, false);
+            mKeepScreenOn = savedInstanceState.getBoolean(STATE_KEEP_SCREEN_ON, false);
         }
+
+        // Apply wake lock state
+        updateWakeLock();
 
         binding.webviewAlertReload.setOnClickListener(v -> {
             webViewCrashed = false;
@@ -549,6 +563,12 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        
+        // Release wake lock if held
+        if (mWakeLock != null && mWakeLock.isHeld()) {
+            mWakeLock.release();
+        }
+        
         purgeWebView();
         maybeCloseInputStream();
     }
@@ -589,6 +609,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     protected void onResume() {
         super.onResume();
 
+        // Reapply wake lock state when returning to activity
+        updateWakeLock();
+
         if (!webViewCrashed) {
             // The user could have left the activity to update the WebView
             invalidateOptionsMenu();
@@ -601,6 +624,16 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 binding.webviewAlertMessage.setText(getString(R.string.webview_out_of_date_message, getWebViewRelease(), MIN_WEBVIEW_RELEASE));
                 binding.webviewAlertLayout.setVisibility(View.VISIBLE);
             }
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        
+        // Release wake lock when activity is not visible to save battery
+        if (mWakeLock != null && mWakeLock.isHeld()) {
+            mWakeLock.release();
         }
     }
 
@@ -710,6 +743,24 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         invalidateOptionsMenu();
     }
 
+    private void toggleKeepScreenOn() {
+        mKeepScreenOn = !mKeepScreenOn;
+        updateWakeLock();
+        invalidateOptionsMenu();
+    }
+
+    private void updateWakeLock() {
+        if (mKeepScreenOn) {
+            if (!mWakeLock.isHeld()) {
+                mWakeLock.acquire();
+            }
+        } else {
+            if (mWakeLock.isHeld()) {
+                mWakeLock.release();
+            }
+        }
+    }
+
     private void showSystemUi() {
         ViewKt.showSystemUi(binding.getRoot(), getWindow());
         getSupportActionBar().show();
@@ -730,6 +781,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         savedInstanceState.putInt(STATE_DOCUMENT_ORIENTATION_DEGREES, mDocumentOrientationDegrees);
         savedInstanceState.putString(STATE_ENCRYPTED_DOCUMENT_PASSWORD, mEncryptedDocumentPassword);
         savedInstanceState.putBoolean(STATE_VERTICAL_SCROLL_MODE, isVerticalScrollMode);
+        savedInstanceState.putBoolean(STATE_KEEP_SCREEN_ON, mKeepScreenOn);
     }
 
     private void showPageNumber() {
@@ -761,7 +813,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
                 R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
                 R.id.action_view_document_properties, R.id.action_share, R.id.action_save_as,
-                R.id.action_outline, R.id.action_toggle_vertical_scroll));
+                R.id.action_outline, R.id.action_toggle_vertical_scroll, R.id.action_keep_screen_on));
         if (BuildConfig.DEBUG) {
             ids.add(R.id.debug_action_toggle_text_layer_visibility);
             ids.add(R.id.debug_action_crash_webview);
@@ -799,6 +851,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 mDocumentProperties != null);
 
         menu.findItem(R.id.action_outline).setVisible(viewModel.hasOutline());
+
+        // Set checked state for toggleable menu items
+        menu.findItem(R.id.action_keep_screen_on).setChecked(mKeepScreenOn);
 
         if (webViewCrashed) {
             for (final int id : ids) {
@@ -859,6 +914,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             saveDocument();
         } else if (itemId == R.id.action_toggle_vertical_scroll) {
             toggleVerticalScrollMode();
+            return true;
+        } else if (itemId == R.id.action_keep_screen_on) {
+            toggleKeepScreenOn();
             return true;
         } else if (itemId == R.id.debug_action_toggle_text_layer_visibility) {
             binding.webview.evaluateJavascript("toggleTextLayerVisibility()", null);
