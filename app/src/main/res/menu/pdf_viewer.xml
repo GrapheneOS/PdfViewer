@@ -44,6 +44,12 @@
         app:showAsAction="ifRoom" />
 
     <item
+        android:id="@+id/action_toggle_vertical_scroll"
+        android:icon="@drawable/ic_view_agenda_24dp"
+        android:title="@string/action_toggle_vertical_scroll"
+        app:showAsAction="ifRoom" />
+
+    <item
         android:id="@+id/action_rotate_clockwise"
         android:icon="@drawable/ic_rotate_right_24dp"
         android:title="@string/action_rotate_clockwise"

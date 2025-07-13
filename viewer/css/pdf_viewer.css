@@ -11,6 +11,7 @@ canvas {
 
 body {
     background-color: #c0c0c0;
+    overflow-x: hidden;
 }
 
 #container {
@@ -31,6 +32,59 @@ body {
     /* overlay child elements on top of each other */
     grid-row-start: 1;
     grid-column-start: 1;
+}
+
+/* Vertical scrolling mode styles */
+#all-pages-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    width: 100%;
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+.page-container {
+    position: relative;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    background: white;
+    max-width: 100%;
+}
+
+.page-container::before {
+    content: "Page " attr(data-page-number);
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: sans-serif;
+    z-index: 10;
+}
+
+.page-canvas {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+.page-text-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    opacity: 0.2;
+    line-height: 1.0;
+    pointer-events: none;
 }
 
 canvas {
