@@ -1,7 +1,7 @@
 {
   "type": "module",
   "devDependencies": {
-    "@stylistic/eslint-plugin": "^5.2.0",
+    "@stylistic/eslint-plugin": "^5.2.2",
     "esbuild": "^0.25.8",
     "eslint": "^9.31.0",
     "pdfjs-dist": "^5.2.133"
