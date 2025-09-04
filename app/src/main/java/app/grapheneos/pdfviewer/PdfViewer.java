@@ -279,7 +279,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     @SuppressLint({"SetJavaScriptEnabled"})
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        WindowCompat.enableEdgeToEdge(getWindow());
 
         binding = PdfviewerBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
