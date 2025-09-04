@@ -1,53 +1,55 @@
 html,
 body {
+    width: 100%;
     height: 100%;
 }
 
-body,
-canvas {
-    padding: 0;
-    margin: 0;
-}
-
 body {
+    margin: 0;
+    padding: 0;
     background-color: #c0c0c0;
 }
 
 #container {
     --scale-factor: 1;
+
+    position: fixed;
+    overflow: auto;
+    width: 100%;
+    height: 100%;
+}
+
+#container .page {
     --user-unit: 1;
     --total-scale-factor: calc(var(--scale-factor) * var(--user-unit));
     --scale-round-x: 1px;
     --scale-round-y: 1px;
 
+    --page-width: 0;
+    --page-height: 0;
+
+    position: relative;
+    width: round(down, var(--total-scale-factor) * var(--page-width), var(--scale-round-x));
+    height: round(down, var(--total-scale-factor) * var(--page-height), var(--scale-round-y));
+    margin: 0 auto;
+}
+
+.page canvas {
+    position: absolute;
     width: 100%;
     height: 100%;
-    display: grid;
-    place-items: center;
-}
-
-#container canvas,
-#container .textLayer {
-    /* overlay child elements on top of each other */
-    grid-row-start: 1;
-    grid-column-start: 1;
-}
-
-canvas {
-    display: inline-block;
-    position: relative;
 }
 
 [data-main-rotation="90"] {
-    transform: rotate(90deg);
+    transform: rotate(90deg) translateY(-100%);
 }
 
 [data-main-rotation="180"] {
-    transform: rotate(180deg);
+    transform: rotate(180deg) translate(-100%, -100%);
 }
 
 [data-main-rotation="270"] {
-    transform: rotate(270deg);
+    transform: rotate(270deg) translateX(-100%);
 }
 
 .hiddenCanvasElement {

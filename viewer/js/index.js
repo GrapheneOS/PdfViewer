@@ -14,6 +14,7 @@ let renderPending = false;
 let renderPendingZoom = 0;
 const canvas = document.getElementById("content");
 const container = document.getElementById("container");
+const singlePageView = document.getElementById("single-page-view");
 let orientationDegrees = 0;
 let zoomRatio = 1;
 let textLayerDiv = document.getElementById("text");
@@ -59,23 +60,17 @@ function doPrerender(pageNumber, prerenderTrigger) {
     }
 }
 
-function display(newCanvas, zoom) {
+function display(page, newCanvas, zoom, orientationDegrees) {
+    const viewport = getViewport(page, 1, orientationDegrees);
+    singlePageView.style.setProperty("--page-width", `${viewport.width}px`);
+    singlePageView.style.setProperty("--page-height", `${viewport.height}px`);
+
     canvas.height = newCanvas.height;
     canvas.width = newCanvas.width;
-    canvas.style.height = newCanvas.style.height;
-    canvas.style.width = newCanvas.style.width;
     canvas.getContext("2d", { alpha: false }).drawImage(newCanvas, 0, 0);
     if (!zoom) {
-        scrollTo(0, 0);
+        container.scrollTo(0, 0);
     }
-}
-
-function setLayerTransform(pageWidth, pageHeight, layerDiv) {
-    const translate = {
-        X: Math.max(0, pageWidth - document.body.clientWidth) / 2,
-        Y: Math.max(0, pageHeight - document.body.clientHeight) / 2
-    };
-    layerDiv.style.translate = `${translate.X}px ${translate.Y}px`;
 }
 
 function getDefaultZoomRatio(page, orientationDegrees) {
@@ -190,17 +185,16 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
                 ", orientationDegrees: " + orientationDegrees + ", prerender: " + prerender);
     for (let i = 0; i < cache.length; i++) {
         const cached = cache[i];
-        if (cached.pageNumber === pageNumber && cached.zoomRatio === newZoomRatio &&
+        if (cached.page.pageNumber === pageNumber && cached.zoomRatio === newZoomRatio &&
                 cached.orientationDegrees === orientationDegrees) {
             if (useRender) {
                 cache.splice(i, 1);
                 cache.push(cached);
 
-                display(cached.canvas, zoom);
+                display(cached.page, cached.canvas, zoom, orientationDegrees);
 
                 textLayerDiv.replaceWith(cached.textLayerDiv);
                 textLayerDiv = cached.textLayerDiv;
-                setLayerTransform(cached.pageWidth, cached.pageHeight, textLayerDiv);
                 container.style.setProperty("--scale-factor", newZoomRatio.toString());
                 textLayerDiv.hidden = false;
             }
@@ -231,8 +225,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
 
         if (useRender) {
             if (newZoomRatio !== zoomRatio) {
-                canvas.style.height = viewport.height + "px";
-                canvas.style.width = viewport.width + "px";
+                container.style.setProperty("--scale-factor", newZoomRatio);
             }
             zoomRatio = newZoomRatio;
         }
@@ -242,13 +235,13 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
             pageRendering = false;
 
             // zoom focus relative to page origin, rather than screen origin
-            const globalFocusX = channel.getZoomFocusX() / ratio + globalThis.scrollX;
-            const globalFocusY = channel.getZoomFocusY() / ratio + globalThis.scrollY;
+            const globalFocusX = channel.getZoomFocusX() / ratio + container.scrollLeft;
+            const globalFocusY = channel.getZoomFocusY() / ratio + container.scrollTop;
 
             const translationFactor = scaleFactor - 1;
             const scrollX = globalFocusX * translationFactor;
             const scrollY = globalFocusY * translationFactor;
-            scrollBy(scrollX, scrollY);
+            container.scrollBy(scrollX, scrollY);
 
             return;
         }
@@ -268,9 +261,6 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
         const newCanvas = document.createElement("canvas");
         newCanvas.height = newViewport.height * ratio;
         newCanvas.width = newViewport.width * ratio;
-        // use original viewport height for CSS zoom
-        newCanvas.style.height = viewport.height + "px";
-        newCanvas.style.width = viewport.width + "px";
         const newContext = newCanvas.getContext("2d", { alpha: false });
         newContext.scale(ratio, ratio);
 
@@ -287,7 +277,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
                 if (!useRender || rendered) {
                     return;
                 }
-                display(newCanvas, zoom);
+                display(page, newCanvas, zoom, orientationDegrees);
                 rendered = true;
             }
             render();
@@ -307,7 +297,6 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
 
                 render();
 
-                setLayerTransform(viewport.width, viewport.height, newTextLayerDiv);
                 if (useRender) {
                     textLayerDiv.replaceWith(newTextLayerDiv);
                     textLayerDiv = newTextLayerDiv;
@@ -319,13 +308,11 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
                     cache.shift();
                 }
                 cache.push({
-                    pageNumber: pageNumber,
+                    page: page,
                     zoomRatio: newZoomRatio,
                     orientationDegrees: orientationDegrees,
                     canvas: newCanvas,
-                    textLayerDiv: newTextLayerDiv,
-                    pageWidth: viewport.width,
-                    pageHeight: viewport.height
+                    textLayerDiv: newTextLayerDiv
                 });
 
                 pageRendering = false;
@@ -433,8 +420,4 @@ globalThis.loadDocument = function () {
     }, function (reason) {
         console.error(reason.name + ": " + reason.message);
     });
-};
-
-globalThis.onresize = () => {
-    setLayerTransform(canvas.clientWidth, canvas.clientHeight, textLayerDiv);
 };
