@@ -75,7 +75,10 @@ function display(page, newCanvas, zoom, orientationDegrees) {
 
 function getDefaultZoomRatio(page, orientationDegrees) {
     const viewport = getViewport(page, 1, orientationDegrees);
-    const widthZoomRatio = document.body.clientWidth / viewport.width;
+    const containerStyle = getComputedStyle(container);
+    const containerPadding = parseFloat(containerStyle.paddingLeft) + parseFloat(containerStyle.paddingRight);
+    const containerInnerWidth = container.clientWidth - containerPadding;
+    const widthZoomRatio = containerInnerWidth / viewport.width;
     return Math.max(Math.min(widthZoomRatio, channel.getMaxZoomRatio()), channel.getMinZoomRatio());
 }
 
@@ -421,3 +424,16 @@ globalThis.loadDocument = function () {
         console.error(reason.name + ": " + reason.message);
     });
 };
+
+globalThis.updateInsets = function () {
+    const insets = JSON.parse(channel.getInsets());
+    const ratio = globalThis.devicePixelRatio;
+    const toCssPx = v => `${(Number(v) || 0) / ratio}px`;
+
+    container.style.setProperty("--inset-top", toCssPx(insets.top));
+    container.style.setProperty("--inset-right", toCssPx(insets.right));
+    container.style.setProperty("--inset-bottom", toCssPx(insets.bottom));
+    container.style.setProperty("--inset-left", toCssPx(insets.left));
+};
+
+addEventListener("DOMContentLoaded", globalThis.updateInsets);

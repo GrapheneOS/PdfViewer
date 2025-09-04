@@ -13,10 +13,18 @@ body {
 #container {
     --scale-factor: 1;
 
+    --inset-top: 0;
+    --inset-right: 0;
+    --inset-bottom: 0;
+    --inset-left: 0;
+
     position: fixed;
     overflow: auto;
-    width: 100%;
-    height: 100%;
+    inset: 0;
+    padding-top: var(--inset-top);
+    padding-right: var(--inset-right);
+    padding-bottom: var(--inset-bottom);
+    padding-left: var(--inset-left);
 }
 
 #container .page {
