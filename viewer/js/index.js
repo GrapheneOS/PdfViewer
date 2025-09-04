@@ -79,11 +79,15 @@ function setLayerTransform(pageWidth, pageHeight, layerDiv) {
 }
 
 function getDefaultZoomRatio(page, orientationDegrees) {
-    const totalRotation = (orientationDegrees + page.rotate) % 360;
-    const viewport = page.getViewport({scale: 1, rotation: totalRotation});
+    const viewport = getViewport(page, 1, orientationDegrees);
     const widthZoomRatio = document.body.clientWidth / viewport.width;
     const heightZoomRatio = document.body.clientHeight / viewport.height;
     return Math.max(Math.min(widthZoomRatio, heightZoomRatio, channel.getMaxZoomRatio()), channel.getMinZoomRatio());
+}
+
+function getViewport(page, scale, orientationDegrees) {
+    const rotation = (page.rotate + orientationDegrees) % 360;
+    return page.getViewport({scale, rotation});
 }
 
 /**
@@ -221,8 +225,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
             channel.setZoomRatio(defaultZoomRatio);
         }
 
-        const totalRotation = (orientationDegrees + page.rotate) % 360;
-        const viewport = page.getViewport({scale: newZoomRatio, rotation: totalRotation});
+        const viewport = getViewport(page, newZoomRatio, orientationDegrees);
 
         const scaleFactor = newZoomRatio / zoomRatio;
         const ratio = globalThis.devicePixelRatio;
@@ -260,10 +263,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
         if (renderPixels > maxRenderPixels) {
             console.log(`resolution ${renderPixels} exceeds maximum allowed ${maxRenderPixels}`);
             const adjustedScale = Math.sqrt(maxRenderPixels / renderPixels);
-            newViewport = page.getViewport({
-                scale: newZoomRatio * adjustedScale,
-                rotation: totalRotation
-            });
+            newViewport = getViewport(page, newZoomRatio * adjustedScale, orientationDegrees);
         }
 
         const newCanvas = document.createElement("canvas");
