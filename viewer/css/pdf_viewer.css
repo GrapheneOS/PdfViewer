@@ -18,13 +18,15 @@ body {
     --inset-bottom: 0;
     --inset-left: 0;
 
+    --padding: 8px;
+
     position: fixed;
     overflow: auto;
     inset: 0;
-    padding-top: var(--inset-top);
-    padding-right: var(--inset-right);
-    padding-bottom: var(--inset-bottom);
-    padding-left: var(--inset-left);
+    padding-top: calc(var(--padding) + var(--inset-top));
+    padding-right: calc(var(--padding) + var(--inset-right));
+    padding-bottom: calc(var(--padding) + var(--inset-bottom));
+    padding-left: calc(var(--padding) + var(--inset-left));
 }
 
 #container .page {
