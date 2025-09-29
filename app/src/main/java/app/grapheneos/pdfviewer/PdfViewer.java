@@ -369,6 +369,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     headers.put("Content-Security-Policy", CONTENT_SECURITY_POLICY);
                     headers.put("Permissions-Policy", PERMISSIONS_POLICY);
                     headers.put("X-Content-Type-Options", "nosniff");
+                    if (response==null){
+                        Log.d("文件路径空","文件路径空");
+                        return null;
+                    }
                     response.setResponseHeaders(headers);
                     return response;
                 }
