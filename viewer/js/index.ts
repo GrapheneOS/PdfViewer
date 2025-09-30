@@ -4,31 +4,32 @@ import {
     TextLayer,
     getDocument,
 } from "pdfjs-dist";
+import type { PDFDocument, SimpleOutlineNode, CachedPage } from "./types";
 
 GlobalWorkerOptions.workerSrc = "/viewer/js/worker.js";
 
-let pdfDoc = null;
+let pdfDoc: PDFDocument | null = null;
 let outlineAbort = new AbortController();
 let pageRendering = false;
 let renderPending = false;
 let renderPendingZoom = 0;
-const canvas = document.getElementById("content");
-const container = document.getElementById("container");
+const canvas = document.getElementById("content") as HTMLCanvasElement;
+const container = document.getElementById("container") as HTMLElement;
 let orientationDegrees = 0;
 let zoomRatio = 1;
-let textLayerDiv = document.getElementById("text");
-let task = null;
+let textLayerDiv = document.getElementById("text") as HTMLElement;
+let task: { promise: Promise<void>; cancel: () => void } | null = null;
 
 let newPageNumber = 0;
 let newZoomRatio = 1;
-let useRender;
+let useRender: boolean;
 
-const cache = [];
+const cache: CachedPage[] = [];
 const maxCached = 6;
 
 let isTextLayerVisible = false;
 
-function maybeRenderNextPage() {
+function maybeRenderNextPage(): boolean {
     if (renderPending) {
         pageRendering = false;
         renderPending = false;
@@ -38,16 +39,16 @@ function maybeRenderNextPage() {
     return false;
 }
 
-function handleRenderingError(error) {
+function handleRenderingError(error: any): void {
     console.log("rendering error: " + error);
 
     pageRendering = false;
     maybeRenderNextPage();
 }
 
-function doPrerender(pageNumber, prerenderTrigger) {
+function doPrerender(pageNumber: number, prerenderTrigger: number): void {
     if (useRender) {
-        if (pageNumber + 1 <= pdfDoc.numPages) {
+        if (pdfDoc && pageNumber + 1 <= pdfDoc.numPages) {
             renderPage(pageNumber + 1, false, true, pageNumber);
         } else if (pageNumber - 1 > 0) {
             renderPage(pageNumber - 1, false, true, pageNumber);
@@ -59,18 +60,21 @@ function doPrerender(pageNumber, prerenderTrigger) {
     }
 }
 
-function display(newCanvas, zoom) {
+function display(newCanvas: HTMLCanvasElement, zoom: number): void {
     canvas.height = newCanvas.height;
     canvas.width = newCanvas.width;
     canvas.style.height = newCanvas.style.height;
     canvas.style.width = newCanvas.style.width;
-    canvas.getContext("2d", { alpha: false }).drawImage(newCanvas, 0, 0);
+    const ctx = canvas.getContext("2d", { alpha: false });
+    if (ctx) {
+        ctx.drawImage(newCanvas, 0, 0);
+    }
     if (!zoom) {
         scrollTo(0, 0);
     }
 }
 
-function setLayerTransform(pageWidth, pageHeight, layerDiv) {
+function setLayerTransform(pageWidth: number, pageHeight: number, layerDiv: HTMLElement): void {
     const translate = {
         X: Math.max(0, pageWidth - document.body.clientWidth) / 2,
         Y: Math.max(0, pageHeight - document.body.clientHeight) / 2
@@ -78,7 +82,7 @@ function setLayerTransform(pageWidth, pageHeight, layerDiv) {
     layerDiv.style.translate = `${translate.X}px ${translate.Y}px`;
 }
 
-function getDefaultZoomRatio(page, orientationDegrees) {
+function getDefaultZoomRatio(page: any, orientationDegrees: number): number {
     const totalRotation = (orientationDegrees + page.rotate) % 360;
     const viewport = page.getViewport({scale: 1, rotation: totalRotation});
     const widthZoomRatio = document.body.clientWidth / viewport.width;
@@ -104,7 +108,7 @@ function getDefaultZoomRatio(page, orientationDegrees) {
  * @return {Promise} A promise that is resolved with an {Array} that contains
  * all the top-level nodes of the outline in simplified form
  */
-async function getSimplifiedOutline(pdfJsOutline, abortController) {
+async function getSimplifiedOutline(pdfJsOutline: any, abortController: AbortController): Promise<SimpleOutlineNode[] | null> {
     if (pdfJsOutline === undefined || pdfJsOutline === null || pdfJsOutline.length === 0) {
         return null;
     }
@@ -176,7 +180,7 @@ async function getSimplifiedOutline(pdfJsOutline, abortController) {
     return topLevelEntries;
 }
 
-function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
+function renderPage(pageNumber: number, zoom: number, prerender: boolean, prerenderTrigger: number = 0): void {
     pageRendering = true;
     useRender = !prerender;
 
@@ -336,7 +340,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
     });
 }
 
-globalThis.onRenderPage = function (zoom) {
+globalThis.onRenderPage = function (zoom: number): void {
     if (pageRendering) {
         if (newPageNumber === channel.getPage() && newZoomRatio === channel.getZoomRatio() &&
                 orientationDegrees === channel.getDocumentOrientationDegrees()) {
@@ -355,11 +359,11 @@ globalThis.onRenderPage = function (zoom) {
     }
 };
 
-globalThis.isTextSelected = function () {
+globalThis.isTextSelected = function (): boolean {
     return globalThis.getSelection().toString() !== "";
 };
 
-globalThis.getDocumentOutline = function () {
+globalThis.getDocumentOutline = function (): void {
     pdfDoc.getOutline().then(function(outline) {
         getSimplifiedOutline(outline, outlineAbort).then(function(outlineEntries) {
             if (outlineEntries !== null) {
@@ -375,12 +379,12 @@ globalThis.getDocumentOutline = function () {
     });
 };
 
-globalThis.abortDocumentOutline = function () {
+globalThis.abortDocumentOutline = function (): void {
     outlineAbort.abort();
     outlineAbort = new AbortController();
 };
 
-globalThis.toggleTextLayerVisibility = function () {
+globalThis.toggleTextLayerVisibility = function (): void {
     let textLayerForeground = "red";
     if (isTextLayerVisible) {
         textLayerForeground = "transparent";
@@ -389,7 +393,7 @@ globalThis.toggleTextLayerVisibility = function () {
     isTextLayerVisible = !isTextLayerVisible;
 };
 
-globalThis.loadDocument = function () {
+globalThis.loadDocument = function (): void {
     const pdfPassword = channel.getPassword();
     const loadingTask = getDocument({
         url: "https://localhost/placeholder.pdf",

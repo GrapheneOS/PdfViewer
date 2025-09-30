@@ -1,17 +1,16 @@
-import esbuild from "esbuild";
-import { spawn } from "node:child_process";
-import fs from "node:fs/promises";
-import path from "node:path";
+import * as esbuild from "esbuild";
+import { spawn, ChildProcess } from "child_process";
+import * as fs from "fs/promises";
+import * as path from "path";
 
-/**
- * @typedef ProcessOptions
- * @property {string} rootDir
- * @property {string[]} entryPoints
- * @property {string} outDir
- * @property {boolean} production
- */
+interface ProcessOptions {
+    rootDir: string;
+    entryPoints: string[];
+    outDir: string;
+    production: boolean;
+}
 
-async function processStatic() {
+async function processStatic(): Promise<void> {
     const rootDir = "viewer";
     const outDir = "app/src/main/assets/viewer";
     const outDirDebug = "app/src/debug/assets/viewer";
@@ -20,13 +19,13 @@ async function processStatic() {
 
     await processScripts({
         rootDir,
-        entryPoints: ["js/index.js", "js/worker.js"],
+        entryPoints: ["js/index.ts", "js/worker.ts"],
         outDir,
         production: true,
     });
     await processScripts({
         rootDir,
-        entryPoints: ["js/index.js", "js/worker.js"],
+        entryPoints: ["js/index.ts", "js/worker.ts"],
         outDir: outDirDebug,
         production: false,
     });
@@ -49,31 +48,18 @@ async function processStatic() {
     }
 }
 
-/**
- * @param {string} command
- * @param {string} winExt
- * @returns {string}
- */
-function getCommand(command, winExt = "cmd") {
+function getCommand(command: string, winExt: string = "cmd"): string {
     return path.resolve(globalThis.process.platform === "win32" ? `${command}.${winExt}` : command);
 }
 
-/**
- * @param {string} command
- * @param  {...string} args
- * @returns {Promise<void>}
- */
-function commandLine(command, ...args) {
+function commandLine(command: string, ...args: string[]): Promise<void> {
     return new Promise((resolve, reject) => {
-        const subprocess = spawn(command, args, { shell: false, stdio: "inherit" });
-        subprocess.on("close", (code) => code === 0 ? resolve() : reject());
+        const subprocess: ChildProcess = spawn(command, args, { shell: false, stdio: "inherit" });
+        subprocess.on("close", (code: number | null) => code === 0 ? resolve() : reject());
     });
 }
 
-/**
- * @param {ProcessOptions} options
- */
-async function processScripts(options) {
+async function processScripts(options: ProcessOptions): Promise<void> {
     const entryPoints = options.entryPoints.map((filepath) => path.join(options.rootDir, filepath));
     await esbuild.build({
         entryPoints,
@@ -84,13 +70,24 @@ async function processScripts(options) {
         outdir: path.join(options.outDir, "js"),
         minify: options.production,
         sourcemap: options.production ? false : "inline",
+        loader: {
+            ".ts": "ts",
+            ".js": "js"
+        },
+        tsconfigRaw: {
+            compilerOptions: {
+                target: "ES2020",
+                module: "ES2020",
+                moduleResolution: "node",
+                lib: ["ES2020", "DOM", "DOM.Iterable"],
+                strict: true,
+                skipLibCheck: true
+            }
+        }
     });
 }
 
-/**
- * @param {ProcessOptions} options
- */
-async function processStyles(options) {
+async function processStyles(options: ProcessOptions): Promise<void> {
     const entryPoints = options.entryPoints.map((filepath) => path.join(options.rootDir, filepath));
     await esbuild.build({
         entryPoints,
@@ -100,14 +97,11 @@ async function processStyles(options) {
     });
 }
 
-/**
- * @param {ProcessOptions} options
- */
-async function processHtml(options) {
+async function processHtml(options: ProcessOptions): Promise<void> {
     await fs.mkdir(options.outDir, { recursive: true });
     for (const entryPoint of options.entryPoints) {
         await fs.copyFile(path.join(options.rootDir, entryPoint), path.join(options.outDir, entryPoint));
     }
 }
 
-await processStatic();
+processStatic().catch(console.error);

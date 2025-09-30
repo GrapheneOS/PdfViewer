@@ -97,6 +97,7 @@ dependencies {
 
 val npmPath = "/opt/homebrew/bin/npm"
 val nodePath = "/opt/homebrew/bin/node"
+val npxPath = "/opt/homebrew/bin/npx"
 
 val npmSetup = tasks.register("npmSetup", Exec::class) {
     workingDir = rootDir
@@ -106,7 +107,7 @@ val npmSetup = tasks.register("npmSetup", Exec::class) {
 val processStatic = tasks.register("processStatic", Exec::class) {
     workingDir = rootDir
     dependsOn(npmSetup)
-    commandLine(nodePath, "process_static.js")
+    commandLine(npxPath, "tsx", "process_static.ts")
 }
 
 val cleanStatic = tasks.register("cleanStatic", Delete::class) {
