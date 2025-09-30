@@ -7,7 +7,7 @@ import android.view.Gravity
 import android.widget.FrameLayout
 import android.widget.NumberPicker
 import androidx.fragment.app.DialogFragment
-import app.future.pdfviewer.PdfViewer
+import app.future.pdfviewer.PdfActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class JumpToPageFragment : DialogFragment() {
@@ -23,7 +23,7 @@ class JumpToPageFragment : DialogFragment() {
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
 
-        val viewerActivity: PdfViewer = (requireActivity() as PdfViewer)
+        val viewerActivity: PdfActivity = (requireActivity() as PdfActivity)
 
         if (savedInstanceState != null) {
             mPicker.minValue = savedInstanceState.getInt(STATE_PICKER_MIN)

@@ -56,7 +56,7 @@ import app.future.pdfviewer.loader.DocumentPropertiesAsyncTaskLoader;
 import app.future.pdfviewer.outline.OutlineFragment;
 import app.future.pdfviewer.viewModel.PdfViewModel;
 
-public class PdfViewer extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<CharSequence>> {
+public class PdfActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<CharSequence>> {
     private static final String TAG = "PdfViewer";
 
     private static final String STATE_WEBVIEW_CRASHED = "webview_crashed";
@@ -226,7 +226,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         @JavascriptInterface
         public void setNumPages(int numPages) {
             mNumPages = numPages;
-            runOnUiThread(PdfViewer.this::invalidateOptionsMenu);
+            runOnUiThread(PdfActivity.this::invalidateOptionsMenu);
         }
 
         @JavascriptInterface
@@ -237,7 +237,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
             final Bundle args = new Bundle();
             args.putString(KEY_PROPERTIES, properties);
-            runOnUiThread(() -> LoaderManager.getInstance(PdfViewer.this).restartLoader(DocumentPropertiesAsyncTaskLoader.ID, args, PdfViewer.this));
+            runOnUiThread(() -> LoaderManager.getInstance(PdfActivity.this).restartLoader(DocumentPropertiesAsyncTaskLoader.ID, args, PdfActivity.this));
         }
 
         @JavascriptInterface
@@ -435,7 +435,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             }
         });
 
-        GestureHelper.attach(PdfViewer.this, binding.webview,
+        GestureHelper.attach(PdfActivity.this, binding.webview,
                 new GestureHelper.GestureListener() {
                     @Override
                     public boolean onTapUp() {

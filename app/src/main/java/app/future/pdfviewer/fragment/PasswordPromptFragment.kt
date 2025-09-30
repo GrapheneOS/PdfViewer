@@ -10,7 +10,7 @@ import android.view.WindowManager
 import android.view.inputmethod.EditorInfo.IME_ACTION_DONE
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
-import app.future.pdfviewer.PdfViewer
+import app.future.pdfviewer.PdfActivity
 import app.future.pdfviewer.R
 import app.future.pdfviewer.databinding.PasswordDialogFragmentBinding
 import app.future.pdfviewer.viewModel.PdfViewModel
@@ -49,7 +49,7 @@ class PasswordPromptFragment : DialogFragment() {
         isCancelable = false
         dialog.setCanceledOnTouchOutside(false)
         dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
-        (requireActivity() as PdfViewer).viewModel.passwordStatus.observe(
+        (requireActivity() as PdfActivity).viewModel.passwordStatus.observe(
             this
         ) {
             when (it) {
@@ -82,7 +82,7 @@ class PasswordPromptFragment : DialogFragment() {
     private fun sendPassword() {
         val password = passwordEditText.text.toString()
         if (!TextUtils.isEmpty(password)) {
-            (activity as PdfViewer).loadPdfWithPassword(password)
+            (activity as PdfActivity).loadPdfWithPassword(password)
         }
     }
 
