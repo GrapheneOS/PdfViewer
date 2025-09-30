@@ -1,4 +1,4 @@
-package app.grapheneos.pdfviewer.outline
+package app.future.pdfviewer.outline
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -11,8 +11,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import app.grapheneos.pdfviewer.databinding.OutlineListFragmentBinding
-import app.grapheneos.pdfviewer.viewModel.OutlineViewModel
+import app.future.pdfviewer.databinding.OutlineListFragmentBinding
+import app.future.pdfviewer.viewModel.OutlineViewModel
 import com.google.android.material.divider.MaterialDividerItemDecoration
 
 class OutlineListViewModel : ViewModel() {

@@ -1,4 +1,4 @@
-package app.grapheneos.pdfviewer.loader
+package app.future.pdfviewer.loader
 
 import android.content.Context
 import android.graphics.Typeface
@@ -10,7 +10,7 @@ import android.text.format.Formatter
 import android.text.style.StyleSpan
 import android.util.Log
 import androidx.core.database.getLongOrNull
-import app.grapheneos.pdfviewer.R
+import app.future.pdfviewer.R
 import org.json.JSONException
 
 class DocumentPropertiesLoader(

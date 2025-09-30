@@ -1,7 +1,7 @@
-package app.grapheneos.pdfviewer.loader
+package app.future.pdfviewer.loader
 
 import androidx.annotation.StringRes
-import app.grapheneos.pdfviewer.R
+import app.future.pdfviewer.R
 
 private const val TITLE_KEY = "Title"
 private const val AUTHOR_KEY = "Author"

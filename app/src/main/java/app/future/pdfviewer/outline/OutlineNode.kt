@@ -1,4 +1,4 @@
-package app.grapheneos.pdfviewer.outline
+package app.future.pdfviewer.outline
 
 import android.util.JsonReader
 import kotlinx.coroutines.CoroutineScope

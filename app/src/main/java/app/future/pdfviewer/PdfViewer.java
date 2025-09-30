@@ -1,4 +1,4 @@
-package app.grapheneos.pdfviewer;
+package app.future.pdfviewer;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
@@ -47,14 +47,14 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-import app.grapheneos.pdfviewer.databinding.PdfviewerBinding;
-import app.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
-import app.grapheneos.pdfviewer.fragment.JumpToPageFragment;
-import app.grapheneos.pdfviewer.fragment.PasswordPromptFragment;
-import app.grapheneos.pdfviewer.ktx.ViewKt;
-import app.grapheneos.pdfviewer.loader.DocumentPropertiesAsyncTaskLoader;
-import app.grapheneos.pdfviewer.outline.OutlineFragment;
-import app.grapheneos.pdfviewer.viewModel.PdfViewModel;
+import app.future.pdfviewer.databinding.PdfviewerBinding;
+import app.future.pdfviewer.fragment.DocumentPropertiesFragment;
+import app.future.pdfviewer.fragment.JumpToPageFragment;
+import app.future.pdfviewer.fragment.PasswordPromptFragment;
+import app.future.pdfviewer.ktx.ViewKt;
+import app.future.pdfviewer.loader.DocumentPropertiesAsyncTaskLoader;
+import app.future.pdfviewer.outline.OutlineFragment;
+import app.future.pdfviewer.viewModel.PdfViewModel;
 
 public class PdfViewer extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<CharSequence>> {
     private static final String TAG = "PdfViewer";

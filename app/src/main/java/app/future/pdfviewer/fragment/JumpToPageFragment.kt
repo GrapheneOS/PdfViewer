@@ -1,4 +1,4 @@
-package app.grapheneos.pdfviewer.fragment
+package app.future.pdfviewer.fragment
 
 import android.app.Dialog
 import android.content.DialogInterface
@@ -7,7 +7,7 @@ import android.view.Gravity
 import android.widget.FrameLayout
 import android.widget.NumberPicker
 import androidx.fragment.app.DialogFragment
-import app.grapheneos.pdfviewer.PdfViewer
+import app.future.pdfviewer.PdfViewer
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class JumpToPageFragment : DialogFragment() {

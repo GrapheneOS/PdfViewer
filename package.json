@@ -1,14 +1,14 @@
 {
   "type": "module",
   "devDependencies": {
-    "@stylistic/eslint-plugin": "^5.4.0",
-    "@types/node": "^24.5.2",
-    "esbuild": "^0.25.10",
-    "eslint": "^9.36.0",
-    "pdfjs-dist": "^5.4.149",
-    "ts-node": "^10.9.2",
-    "tsx": "^4.20.6",
-    "typescript": "^5.9.2"
+    "@stylistic/eslint-plugin": "5.4.0",
+    "@types/node": "24.5.2",
+    "esbuild": "0.25.10",
+    "eslint": "9.36.0",
+    "pdfjs-dist": "5.4.149",
+    "ts-node": "10.9.2",
+    "tsx": "4.20.6",
+    "typescript": "5.9.2"
   },
   "ts-node": {
     "esm": true

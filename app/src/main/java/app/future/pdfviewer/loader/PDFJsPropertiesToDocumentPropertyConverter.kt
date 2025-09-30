@@ -1,6 +1,6 @@
-package app.grapheneos.pdfviewer.loader
+package app.future.pdfviewer.loader
 
-import app.grapheneos.pdfviewer.Utils
+import app.future.pdfviewer.Utils
 import org.json.JSONException
 import org.json.JSONObject
 import java.text.ParseException

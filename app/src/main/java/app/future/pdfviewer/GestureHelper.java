@@ -1,4 +1,4 @@
-package app.grapheneos.pdfviewer;
+package app.future.pdfviewer;
 
 import android.annotation.SuppressLint;
 import android.content.Context;

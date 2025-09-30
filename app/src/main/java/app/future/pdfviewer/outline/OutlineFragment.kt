@@ -1,4 +1,4 @@
-package app.grapheneos.pdfviewer.outline
+package app.future.pdfviewer.outline
 
 import android.os.Bundle
 import android.view.KeyEvent
@@ -12,11 +12,11 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentContainerView
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
-import app.grapheneos.pdfviewer.R
-import app.grapheneos.pdfviewer.applySystemBarMargins
-import app.grapheneos.pdfviewer.databinding.OutlineFragmentBinding
-import app.grapheneos.pdfviewer.viewModel.OutlineViewModel
-import app.grapheneos.pdfviewer.viewModel.PdfViewModel
+import app.future.pdfviewer.R
+import app.future.pdfviewer.applySystemBarMargins
+import app.future.pdfviewer.databinding.OutlineFragmentBinding
+import app.future.pdfviewer.viewModel.OutlineViewModel
+import app.future.pdfviewer.viewModel.PdfViewModel
 import com.google.android.material.appbar.MaterialToolbar
 
 class OutlineFragment : Fragment() {

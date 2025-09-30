@@ -1,8 +1,8 @@
-package app.grapheneos.pdfviewer.viewModel
+package app.future.pdfviewer.viewModel
 
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import app.grapheneos.pdfviewer.outline.OutlineNode
+import app.future.pdfviewer.outline.OutlineNode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel

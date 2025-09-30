@@ -1,10 +1,8 @@
-package app.grapheneos.pdfviewer;
+package app.future.pdfviewer;
 
 import android.text.TextUtils;
 
-import java.math.RoundingMode;
 import java.text.DateFormat;
-import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.util.Calendar;
 

@@ -1,4 +1,4 @@
-package app.grapheneos.pdfviewer.ktx
+package app.future.pdfviewer.ktx
 
 import android.view.View
 import android.view.Window
