@@ -73,11 +73,21 @@ function display(page, newCanvas, zoom, orientationDegrees) {
     }
 }
 
+function getContainerPadding() {
+    const containerStyle = getComputedStyle(container);
+    return {
+        top: parseFloat(containerStyle.paddingTop),
+        right: parseFloat(containerStyle.paddingRight),
+        bottom: parseFloat(containerStyle.paddingBottom),
+        left: parseFloat(containerStyle.paddingLeft)
+    };
+}
+
 function getDefaultZoomRatio(page, orientationDegrees) {
     const viewport = getViewport(page, 1, orientationDegrees);
-    const containerStyle = getComputedStyle(container);
-    const containerPadding = parseFloat(containerStyle.paddingLeft) + parseFloat(containerStyle.paddingRight);
-    const containerInnerWidth = container.clientWidth - containerPadding;
+    const containerPadding = getContainerPadding();
+    const containerHorizontalPadding = containerPadding.left + containerPadding.right;
+    const containerInnerWidth = container.clientWidth - containerHorizontalPadding;
     const widthZoomRatio = containerInnerWidth / viewport.width;
     return Math.max(Math.min(widthZoomRatio, channel.getMaxZoomRatio()), channel.getMinZoomRatio());
 }
@@ -237,9 +247,10 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
             textLayerDiv.hidden = true;
             pageRendering = false;
 
+            const containerPadding = getContainerPadding();
             // zoom focus relative to page origin, rather than screen origin
-            const globalFocusX = channel.getZoomFocusX() / ratio + container.scrollLeft;
-            const globalFocusY = channel.getZoomFocusY() / ratio + container.scrollTop;
+            const globalFocusX = channel.getZoomFocusX() / ratio + container.scrollLeft - containerPadding.left;
+            const globalFocusY = channel.getZoomFocusY() / ratio + container.scrollTop - containerPadding.top;
 
             const translationFactor = scaleFactor - 1;
             const scrollX = globalFocusX * translationFactor;
