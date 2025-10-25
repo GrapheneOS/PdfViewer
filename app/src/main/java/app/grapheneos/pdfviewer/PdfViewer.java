@@ -29,7 +29,10 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.lifecycle.ViewModelProvider;
@@ -37,6 +40,8 @@ import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
 
 import com.google.android.material.snackbar.Snackbar;
+
+import org.json.JSONObject;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -265,6 +270,23 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         public String getPassword() {
             return mEncryptedDocumentPassword != null ? mEncryptedDocumentPassword : "";
         }
+
+        @JavascriptInterface
+        public String getInsets() {
+            WindowInsetsCompat wic = ViewCompat.getRootWindowInsets(binding.getRoot());
+            int types = WindowInsetsCompat.Type.statusBars()
+                    | WindowInsetsCompat.Type.navigationBars()
+                    | WindowInsetsCompat.Type.displayCutout();
+            Insets insets = (wic != null) ? wic.getInsetsIgnoringVisibility(types) : Insets.NONE;
+
+            HashMap<String, Integer> insetMap = new HashMap<>(4);
+            insetMap.put("top", insets.top + binding.toolbar.getHeight());
+            insetMap.put("right", insets.right);
+            insetMap.put("bottom", insets.bottom);
+            insetMap.put("left", insets.left);
+
+            return new JSONObject(insetMap).toString();
+        }
     }
 
     private void showWebViewCrashed() {
@@ -279,11 +301,19 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     @SuppressLint({"SetJavaScriptEnabled"})
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        WindowCompat.enableEdgeToEdge(getWindow());
 
         binding = PdfviewerBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         setSupportActionBar(binding.toolbar);
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (v, insets) -> {
+            if (mUri != null) {
+                binding.webview.evaluateJavascript("updateInsets()", null);
+            }
+            return insets;
+        });
+
         viewModel = new ViewModelProvider(this, ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication())).get(PdfViewModel.class);
 
         viewModel.getOutline().observe(this, requested -> {
