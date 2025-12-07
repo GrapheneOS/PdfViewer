@@ -73,6 +73,12 @@
         android:title="@string/action_outline" />
 
     <item
+        android:id="@+id/action_toggle_inverted_mode"
+        android:icon="@drawable/ic_outline_bulletlist_24dp"
+        android:title="@string/action_toggle_inverted_mode" />
+
+
+    <item
         android:id="@+id/action_view_document_properties"
         android:title="@string/action_view_document_properties"
         app:showAsAction="never" />
