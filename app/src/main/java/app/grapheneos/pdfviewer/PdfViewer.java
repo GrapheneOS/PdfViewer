@@ -50,6 +50,7 @@ import java.util.List;
 import app.grapheneos.pdfviewer.databinding.PdfviewerBinding;
 import app.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
 import app.grapheneos.pdfviewer.fragment.JumpToPageFragment;
+import app.grapheneos.pdfviewer.fragment.SetZoomFragment;
 import app.grapheneos.pdfviewer.fragment.PasswordPromptFragment;
 import app.grapheneos.pdfviewer.ktx.ViewKt;
 import app.grapheneos.pdfviewer.loader.DocumentPropertiesAsyncTaskLoader;
@@ -452,12 +453,12 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
                     @Override
                     public void onZoom(float scaleFactor, float focusX, float focusY) {
-                        zoom(scaleFactor, focusX, focusY, false);
+                        onZoomPage(scaleFactor, focusX, focusY, false);
                     }
 
                     @Override
                     public void onZoomEnd() {
-                        zoomEnd();
+                        onZoomPageEnd();
                     }
                 });
 
@@ -652,7 +653,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
     }
 
-    private void zoom(float scaleFactor, float focusX, float focusY, boolean end) {
+    public void onZoomPage(float scaleFactor, float focusX, float focusY, boolean end) {
         mZoomRatio = Math.min(Math.max(mZoomRatio * scaleFactor, MIN_ZOOM_RATIO), MAX_ZOOM_RATIO);
         mZoomFocusX = focusX;
         mZoomFocusY = focusY;
@@ -660,7 +661,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         invalidateOptionsMenu();
     }
 
-    private void zoomEnd() {
+    public void onZoomPageEnd() {
         renderPage(1);
     }
 
@@ -730,7 +731,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
                 R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
                 R.id.action_view_document_properties, R.id.action_share, R.id.action_save_as,
-                R.id.action_outline));
+                R.id.action_outline, R.id.action_set_zoom));
         if (BuildConfig.DEBUG) {
             ids.add(R.id.debug_action_toggle_text_layer_visibility);
             ids.add(R.id.debug_action_crash_webview);
@@ -759,6 +760,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         enableDisableMenuItem(menu.findItem(R.id.action_next), mPage < mNumPages);
         enableDisableMenuItem(menu.findItem(R.id.action_previous), mPage > 1);
         enableDisableMenuItem(menu.findItem(R.id.action_save_as), mUri != null);
+        enableDisableMenuItem(menu.findItem(R.id.action_set_zoom), mUri != null);
         enableDisableMenuItem(menu.findItem(R.id.action_view_document_properties),
                 mDocumentProperties != null);
 
@@ -815,6 +817,13 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         } else if (itemId == R.id.action_jump_to_page) {
             new JumpToPageFragment()
                 .show(getSupportFragmentManager(), JumpToPageFragment.TAG);
+            return true;
+        } else if (itemId == R.id.action_set_zoom) {
+            SetZoomFragment zoomFragment = new SetZoomFragment(mZoomRatio, MIN_ZOOM_RATIO, MAX_ZOOM_RATIO);
+            // TODO: horizontally center the zooming focus.
+            //  Need to get the coordinates of viewport top-center.
+            // zoomFragment.setZoomFocusX((float) binding.webview.getWidth() / 2);
+            zoomFragment.show(getSupportFragmentManager(), SetZoomFragment.TAG);
             return true;
         } else if (itemId == R.id.action_share) {
             shareDocument();
