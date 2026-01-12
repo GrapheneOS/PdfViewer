@@ -7,6 +7,9 @@ import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 /*
     The GestureHelper present a simple gesture api for the PdfViewer
 */
@@ -14,6 +17,11 @@ import android.view.View;
 class GestureHelper {
     public interface GestureListener {
         boolean onTapUp();
+        boolean onFling(@Nullable MotionEvent e1, @NonNull MotionEvent e2, float velocityX, float velocityY);
+        boolean onDown();
+        // Can be replaced with ratio when supported
+        void onZoomIn(float value);
+        void onZoomOut(float value);
         void onZoom(float scaleFactor, float focusX, float focusY);
         void onZoomEnd();
     }
@@ -24,9 +32,20 @@ class GestureHelper {
         final GestureDetector detector = new GestureDetector(context,
                 new GestureDetector.SimpleOnGestureListener() {
                     @Override
-                    public boolean onSingleTapUp(MotionEvent motionEvent) {
+                    public boolean onSingleTapUp(@NonNull MotionEvent motionEvent) {
                         return listener.onTapUp();
                     }
+
+                    @Override
+                    public boolean onFling(@Nullable MotionEvent e1, @NonNull MotionEvent e2, float velocityX, float velocityY) {
+                        return listener.onFling(e1, e2, velocityX, velocityY);
+                    }
+
+                    @Override
+                    public boolean onDown(@NonNull MotionEvent  motionEvent){
+                        return listener.onDown();
+                    }
+
                 });
 
         final ScaleGestureDetector scaleDetector = new ScaleGestureDetector(context,
