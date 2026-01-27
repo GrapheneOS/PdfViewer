@@ -4,6 +4,7 @@ import {
     TextLayer,
     getDocument,
 } from "pdfjs-dist";
+import { SearchController } from "./search_controller.js";
 
 GlobalWorkerOptions.workerSrc = "/viewer/js/worker.js";
 
@@ -18,6 +19,54 @@ let orientationDegrees = 0;
 let zoomRatio = 1;
 let textLayerDiv = document.getElementById("text");
 let task = null;
+let searchController = new SearchController(
+    () => pdfDoc,
+    (pageNum) => {
+        // Only trigger render if navigating to a different page
+        if (channel.getPage() !== pageNum) {
+            // If the SearchController requests a page that we are currently
+            // prerendering (or rendering in general), ignore the request.
+            // This prevents the background prerender from hijacking the view.
+            if (pageRendering && newPageNumber === pageNum) {
+                console.log("Ignored phantom navigation to prerendered page: " + pageNum);
+                return;
+            }
+            renderPage(pageNum, false, false);
+            if (channel.setPage) {
+                channel.setPage(pageNum);
+            }
+        }
+    },
+    () => {
+        if (channel && channel.showNoSearchResults) {
+            channel.showNoSearchResults();
+        }
+    }
+);
+globalThis.onMessage = function (message) {
+    try {
+        let msg;
+        if (typeof message === "string") {
+            msg = JSON.parse(message);
+        } else {
+            msg = message;
+        }
+
+        switch (msg.type) {
+            case "find":
+                searchController.find(msg.query);
+                break;
+            case "findagain":
+                searchController.findNext(msg.findPrevious);
+                break;
+            case "closesearch":
+                searchController.clear();
+                break;
+        }
+    } catch (e) {
+        console.error("Failed to parse message: " + e);
+    }
+};
 
 let newPageNumber = 0;
 let newZoomRatio = 1;
@@ -65,7 +114,7 @@ function display(newCanvas, zoom) {
     canvas.style.height = newCanvas.style.height;
     canvas.style.width = newCanvas.style.width;
     canvas.getContext("2d", { alpha: false }).drawImage(newCanvas, 0, 0);
-    if (!zoom) {
+    if (zoom === 0) {
         scrollTo(0, 0);
     }
 }
@@ -80,7 +129,7 @@ function setLayerTransform(pageWidth, pageHeight, layerDiv) {
 
 function getDefaultZoomRatio(page, orientationDegrees) {
     const totalRotation = (orientationDegrees + page.rotate) % 360;
-    const viewport = page.getViewport({scale: 1, rotation: totalRotation});
+    const viewport = page.getViewport({ scale: 1, rotation: totalRotation });
     const widthZoomRatio = document.body.clientWidth / viewport.width;
     const heightZoomRatio = document.body.clientHeight / viewport.height;
     return Math.max(Math.min(widthZoomRatio, heightZoomRatio, channel.getMaxZoomRatio()), channel.getMinZoomRatio());
@@ -157,9 +206,9 @@ async function getSimplifiedOutline(pdfJsOutline, abortController) {
                 const destRef = dest[0];
                 if (typeof destRef === "object") {
                     pageNumberPromises.push(
-                        pdfDoc.getPageIndex(destRef).then(function(index) {
+                        pdfDoc.getPageIndex(destRef).then(function (index) {
                             simpleChild.p = parseInt(index) + 1;
-                        }).catch(function(error) {
+                        }).catch(function (error) {
                             console.log("pdfDoc.getPageIndex error: " + error);
                             simpleChild.p = -1;
                         })
@@ -177,6 +226,9 @@ async function getSimplifiedOutline(pdfJsOutline, abortController) {
 }
 
 function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
+    if (searchController && !prerender) {
+        searchController.removeHighlights();
+    }
     pageRendering = true;
     useRender = !prerender;
 
@@ -184,11 +236,11 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
     newZoomRatio = channel.getZoomRatio();
     orientationDegrees = channel.getDocumentOrientationDegrees();
     console.log("page: " + pageNumber + ", zoom: " + newZoomRatio +
-                ", orientationDegrees: " + orientationDegrees + ", prerender: " + prerender);
+        ", orientationDegrees: " + orientationDegrees + ", prerender: " + prerender);
     for (let i = 0; i < cache.length; i++) {
         const cached = cache[i];
         if (cached.pageNumber === pageNumber && cached.zoomRatio === newZoomRatio &&
-                cached.orientationDegrees === orientationDegrees) {
+            cached.orientationDegrees === orientationDegrees) {
             if (useRender) {
                 cache.splice(i, 1);
                 cache.push(cached);
@@ -200,6 +252,10 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
                 setLayerTransform(cached.pageWidth, cached.pageHeight, textLayerDiv);
                 container.style.setProperty("--scale-factor", newZoomRatio.toString());
                 textLayerDiv.hidden = false;
+
+                if (searchController) {
+                    searchController.drawPageMatches(pageNumber, textLayerDiv, zoom === 1 || zoom === 2);
+                }
             }
 
             pageRendering = false;
@@ -208,138 +264,181 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
         }
     }
 
-    pdfDoc.getPage(pageNumber).then(function(page) {
-        if (maybeRenderNextPage()) {
-            return;
-        }
 
-        const defaultZoomRatio = getDefaultZoomRatio(page, orientationDegrees);
 
-        if (cache.length === 0) {
-            zoomRatio = defaultZoomRatio;
-            newZoomRatio = defaultZoomRatio;
-            channel.setZoomRatio(defaultZoomRatio);
-        }
 
-        const totalRotation = (orientationDegrees + page.rotate) % 360;
-        const viewport = page.getViewport({scale: newZoomRatio, rotation: totalRotation});
+    let isCancelled = false;
+    let cancelPageRender = null;
 
-        const scaleFactor = newZoomRatio / zoomRatio;
-        const ratio = globalThis.devicePixelRatio;
+    task = {
+        promise: new Promise((resolve, reject) => {
+            cancelPageRender = () => {
+                isCancelled = true;
+                reject({ name: "RenderingCancelledException", message: "Render cancelled during getPage" });
+            };
 
-        if (useRender) {
-            if (newZoomRatio !== zoomRatio) {
-                canvas.style.height = viewport.height + "px";
-                canvas.style.width = viewport.width + "px";
-            }
-            zoomRatio = newZoomRatio;
-        }
-
-        if (zoom === 2) {
-            textLayerDiv.hidden = true;
-            pageRendering = false;
-
-            // zoom focus relative to page origin, rather than screen origin
-            const globalFocusX = channel.getZoomFocusX() / ratio + globalThis.scrollX;
-            const globalFocusY = channel.getZoomFocusY() / ratio + globalThis.scrollY;
-
-            const translationFactor = scaleFactor - 1;
-            const scrollX = globalFocusX * translationFactor;
-            const scrollY = globalFocusY * translationFactor;
-            scrollBy(scrollX, scrollY);
-
-            return;
-        }
-
-        const resolutionY = viewport.height * ratio;
-        const resolutionX = viewport.width * ratio;
-        const renderPixels = resolutionY * resolutionX;
-
-        let newViewport = viewport;
-        const maxRenderPixels = channel.getMaxRenderPixels();
-        if (renderPixels > maxRenderPixels) {
-            console.log(`resolution ${renderPixels} exceeds maximum allowed ${maxRenderPixels}`);
-            const adjustedScale = Math.sqrt(maxRenderPixels / renderPixels);
-            newViewport = page.getViewport({
-                scale: newZoomRatio * adjustedScale,
-                rotation: totalRotation
-            });
-        }
-
-        const newCanvas = document.createElement("canvas");
-        newCanvas.height = newViewport.height * ratio;
-        newCanvas.width = newViewport.width * ratio;
-        // use original viewport height for CSS zoom
-        newCanvas.style.height = viewport.height + "px";
-        newCanvas.style.width = viewport.width + "px";
-        const newContext = newCanvas.getContext("2d", { alpha: false });
-        newContext.scale(ratio, ratio);
-
-        task = page.render({
-            canvasContext: newContext,
-            viewport: newViewport
-        });
-
-        task.promise.then(function() {
-            task = null;
-
-            let rendered = false;
-            function render() {
-                if (!useRender || rendered) {
+            pdfDoc.getPage(pageNumber).then(function (page) {
+                if (isCancelled) {
                     return;
                 }
-                display(newCanvas, zoom);
-                rendered = true;
-            }
-            render();
 
-            const newTextLayerDiv = textLayerDiv.cloneNode();
-            const textLayer = new TextLayer({
-                textContentSource: page.streamTextContent(),
-                container: newTextLayerDiv,
-                viewport: viewport
-            });
-            task = {
-                promise: textLayer.render(),
-                cancel: () => textLayer.cancel()
-            };
-            task.promise.then(function() {
-                task = null;
+                if (maybeRenderNextPage()) {
+                    resolve();
+                    return;
+                }
 
-                render();
+                const defaultZoomRatio = getDefaultZoomRatio(page, orientationDegrees);
 
-                setLayerTransform(viewport.width, viewport.height, newTextLayerDiv);
+                if (cache.length === 0) {
+                    zoomRatio = defaultZoomRatio;
+                    newZoomRatio = defaultZoomRatio;
+                    channel.setZoomRatio(defaultZoomRatio);
+                }
+
+                const totalRotation = (orientationDegrees + page.rotate) % 360;
+                const viewport = page.getViewport({ scale: newZoomRatio, rotation: totalRotation });
+
+                const scaleFactor = newZoomRatio / zoomRatio;
+                const ratio = globalThis.devicePixelRatio;
+
                 if (useRender) {
-                    textLayerDiv.replaceWith(newTextLayerDiv);
-                    textLayerDiv = newTextLayerDiv;
-                    container.style.setProperty("--scale-factor", newZoomRatio.toString());
-                    textLayerDiv.hidden = false;
+                    if (newZoomRatio !== zoomRatio) {
+                        canvas.style.height = viewport.height + "px";
+                        canvas.style.width = viewport.width + "px";
+                    }
+                    zoomRatio = newZoomRatio;
                 }
 
-                if (cache.length === maxCached) {
-                    cache.shift();
+                if (zoom === 2) {
+                    container.style.setProperty("--scale-factor", newZoomRatio.toString());
+                    pageRendering = false;
+
+                    // zoom focus relative to page origin, rather than screen origin
+                    const globalFocusX = channel.getZoomFocusX() / ratio + globalThis.scrollX;
+                    const globalFocusY = channel.getZoomFocusY() / ratio + globalThis.scrollY;
+
+                    const translationFactor = scaleFactor - 1;
+                    const scrollX = globalFocusX * translationFactor;
+                    const scrollY = globalFocusY * translationFactor;
+                    scrollBy(scrollX, scrollY);
+
+                    resolve();
+                    return;
                 }
-                cache.push({
-                    pageNumber: pageNumber,
-                    zoomRatio: newZoomRatio,
-                    orientationDegrees: orientationDegrees,
-                    canvas: newCanvas,
-                    textLayerDiv: newTextLayerDiv,
-                    pageWidth: viewport.width,
-                    pageHeight: viewport.height
+
+                const resolutionY = viewport.height * ratio;
+                const resolutionX = viewport.width * ratio;
+                const renderPixels = resolutionY * resolutionX;
+
+                let newViewport = viewport;
+                const maxRenderPixels = channel.getMaxRenderPixels();
+                if (renderPixels > maxRenderPixels) {
+                    console.log(`resolution ${renderPixels} exceeds maximum allowed ${maxRenderPixels}`);
+                    const adjustedScale = Math.sqrt(maxRenderPixels / renderPixels);
+                    newViewport = page.getViewport({
+                        scale: newZoomRatio * adjustedScale,
+                        rotation: totalRotation
+                    });
+                }
+
+                const newCanvas = document.createElement("canvas");
+                newCanvas.height = newViewport.height * ratio;
+                newCanvas.width = newViewport.width * ratio;
+                // use original viewport height for CSS zoom
+                newCanvas.style.height = viewport.height + "px";
+                newCanvas.style.width = viewport.width + "px";
+                const newContext = newCanvas.getContext("2d", { alpha: false });
+                newContext.scale(ratio, ratio);
+
+                const renderTask = page.render({
+                    canvasContext: newContext,
+                    viewport: newViewport
                 });
 
-                pageRendering = false;
-                doPrerender(pageNumber, prerenderTrigger);
-            }).catch(handleRenderingError);
-        }).catch(handleRenderingError);
-    });
+                cancelPageRender = () => {
+                    isCancelled = true;
+                    renderTask.cancel();
+                };
+
+                renderTask.promise.then(function () {
+                    if (isCancelled) {
+                        return;
+                    }
+
+                    let rendered = false;
+                    function render() {
+                        if (!useRender || rendered) {
+                            return;
+                        }
+                        display(newCanvas, zoom);
+                        rendered = true;
+                    }
+                    render();
+
+                    const newTextLayerDiv = textLayerDiv.cloneNode();
+                    const textLayer = new TextLayer({
+                        textContentSource: page.streamTextContent(),
+                        container: newTextLayerDiv,
+                        viewport: viewport
+                    });
+
+                    const textLayerRenderTask = textLayer.render();
+                    cancelPageRender = () => {
+                        isCancelled = true;
+                        textLayer.cancel();
+                    };
+
+                    textLayerRenderTask.then(function () {
+                        if (isCancelled) {
+                            return;
+                        }
+
+                        render();
+
+                        setLayerTransform(viewport.width, viewport.height, newTextLayerDiv);
+                        if (useRender) {
+                            textLayerDiv.replaceWith(newTextLayerDiv);
+                            textLayerDiv = newTextLayerDiv;
+                            container.style.setProperty("--scale-factor", newZoomRatio.toString());
+                            textLayerDiv.hidden = false;
+
+                            searchController.drawPageMatches(pageNumber, textLayerDiv, zoom === 1 || zoom === 2);
+                        }
+
+                        if (cache.length === maxCached) {
+                            cache.shift();
+                        }
+                        cache.push({
+                            pageNumber: pageNumber,
+                            zoomRatio: newZoomRatio,
+                            orientationDegrees: orientationDegrees,
+                            canvas: newCanvas,
+                            textLayerDiv: newTextLayerDiv,
+                            pageWidth: viewport.width,
+                            pageHeight: viewport.height,
+                        });
+
+                        pageRendering = false;
+                        doPrerender(pageNumber, prerenderTrigger);
+                        resolve();
+                    }, reject);
+                }, reject);
+            }, reject);
+        }),
+        cancel: () => {
+            if (cancelPageRender) {
+                cancelPageRender();
+            }
+        }
+    };
+
+    task.promise.catch(handleRenderingError);
 }
 
 globalThis.onRenderPage = function (zoom) {
     if (pageRendering) {
         if (newPageNumber === channel.getPage() && newZoomRatio === channel.getZoomRatio() &&
-                orientationDegrees === channel.getDocumentOrientationDegrees()) {
+            orientationDegrees === channel.getDocumentOrientationDegrees()) {
             useRender = true;
             return;
         }
@@ -360,17 +459,17 @@ globalThis.isTextSelected = function () {
 };
 
 globalThis.getDocumentOutline = function () {
-    pdfDoc.getOutline().then(function(outline) {
-        getSimplifiedOutline(outline, outlineAbort).then(function(outlineEntries) {
+    pdfDoc.getOutline().then(function (outline) {
+        getSimplifiedOutline(outline, outlineAbort).then(function (outlineEntries) {
             if (outlineEntries !== null) {
                 channel.setDocumentOutline(JSON.stringify(outlineEntries));
             } else {
                 channel.setDocumentOutline(null);
             }
-        }).catch(function(error) {
+        }).catch(function (error) {
             console.log("getSimplifiedOutline error: " + error);
         });
-    }).catch(function(error) {
+    }).catch(function (error) {
         console.log("pdfDoc.getOutline error: " + error);
     });
 };
@@ -425,9 +524,9 @@ globalThis.loadDocument = function () {
         }).catch(function (error) {
             console.log("getMetadata error: " + error);
         });
-        pdfDoc.getOutline().then(function(outline) {
+        pdfDoc.getOutline().then(function (outline) {
             channel.setHasDocumentOutline(outline && outline.length > 0);
-        }).catch(function(error) {
+        }).catch(function (error) {
             console.log("getOutline error: " + error);
         });
         renderPage(channel.getPage(), false, false);
