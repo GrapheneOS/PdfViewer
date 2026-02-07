@@ -1,2 +1,24 @@
 @import url(css/pdf_viewer.css);
 @import url(css/text_layer.css);
+
+.search-highlight-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2;
+    transform-origin: 0 0;
+    transform: scale(var(--scale-factor, 1));
+}
+
+.search-highlight {
+    position: absolute;
+    background-color: rgba(204, 226, 254, 0.6);
+    border-radius: 2px;
+}
+
+.search-highlight.selected {
+    background-color: rgba(122, 171, 217, 0.7);
+}
