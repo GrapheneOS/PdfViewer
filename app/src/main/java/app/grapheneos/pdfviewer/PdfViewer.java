@@ -29,7 +29,11 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.OnApplyWindowInsetsListener;
+import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.lifecycle.ViewModelProvider;
@@ -125,6 +129,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private float mZoomRatio = 1f;
     private float mZoomFocusX = 0f;
     private float mZoomFocusY = 0f;
+    private float mInsetLeft = 0f;
+    private float mInsetTop = 0f;
+    private float mInsetRight = 0f;
+    private float mInsetBottom = 0f;
     private int mDocumentOrientationDegrees;
     private int mDocumentState;
     private String mEncryptedDocumentPassword;
@@ -137,6 +145,13 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private Snackbar snackbar;
     private PasswordPromptFragment mPasswordPromptFragment;
     public PdfViewModel viewModel;
+
+    private final View.OnLayoutChangeListener appBarOnLayoutChangeListener =
+            (v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+                if (binding.toolbar.getVisibility() == View.VISIBLE) {
+                    mInsetTop = bottom - top;
+                }
+            };
 
     private final ActivityResultLauncher<Intent> openDocumentLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -219,6 +234,26 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
 
         @JavascriptInterface
+        public float getInsetLeft() {
+            return mInsetLeft;
+        }
+
+        @JavascriptInterface
+        public float getInsetTop() {
+            return mInsetTop;
+        }
+
+        @JavascriptInterface
+        public float getInsetRight() {
+            return mInsetRight;
+        }
+
+        @JavascriptInterface
+        public float getInsetBottom() {
+            return mInsetBottom;
+        }
+
+        @JavascriptInterface
         public int getDocumentOrientationDegrees() {
             return mDocumentOrientationDegrees;
         }
@@ -279,7 +314,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     @SuppressLint({"SetJavaScriptEnabled"})
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        WindowCompat.enableEdgeToEdge(getWindow());
 
         binding = PdfviewerBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -308,6 +343,21 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         // Margins for the toolbar are needed, so that content of the toolbar
         // is not covered by a system button navigation bar when in landscape.
         KtUtilsKt.applySystemBarMargins(binding.toolbar, false);
+        ViewCompat.setOnApplyWindowInsetsListener(
+                binding.webview, new OnApplyWindowInsetsListener() {
+            @Override
+            public @NonNull WindowInsetsCompat onApplyWindowInsets(
+                    @NonNull View v, @NonNull WindowInsetsCompat insets) {
+                 Insets allInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars()
+                         + WindowInsetsCompat.Type.displayCutout());
+                 mInsetLeft = allInsets.left;
+                 mInsetRight = allInsets.right;
+                 // Only set the bottom inset. The top will use the height of the app bar layout
+                 // which includes the status bar/display cutout.
+                 mInsetBottom = allInsets.bottom;
+                return insets;
+            }
+        });
 
         binding.webview.setBackgroundColor(Color.TRANSPARENT);
 
@@ -503,6 +553,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mEncryptedDocumentPassword = savedInstanceState.getString(STATE_ENCRYPTED_DOCUMENT_PASSWORD);
         }
 
+        binding.appBarLayout.addOnLayoutChangeListener(appBarOnLayoutChangeListener);
+
         binding.webviewAlertReload.setOnClickListener(v -> {
             webViewCrashed = false;
             recreate();
@@ -529,6 +581,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        binding.appBarLayout.removeOnLayoutChangeListener(appBarOnLayoutChangeListener);
         purgeWebView();
         maybeCloseInputStream();
     }
