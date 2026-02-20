@@ -275,6 +275,13 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
         const newContext = newCanvas.getContext("2d", { alpha: false });
         newContext.scale(ratio, ratio);
 
+        // Add padding to the canvas to allow the page to be scrolled bellow/above any
+        // system/app ui that might be visible.
+        canvas.style.paddingLeft = (channel.getInsetLeft() / ratio) + "px";
+        canvas.style.paddingTop = (channel.getInsetTop() / ratio) + "px";
+        canvas.style.paddingRight = (channel.getInsetRight() / ratio) + "px";
+        canvas.style.paddingBottom = (channel.getInsetBottom() / ratio) + "px";
+
         task = page.render({
             canvasContext: newContext,
             viewport: newViewport
