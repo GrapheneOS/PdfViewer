@@ -15,6 +15,10 @@
     <string name="action_outline">Outline</string>
     <string name="action_view_document_properties">Properties</string>
     <string name="action_close">Close</string>
+    <string name="action_search">Search</string>
+    <string name="search_hint">Find in document...</string>
+    <string name="no_matches">No matches found</string>
+    <string name="match_status">%1$d / %2$d</string>
 
     <string name="outline_child_button_description">View nested outline entries</string>
     <string name="outline_not_available">No outline available</string>
