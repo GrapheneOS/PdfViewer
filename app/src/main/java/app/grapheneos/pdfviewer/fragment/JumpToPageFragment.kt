@@ -1,60 +1,56 @@
 package app.grapheneos.pdfviewer.fragment
 
 import android.app.Dialog
-import android.content.DialogInterface
 import android.os.Bundle
+import android.text.InputType
 import android.view.Gravity
+import android.widget.EditText
 import android.widget.FrameLayout
-import android.widget.NumberPicker
 import androidx.fragment.app.DialogFragment
 import app.grapheneos.pdfviewer.PdfViewer
+import app.grapheneos.pdfviewer.R
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class JumpToPageFragment : DialogFragment() {
 
     companion object {
         const val TAG = "JumpToPageFragment"
-        private const val STATE_PICKER_CUR = "picker_cur"
-        private const val STATE_PICKER_MIN = "picker_min"
-        private const val STATE_PICKER_MAX = "picker_max"
     }
 
-    private val mPicker: NumberPicker by lazy { NumberPicker(requireActivity()) }
-
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val viewerActivity = requireActivity() as PdfViewer
 
-        val viewerActivity: PdfViewer = (requireActivity() as PdfViewer)
-
-        if (savedInstanceState != null) {
-            mPicker.minValue = savedInstanceState.getInt(STATE_PICKER_MIN)
-            mPicker.maxValue = savedInstanceState.getInt(STATE_PICKER_MAX)
-            mPicker.value = savedInstanceState.getInt(STATE_PICKER_CUR)
-        } else {
-            mPicker.minValue = 1
-            mPicker.maxValue = viewerActivity.mNumPages
-            mPicker.value = viewerActivity.mPage
-        }
-        val layout = FrameLayout(requireActivity())
-        layout.addView(
-            mPicker, FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
+        val input = EditText(requireContext()).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setText(viewerActivity.mPage.toString())
+            setSelection(text.length)
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.CENTER
             )
-        )
-        return MaterialAlertDialogBuilder(requireActivity())
-            .setView(layout)
-            .setPositiveButton(android.R.string.ok) { _: DialogInterface?, _: Int ->
-                mPicker.clearFocus()
-                viewerActivity.onJumpToPageInDocument(mPicker.value)
+        }
+
+        val container = FrameLayout(requireContext()).apply {
+            val padding = (16 * resources.displayMetrics.density).toInt()
+            setPadding(padding, padding, padding, padding)
+            addView(input)
+        }
+
+        return MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.action_jump_to_page))
+            .setView(container)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val enteredPage = input.text.toString().toIntOrNull()
+                if (enteredPage != null &&
+                    enteredPage in 1..viewerActivity.mNumPages
+                ) {
+                    viewerActivity.onJumpToPageInDocument(enteredPage)
+                } else {
+                    viewerActivity.onJumpToPageInDocument(viewerActivity.mNumPages)
+                }
             }
             .setNegativeButton(android.R.string.cancel, null)
             .create()
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        outState.putInt(STATE_PICKER_MIN, mPicker.minValue)
-        outState.putInt(STATE_PICKER_MAX, mPicker.maxValue)
-        outState.putInt(STATE_PICKER_CUR, mPicker.value)
     }
 }
