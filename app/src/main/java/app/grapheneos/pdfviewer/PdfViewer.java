@@ -13,6 +13,7 @@ import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
@@ -28,6 +29,7 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.WindowCompat;
 import androidx.fragment.app.Fragment;
@@ -451,8 +453,41 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     }
 
                     @Override
+
+                    public boolean onFling(@Nullable MotionEvent e1, @NonNull MotionEvent e2, float velocityX, float velocityY) {
+                        assert e1 != null;
+                        float maxXVelocity = 4000;
+                        float deltaX = e2.getX() - e1.getX();
+                        float deltaY = e2.getY() - e1.getY();
+
+                        if (Math.abs(deltaX) > Math.abs(deltaY)){
+                            if ((deltaX > 0) & (Math.abs(velocityX) > maxXVelocity)) {
+                                Log.d("Horizontal", "Right movement Position");
+                                onJumpToPageInDocument(mPage - 1);
+                            } else if ((Math.abs(velocityX) > maxXVelocity)) {
+                                Log.d("Horizontal", "Left movement Position");
+                                onJumpToPageInDocument(mPage + 1);
+                            }
+                        }
+                        return true;
+                    }
+
+                    @Override
+                    public boolean onDown() {
+                        return true;
+                    }
+
+                    @Override
+                    public void onZoomIn(float value) {
+                        zoomIn(value, false);
+                    }
+
+                    @Override
+                    public void onZoomOut(float value) {
+                        zoomOut(value, false);
+
                     public void onZoom(float scaleFactor, float focusX, float focusY) {
-                        zoom(scaleFactor, focusX, focusY, false);
+                        zoom(scaleFactor, focusX, focusY, false); 
                     }
 
                     @Override
