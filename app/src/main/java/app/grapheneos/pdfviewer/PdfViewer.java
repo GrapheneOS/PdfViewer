@@ -54,7 +54,13 @@ import app.grapheneos.pdfviewer.fragment.PasswordPromptFragment;
 import app.grapheneos.pdfviewer.ktx.ViewKt;
 import app.grapheneos.pdfviewer.loader.DocumentPropertiesAsyncTaskLoader;
 import app.grapheneos.pdfviewer.outline.OutlineFragment;
+import app.grapheneos.pdfviewer.preferences.PdfPreferencesRepository;
 import app.grapheneos.pdfviewer.viewModel.PdfViewModel;
+import kotlin.coroutines.EmptyCoroutineContext;
+import kotlinx.coroutines.BuildersKt;
+import kotlinx.coroutines.CoroutineStart;
+import kotlinx.coroutines.Job;
+import kotlinx.coroutines.flow.FlowKt;
 
 public class PdfViewer extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<CharSequence>> {
     private static final String TAG = "PdfViewer";
@@ -120,6 +126,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     private boolean webViewCrashed;
     private Uri mUri;
+    private String mFileHash;
     public int mPage;
     public int mNumPages;
     private float mZoomRatio = 1f;
@@ -130,6 +137,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private String mEncryptedDocumentPassword;
     private List<CharSequence> mDocumentProperties;
     private InputStream mInputStream;
+    private PdfPreferencesRepository repository;
+    private Job hashCalculationJob;
 
     private PdfviewerBinding binding;
     private TextView mTextView;
@@ -285,6 +294,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         setContentView(binding.getRoot());
         setSupportActionBar(binding.toolbar);
         viewModel = new ViewModelProvider(this, ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication())).get(PdfViewModel.class);
+        repository = new PdfPreferencesRepository(getApplicationContext());
 
         viewModel.getOutline().observe(this, requested -> {
             if (requested instanceof PdfViewModel.OutlineStatus.Requested) {
@@ -416,6 +426,28 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 mDocumentState = STATE_LOADED;
                 invalidateOptionsMenu();
                 loadPdfWithPassword(mEncryptedDocumentPassword);
+
+                if (hashCalculationJob != null && hashCalculationJob.isActive()) {
+                    BuildersKt.launch(
+                            androidx.lifecycle.LifecycleOwnerKt.getLifecycleScope(PdfViewer.this),
+                            EmptyCoroutineContext.INSTANCE,
+                            CoroutineStart.DEFAULT,
+                            (scope, continuation) -> KtUtilsKt.waitForHashAndCheckSavedPage(
+                                    hashCalculationJob,
+                                    mFileHash,
+                                    repository,
+                                    (savedPage) -> {
+                                        runOnUiThread(() -> {
+                                            if (savedPage != null) {
+                                                onJumpToPageInDocument(savedPage);
+                                            }
+                                        });
+                                        return kotlin.Unit.INSTANCE;
+                                    },
+                                    continuation
+                            )
+                    );
+                }
             }
 
             @Override
@@ -501,6 +533,32 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mZoomRatio = savedInstanceState.getFloat(STATE_ZOOM_RATIO);
             mDocumentOrientationDegrees = savedInstanceState.getInt(STATE_DOCUMENT_ORIENTATION_DEGREES);
             mEncryptedDocumentPassword = savedInstanceState.getString(STATE_ENCRYPTED_DOCUMENT_PASSWORD);
+        } else {
+            if (mUri != null) {
+                takePersistableUriPermission();
+                savePdfState(false);
+                startHashCalculation();
+            } else {
+                try {
+                    PdfPreferencesRepository.PdfState state =
+                            kotlinx.coroutines.BuildersKt.runBlocking(
+                                    EmptyCoroutineContext.INSTANCE,
+                                    (scope, continuation) ->
+                                            FlowKt.first(repository.getPdfStateFlow(), continuation)
+                            );
+
+                    if (state.getLastOpenedUri() != null) {
+                        Uri uri = Uri.parse(state.getLastOpenedUri());
+                        if (hasUriPermission(uri)) {
+                            mUri = uri;
+                            mPage = state.getLastOpenedPage();
+                            startHashCalculation();
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to load last opened Uri", e);
+                }
+            }
         }
 
         binding.webviewAlertReload.setOnClickListener(v -> {
@@ -524,6 +582,12 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         binding.webview.removeJavascriptInterface("channel");
         binding.getRoot().removeView(binding.webview);
         binding.webview.destroy();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        savePdfState(true);
     }
 
     @Override
@@ -874,5 +938,76 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 SecurityException e) {
             snackbar.setText(R.string.error_while_saving).show();
         }
+    }
+
+    private void savePdfState(boolean includeHashMapping) {
+        if (mUri == null) return;
+
+        Uri currentUri = mUri;
+        int currentPage = mPage;
+        String currentHash = mFileHash;
+
+        BuildersKt.launch(
+                androidx.lifecycle.LifecycleOwnerKt.getLifecycleScope(this),
+                EmptyCoroutineContext.INSTANCE,
+                CoroutineStart.DEFAULT,
+                (scope, continuation) -> {
+                    repository.saveLastOpened(
+                            currentUri.toString(),
+                            currentPage,
+                            continuation
+                    );
+
+                    if (includeHashMapping && currentHash != null) {
+                        repository.updatePagePosition(
+                                currentHash,
+                                currentPage,
+                                continuation
+                        );
+                    }
+
+                    return kotlin.Unit.INSTANCE;
+                }
+        );
+    }
+
+    private void startHashCalculation() {
+        if (mUri == null) return;
+
+        if (hashCalculationJob != null && hashCalculationJob.isActive()) {
+            hashCalculationJob.cancel(null);
+        }
+
+        hashCalculationJob = BuildersKt.launch(
+                androidx.lifecycle.LifecycleOwnerKt.getLifecycleScope(this),
+                EmptyCoroutineContext.INSTANCE,
+                CoroutineStart.DEFAULT,
+                (scope, continuation) -> KtUtilsKt.calculateFileHashAsync(
+                        mUri,
+                        getContentResolver(),
+                        (hash) -> {
+                            mFileHash = hash;
+                            return kotlin.Unit.INSTANCE;
+                        },
+                        continuation
+                    )
+        );
+    }
+
+    private void takePersistableUriPermission() {
+        try {
+            getContentResolver().takePersistableUriPermission(
+                    mUri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+            );
+        } catch (SecurityException ignored) {}
+    }
+
+    private boolean hasUriPermission(Uri uri) {
+        return getContentResolver().getPersistedUriPermissions()
+                .stream()
+                .anyMatch(permission ->
+                        permission.getUri().equals(uri) && permission.isReadPermission()
+                );
     }
 }

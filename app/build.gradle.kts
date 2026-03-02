@@ -92,6 +92,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.fragment:fragment-ktx:1.8.9")
     implementation("com.google.android.material:material:1.13.0")
+    implementation("androidx.datastore:datastore-preferences:1.2.0")
 }
 
 fun getCommand(command: String, winExt: String = "cmd"): String {
