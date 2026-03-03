@@ -6,8 +6,14 @@ import android.view.View
 import android.view.ViewGroup.MarginLayoutParams
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import app.grapheneos.pdfviewer.preferences.PdfPreferencesRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.security.MessageDigest
@@ -26,7 +32,7 @@ fun applySystemBarMargins(view: View, applyBottom: Boolean = false) {
     }
 }
 
-suspend fun calculateHash(
+suspend fun calculateFileHash(
     uri: Uri,
     contentResolver: ContentResolver
 ): String? = withContext(Dispatchers.IO) {
@@ -51,25 +57,89 @@ suspend fun calculateHash(
     }
 }
 
-suspend fun calculateFileHashAsync(
+fun calculateFileHashAsync(
+    lifecycleOwner: LifecycleOwner,
     uri: Uri,
     contentResolver: ContentResolver,
     onHashCalculated: (String?) -> Unit
-) {
-    val hash = calculateHash(uri, contentResolver)
-    onHashCalculated(hash)
+): Job {
+    return lifecycleOwner.lifecycleScope.launch {
+        val hash = calculateFileHash(uri, contentResolver)
+        onHashCalculated(hash)
+    }
 }
 
-suspend fun waitForHashAndCheckSavedPage(
-    hashJob: kotlinx.coroutines.Job,
+fun waitForHashAndCheckSavedPageAsync(
+    lifecycleOwner: LifecycleOwner,
+    hashJob: Job,
     fileHash: String?,
     repository: PdfPreferencesRepository,
     onPageFound: (Int?) -> Unit
 ) {
-    hashJob.join()
+    lifecycleOwner.lifecycleScope.launch {
+        hashJob.join()
 
-    if (fileHash != null) {
-        val savedPage = repository.getPageForFile(fileHash)
-        onPageFound(savedPage)
+        if (fileHash != null) {
+            val savedPage = repository.getPageForFile(fileHash)
+            onPageFound(savedPage)
+        }
+    }
+}
+
+fun getPageForFileBlocking(
+    repository: PdfPreferencesRepository,
+    fileHash: String
+): Int? {
+    return runBlocking {
+        repository.getPageForFile(fileHash)
+    }
+}
+
+fun loadPdfStateBlocking(
+    repository: PdfPreferencesRepository
+): PdfPreferencesRepository.PdfState {
+    return runBlocking {
+        repository.pdfStateFlow.first()
+    }
+}
+
+fun savePdfStateBlocking(
+    repository: PdfPreferencesRepository,
+    uri: String,
+    page: Int,
+    fileHash: String?,
+    includeHashMapping: Boolean
+) {
+    runBlocking {
+        repository.saveLastOpened(uri, page)
+
+        if (includeHashMapping && fileHash != null) {
+            repository.updatePagePosition(fileHash, page)
+        }
+    }
+}
+
+fun savePdfStateAsync(
+    lifecycleOwner: LifecycleOwner,
+    repository: PdfPreferencesRepository,
+    uri: String,
+    page: Int,
+    fileHash: String?,
+    includeHashMapping: Boolean
+) {
+    lifecycleOwner.lifecycleScope.launch {
+        repository.saveLastOpened(uri, page)
+
+        if (includeHashMapping && fileHash != null) {
+            repository.updatePagePosition(fileHash, page)
+        }
+    }
+}
+
+fun clearLastOpenedBlocking(
+    repository: PdfPreferencesRepository
+) {
+    runBlocking {
+        repository.clearLastOpened()
     }
 }

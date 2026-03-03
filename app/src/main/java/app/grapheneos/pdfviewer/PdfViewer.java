@@ -51,16 +51,13 @@ import app.grapheneos.pdfviewer.databinding.PdfviewerBinding;
 import app.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
 import app.grapheneos.pdfviewer.fragment.JumpToPageFragment;
 import app.grapheneos.pdfviewer.fragment.PasswordPromptFragment;
+import app.grapheneos.pdfviewer.fragment.SettingsDialog;
 import app.grapheneos.pdfviewer.ktx.ViewKt;
 import app.grapheneos.pdfviewer.loader.DocumentPropertiesAsyncTaskLoader;
 import app.grapheneos.pdfviewer.outline.OutlineFragment;
 import app.grapheneos.pdfviewer.preferences.PdfPreferencesRepository;
 import app.grapheneos.pdfviewer.viewModel.PdfViewModel;
-import kotlin.coroutines.EmptyCoroutineContext;
-import kotlinx.coroutines.BuildersKt;
-import kotlinx.coroutines.CoroutineStart;
 import kotlinx.coroutines.Job;
-import kotlinx.coroutines.flow.FlowKt;
 
 public class PdfViewer extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<CharSequence>> {
     private static final String TAG = "PdfViewer";
@@ -129,6 +126,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private String mFileHash;
     public int mPage;
     public int mNumPages;
+    private Integer mPendingJumpPage = null;
     private float mZoomRatio = 1f;
     private float mZoomFocusX = 0f;
     private float mZoomFocusY = 0f;
@@ -158,6 +156,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     mDocumentProperties = null;
                     mEncryptedDocumentPassword = "";
                     viewModel.clearOutline();
+                    if (mUri != null) {
+                        takePersistableUriPermission();
+                        savePdfState(false, false);
+                        startHashCalculation();
+                    }
                     loadPdf();
                     invalidateOptionsMenu();
                 }
@@ -235,7 +238,13 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         @JavascriptInterface
         public void setNumPages(int numPages) {
             mNumPages = numPages;
-            runOnUiThread(PdfViewer.this::invalidateOptionsMenu);
+            runOnUiThread(() -> {
+                if (mPendingJumpPage != null) {
+                    onJumpToPageInDocument(mPendingJumpPage);
+                    mPendingJumpPage = null;
+                }
+                invalidateOptionsMenu();
+            });
         }
 
         @JavascriptInterface
@@ -428,25 +437,28 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 loadPdfWithPassword(mEncryptedDocumentPassword);
 
                 if (hashCalculationJob != null && hashCalculationJob.isActive()) {
-                    BuildersKt.launch(
-                            androidx.lifecycle.LifecycleOwnerKt.getLifecycleScope(PdfViewer.this),
-                            EmptyCoroutineContext.INSTANCE,
-                            CoroutineStart.DEFAULT,
-                            (scope, continuation) -> KtUtilsKt.waitForHashAndCheckSavedPage(
-                                    hashCalculationJob,
-                                    mFileHash,
-                                    repository,
-                                    (savedPage) -> {
-                                        runOnUiThread(() -> {
-                                            if (savedPage != null) {
-                                                onJumpToPageInDocument(savedPage);
-                                            }
-                                        });
-                                        return kotlin.Unit.INSTANCE;
-                                    },
-                                    continuation
-                            )
+                    KtUtilsKt.waitForHashAndCheckSavedPageAsync(
+                            PdfViewer.this,
+                            hashCalculationJob,
+                            mFileHash,
+                            repository,
+                            (savedPage) -> {
+                                runOnUiThread(() -> {
+                                    if (savedPage != null) {
+                                        maybeJumpToPage(savedPage);
+                                    }
+                                });
+                                return kotlin.Unit.INSTANCE;
+                            }
                     );
+                } else if (mFileHash != null) {
+                    Integer savedPage = KtUtilsKt.getPageForFileBlocking(
+                            repository,
+                            mFileHash
+                    );
+                    if (savedPage != null) {
+                        maybeJumpToPage(savedPage);
+                    }
                 }
             }
 
@@ -536,27 +548,33 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         } else {
             if (mUri != null) {
                 takePersistableUriPermission();
-                savePdfState(false);
+                savePdfState(false, false);
                 startHashCalculation();
             } else {
-                try {
-                    PdfPreferencesRepository.PdfState state =
-                            kotlinx.coroutines.BuildersKt.runBlocking(
-                                    EmptyCoroutineContext.INSTANCE,
-                                    (scope, continuation) ->
-                                            FlowKt.first(repository.getPdfStateFlow(), continuation)
-                            );
+                if (PreferenceHelper.INSTANCE.isResumeLastDocumentEnabled(this)) {
+                    try {
+                        PdfPreferencesRepository.PdfState state =
+                                KtUtilsKt.loadPdfStateBlocking(repository);
 
-                    if (state.getLastOpenedUri() != null) {
-                        Uri uri = Uri.parse(state.getLastOpenedUri());
-                        if (hasUriPermission(uri)) {
-                            mUri = uri;
-                            mPage = state.getLastOpenedPage();
-                            startHashCalculation();
+                        if (state.getLastOpenedUri() != null) {
+                            Uri uri = Uri.parse(state.getLastOpenedUri());
+                            if (hasUriPermission(uri)) {
+                                try {
+                                    getContentResolver().openInputStream(uri).close();
+                                    mUri = uri;
+                                    mPage = state.getLastOpenedPage();
+                                    startHashCalculation();
+                                } catch (SecurityException | IOException e) {
+                                    KtUtilsKt.clearLastOpenedBlocking(repository);
+                                    Toast.makeText(this,
+                                            "Previous document is no longer accessible. Please reopen it.",
+                                            Toast.LENGTH_LONG).show();
+                                }
+                            }
                         }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Failed to load last opened Uri", e);
                     }
-                } catch (Exception e) {
-                    Log.e(TAG, "Failed to load last opened Uri", e);
                 }
             }
         }
@@ -585,9 +603,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
-        savePdfState(true);
+    protected void onStop() {
+        super.onStop();
+        savePdfState(true, true);
     }
 
     @Override
@@ -891,6 +909,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         } else if (itemId == R.id.debug_action_crash_webview) {
             binding.webview.loadUrl("chrome://crash");
             return true;
+        } else if (itemId == R.id.action_settings) {
+            new SettingsDialog().show(getSupportFragmentManager(), "settings");
+            return true;
         }
 
         return super.onOptionsItemSelected(item);
@@ -940,35 +961,31 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
     }
 
-    private void savePdfState(boolean includeHashMapping) {
+    private void savePdfState(boolean includeHashMapping, boolean blocking) {
         if (mUri == null) return;
 
         Uri currentUri = mUri;
         int currentPage = mPage;
         String currentHash = mFileHash;
 
-        BuildersKt.launch(
-                androidx.lifecycle.LifecycleOwnerKt.getLifecycleScope(this),
-                EmptyCoroutineContext.INSTANCE,
-                CoroutineStart.DEFAULT,
-                (scope, continuation) -> {
-                    repository.saveLastOpened(
-                            currentUri.toString(),
-                            currentPage,
-                            continuation
-                    );
-
-                    if (includeHashMapping && currentHash != null) {
-                        repository.updatePagePosition(
-                                currentHash,
-                                currentPage,
-                                continuation
-                        );
-                    }
-
-                    return kotlin.Unit.INSTANCE;
-                }
-        );
+        if (blocking) {
+            KtUtilsKt.savePdfStateBlocking(
+                    repository,
+                    currentUri.toString(),
+                    currentPage,
+                    currentHash,
+                    includeHashMapping
+            );
+        } else {
+            KtUtilsKt.savePdfStateAsync(
+                    this,
+                    repository,
+                    currentUri.toString(),
+                    currentPage,
+                    currentHash,
+                    includeHashMapping
+            );
+        }
     }
 
     private void startHashCalculation() {
@@ -978,19 +995,14 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             hashCalculationJob.cancel(null);
         }
 
-        hashCalculationJob = BuildersKt.launch(
-                androidx.lifecycle.LifecycleOwnerKt.getLifecycleScope(this),
-                EmptyCoroutineContext.INSTANCE,
-                CoroutineStart.DEFAULT,
-                (scope, continuation) -> KtUtilsKt.calculateFileHashAsync(
-                        mUri,
-                        getContentResolver(),
-                        (hash) -> {
-                            mFileHash = hash;
-                            return kotlin.Unit.INSTANCE;
-                        },
-                        continuation
-                    )
+        hashCalculationJob = KtUtilsKt.calculateFileHashAsync(
+                this,
+                mUri,
+                getContentResolver(),
+                (hash) -> {
+                    mFileHash = hash;
+                    return kotlin.Unit.INSTANCE;
+                }
         );
     }
 
@@ -1000,7 +1012,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     mUri,
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
             );
-        } catch (SecurityException ignored) {}
+        } catch (SecurityException e) {
+            Log.e(TAG, "Failed to take persistable URI permission", e);
+        }
     }
 
     private boolean hasUriPermission(Uri uri) {
@@ -1009,5 +1023,14 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 .anyMatch(permission ->
                         permission.getUri().equals(uri) && permission.isReadPermission()
                 );
+    }
+
+    private void maybeJumpToPage(int targetPage) {
+        if (mNumPages > 0) {
+            onJumpToPageInDocument(targetPage);
+            mPendingJumpPage = null;
+        } else {
+            mPendingJumpPage = targetPage;
+        }
     }
 }

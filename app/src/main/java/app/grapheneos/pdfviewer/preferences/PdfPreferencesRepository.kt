@@ -66,6 +66,13 @@ class PdfPreferencesRepository (private val context: Context) {
         }
     }
 
+    suspend fun clearLastOpened() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(PreferencesKeys.LAST_OPENED_URI)
+            preferences.remove(PreferencesKeys.LAST_OPENED_PAGE)
+        }
+    }
+
     suspend fun updatePagePosition(fileHash: String, page: Int) {
         context.dataStore.edit { preferences ->
             val currentMap = parseFilePagePositions(
