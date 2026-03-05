@@ -3,6 +3,7 @@ package app.grapheneos.pdfviewer.viewModel
 import android.app.Application
 import android.content.ContentResolver
 import android.content.Intent
+import android.content.UriPermission
 import android.net.Uri
 import android.util.Log
 import androidx.core.net.toUri
@@ -119,7 +120,7 @@ class PdfViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * Load initial PDF state if preference is enabled
      */
-    fun maybeLoadPdfBlocking(): PdfPreferencesRepository.PdfState? {
+    fun maybeLoadPdfStateBlocking(): PdfPreferencesRepository.PdfState? {
         return runBlocking {
             if (PreferenceHelper.isResumeLastDocumentEnabled(getApplication())) {
                 repository.pdfStateFlow.first()
@@ -170,19 +171,7 @@ class PdfViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun savePdfState(uriString: String, page: Int, includeHashMapping: Boolean) {
         viewModelScope.launch {
-            val oldState = repository.pdfStateFlow.first()
-            val oldUri = oldState.lastOpenedUri
-
-            repository.saveLastOpened(uriString, page)
-
-            // Release old permission if it's different from new URI
-            if (oldUri != null && oldUri != uriString) {
-                releaseUriPermissionIfHeld(oldUri.toUri())
-            }
-
-            if (includeHashMapping && currentFileHash != null) {
-                repository.updatePagePosition(currentFileHash!!, page)
-            }
+            savePdfStateCommon(uriString, page, includeHashMapping)
         }
     }
 
@@ -196,19 +185,23 @@ class PdfViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun savePdfStateBlocking(uriString: String, page: Int, includeHashMapping: Boolean) {
         runBlocking {
-            val oldState = repository.pdfStateFlow.first()
-            val oldUri = oldState.lastOpenedUri
+            savePdfStateCommon(uriString, page, includeHashMapping)
+        }
+    }
 
-            repository.saveLastOpened(uriString, page)
+    private suspend fun savePdfStateCommon(uriString: String, page: Int, includeHashMapping: Boolean) {
+        val oldState = repository.pdfStateFlow.first()
+        val oldUri = oldState.lastOpenedUri
 
-            // Release old permission if it's different from new URI
-            if (oldUri != null && oldUri != uriString) {
-                releaseUriPermissionIfHeld(oldUri.toUri())
-            }
+        repository.saveLastOpened(uriString, page)
 
-            if (includeHashMapping && currentFileHash != null) {
-                repository.updatePagePosition(currentFileHash!!, page)
-            }
+        // Release old permission if it's different from new URI
+        if (oldUri != null && oldUri != uriString) {
+            releaseUriPermissionIfHeld(oldUri.toUri())
+        }
+
+        if (includeHashMapping && currentFileHash != null) {
+            repository.updatePagePosition(currentFileHash!!, page)
         }
     }
 
@@ -223,6 +216,13 @@ class PdfViewModel(application: Application) : AndroidViewModel(application) {
                 releaseUriPermissionIfHeld(currentUri.toUri())
             }
         }
+    }
+
+    fun prepareNewPdf(uri: Uri, page: Int) {
+        if (takePersistableUriPermission(uri)) {
+            savePdfState(uri.toString(), page, false)
+        }
+        calculateHash(uri)
     }
 
     private fun releaseUriPermissionIfHeld(uri: Uri) {
@@ -250,5 +250,23 @@ class PdfViewModel(application: Application) : AndroidViewModel(application) {
         } catch (e: Exception) {
             Log.w(TAG, "Permission release failed", e)
         }
+    }
+
+    private fun takePersistableUriPermission(uri: Uri): Boolean {
+        try {
+            contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            return true
+        } catch (_: SecurityException) {
+            return false
+        }
+    }
+
+    fun hasUriPermission(uri: Uri?): Boolean {
+        return contentResolver.persistedUriPermissions
+            .stream()
+            .anyMatch { permission: UriPermission? -> permission!!.uri == uri && permission.isReadPermission }
     }
 }

@@ -46,9 +46,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import app.grapheneos.pdfviewer.databinding.PdfviewerBinding;
 import app.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
@@ -158,10 +155,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     mEncryptedDocumentPassword = "";
                     viewModel.clearOutline();
                     if (mUri != null && PreferenceHelper.INSTANCE.isResumeLastDocumentEnabled(this)) {
-                        if (takePersistableUriPermission()) {
-                            viewModel.savePdfState(mUri.toString(), mPage, false);
-                        }
-                        viewModel.calculateHash(mUri);
+                        viewModel.prepareNewPdf(mUri, mPage);
                     }
                     loadPdf();
                     invalidateOptionsMenu();
@@ -531,17 +525,14 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             mEncryptedDocumentPassword = savedInstanceState.getString(STATE_ENCRYPTED_DOCUMENT_PASSWORD);
         } else {
             if (mUri != null && PreferenceHelper.INSTANCE.isResumeLastDocumentEnabled(this)) {
-                if (takePersistableUriPermission()) {
-                    viewModel.savePdfState(mUri.toString(), mPage, false);
-                }
-                viewModel.calculateHash(mUri);
+                viewModel.prepareNewPdf(mUri, mPage);
             } else {
                 PdfPreferencesRepository.PdfState state =
-                        viewModel.maybeLoadPdfBlocking();
+                        viewModel.maybeLoadPdfStateBlocking();
 
                 if (state != null && state.getLastOpenedUri() != null) {
                     Uri uri = Uri.parse(state.getLastOpenedUri());
-                    if (hasUriPermission(uri)) {
+                    if (viewModel.hasUriPermission(uri)) {
                         try {
                             getContentResolver().openInputStream(uri).close();
                             mUri = uri;
@@ -551,7 +542,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                         } catch (SecurityException | IOException e) {
                             viewModel.clearLastOpened();
                             Toast.makeText(this,
-                                    "Previous document is no longer accessible. Please reopen it.",
+                                    R.string.msg_previous_document_unavailable,
                                     Toast.LENGTH_LONG).show();
                         }
                     }
@@ -943,27 +934,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 SecurityException e) {
             snackbar.setText(R.string.error_while_saving).show();
         }
-    }
-
-    private boolean takePersistableUriPermission() {
-        try {
-            getContentResolver().takePersistableUriPermission(
-                    mUri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-            );
-            return true;
-        } catch (SecurityException e) {
-            Log.e(TAG, "Failed to take persistable URI permission", e);
-            return false;
-        }
-    }
-
-    private boolean hasUriPermission(Uri uri) {
-        return getContentResolver().getPersistedUriPermissions()
-                .stream()
-                .anyMatch(permission ->
-                        permission.getUri().equals(uri) && permission.isReadPermission()
-                );
     }
 
     private void maybeJumpToPage(int targetPage) {

@@ -60,4 +60,6 @@
 
     <string name="settings">Settings</string>
     <string name="resume_last_document">Resume last document</string>
+
+    <string name="msg_previous_document_unavailable">Previous document is no longer accessible. Please reopen it.</string>
 </resources>
