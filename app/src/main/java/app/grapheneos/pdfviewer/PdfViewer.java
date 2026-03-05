@@ -375,7 +375,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             public @NonNull WindowInsetsCompat onApplyWindowInsets(
                     @NonNull View v, @NonNull WindowInsetsCompat insets) {
                  Insets allInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars()
-                         + WindowInsetsCompat.Type.displayCutout());
+                         | WindowInsetsCompat.Type.displayCutout());
                  mInsetLeft = allInsets.left;
                  mInsetRight = allInsets.right;
                  // Only set the bottom inset. The top will use the height of the app bar layout
