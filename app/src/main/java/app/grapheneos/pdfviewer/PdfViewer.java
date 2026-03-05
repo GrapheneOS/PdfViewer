@@ -46,6 +46,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import app.grapheneos.pdfviewer.databinding.PdfviewerBinding;
 import app.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
@@ -57,7 +60,6 @@ import app.grapheneos.pdfviewer.loader.DocumentPropertiesAsyncTaskLoader;
 import app.grapheneos.pdfviewer.outline.OutlineFragment;
 import app.grapheneos.pdfviewer.preferences.PdfPreferencesRepository;
 import app.grapheneos.pdfviewer.viewModel.PdfViewModel;
-import kotlinx.coroutines.Job;
 
 public class PdfViewer extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<CharSequence>> {
     private static final String TAG = "PdfViewer";
@@ -65,6 +67,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final String STATE_WEBVIEW_CRASHED = "webview_crashed";
     private static final String STATE_URI = "uri";
     private static final String STATE_PAGE = "page";
+    private static final String STATE_NUM_PAGES = "numPages";
     private static final String STATE_ZOOM_RATIO = "zoomRatio";
     private static final String STATE_DOCUMENT_ORIENTATION_DEGREES = "documentOrientationDegrees";
     private static final String STATE_ENCRYPTED_DOCUMENT_PASSWORD = "encrypted_document_password";
@@ -123,7 +126,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     private boolean webViewCrashed;
     private Uri mUri;
-    private String mFileHash;
     public int mPage;
     public int mNumPages;
     private Integer mPendingJumpPage = null;
@@ -135,8 +137,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private String mEncryptedDocumentPassword;
     private List<CharSequence> mDocumentProperties;
     private InputStream mInputStream;
-    private PdfPreferencesRepository repository;
-    private Job hashCalculationJob;
 
     private PdfviewerBinding binding;
     private TextView mTextView;
@@ -153,13 +153,15 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 if (resultData != null) {
                     mUri = result.getData().getData();
                     mPage = 1;
+                    mNumPages = 0;
                     mDocumentProperties = null;
                     mEncryptedDocumentPassword = "";
                     viewModel.clearOutline();
-                    if (mUri != null) {
-                        takePersistableUriPermission();
-                        savePdfState(false, false);
-                        startHashCalculation();
+                    if (mUri != null && PreferenceHelper.INSTANCE.isResumeLastDocumentEnabled(this)) {
+                        if (takePersistableUriPermission()) {
+                            viewModel.savePdfState(mUri.toString(), mPage, false);
+                        }
+                        viewModel.calculateHash(mUri);
                     }
                     loadPdf();
                     invalidateOptionsMenu();
@@ -303,7 +305,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         setContentView(binding.getRoot());
         setSupportActionBar(binding.toolbar);
         viewModel = new ViewModelProvider(this, ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication())).get(PdfViewModel.class);
-        repository = new PdfPreferencesRepository(getApplicationContext());
 
         viewModel.getOutline().observe(this, requested -> {
             if (requested instanceof PdfViewModel.OutlineStatus.Requested) {
@@ -436,29 +437,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 invalidateOptionsMenu();
                 loadPdfWithPassword(mEncryptedDocumentPassword);
 
-                if (hashCalculationJob != null && hashCalculationJob.isActive()) {
-                    KtUtilsKt.waitForHashAndCheckSavedPageAsync(
-                            PdfViewer.this,
-                            hashCalculationJob,
-                            mFileHash,
-                            repository,
-                            (savedPage) -> {
-                                runOnUiThread(() -> {
-                                    if (savedPage != null) {
-                                        maybeJumpToPage(savedPage);
-                                    }
-                                });
-                                return kotlin.Unit.INSTANCE;
-                            }
-                    );
-                } else if (mFileHash != null) {
-                    Integer savedPage = KtUtilsKt.getPageForFileBlocking(
-                            repository,
-                            mFileHash
-                    );
-                    if (savedPage != null) {
-                        maybeJumpToPage(savedPage);
-                    }
+                Integer savedPage = viewModel.getPageByHashBlocking();
+
+                if (savedPage != null) {
+                    runOnUiThread(() -> maybeJumpToPage(savedPage));
                 }
             }
 
@@ -530,6 +512,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             }
             mUri = intent.getData();
             mPage = 1;
+            mNumPages = 0;
         }
 
         if (savedInstanceState != null) {
@@ -542,38 +525,35 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 mUri = uri;
             }
             mPage = savedInstanceState.getInt(STATE_PAGE);
+            mNumPages = savedInstanceState.getInt(STATE_NUM_PAGES);
             mZoomRatio = savedInstanceState.getFloat(STATE_ZOOM_RATIO);
             mDocumentOrientationDegrees = savedInstanceState.getInt(STATE_DOCUMENT_ORIENTATION_DEGREES);
             mEncryptedDocumentPassword = savedInstanceState.getString(STATE_ENCRYPTED_DOCUMENT_PASSWORD);
         } else {
-            if (mUri != null) {
-                takePersistableUriPermission();
-                savePdfState(false, false);
-                startHashCalculation();
+            if (mUri != null && PreferenceHelper.INSTANCE.isResumeLastDocumentEnabled(this)) {
+                if (takePersistableUriPermission()) {
+                    viewModel.savePdfState(mUri.toString(), mPage, false);
+                }
+                viewModel.calculateHash(mUri);
             } else {
-                if (PreferenceHelper.INSTANCE.isResumeLastDocumentEnabled(this)) {
-                    try {
-                        PdfPreferencesRepository.PdfState state =
-                                KtUtilsKt.loadPdfStateBlocking(repository);
+                PdfPreferencesRepository.PdfState state =
+                        viewModel.maybeLoadPdfBlocking();
 
-                        if (state.getLastOpenedUri() != null) {
-                            Uri uri = Uri.parse(state.getLastOpenedUri());
-                            if (hasUriPermission(uri)) {
-                                try {
-                                    getContentResolver().openInputStream(uri).close();
-                                    mUri = uri;
-                                    mPage = state.getLastOpenedPage();
-                                    startHashCalculation();
-                                } catch (SecurityException | IOException e) {
-                                    KtUtilsKt.clearLastOpenedBlocking(repository);
-                                    Toast.makeText(this,
-                                            "Previous document is no longer accessible. Please reopen it.",
-                                            Toast.LENGTH_LONG).show();
-                                }
-                            }
+                if (state != null && state.getLastOpenedUri() != null) {
+                    Uri uri = Uri.parse(state.getLastOpenedUri());
+                    if (hasUriPermission(uri)) {
+                        try {
+                            getContentResolver().openInputStream(uri).close();
+                            mUri = uri;
+                            mPage = state.getLastOpenedPage();
+                            mNumPages = 0;
+                            viewModel.calculateHash(uri);
+                        } catch (SecurityException | IOException e) {
+                            viewModel.clearLastOpened();
+                            Toast.makeText(this,
+                                    "Previous document is no longer accessible. Please reopen it.",
+                                    Toast.LENGTH_LONG).show();
                         }
-                    } catch (Exception e) {
-                        Log.e(TAG, "Failed to load last opened Uri", e);
                     }
                 }
             }
@@ -605,7 +585,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     @Override
     protected void onStop() {
         super.onStop();
-        savePdfState(true, true);
+
+        if (mUri != null) {
+            viewModel.savePdfStateBlocking(mUri.toString(), mPage, true);
+        }
     }
 
     @Override
@@ -778,6 +761,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         savedInstanceState.putBoolean(STATE_WEBVIEW_CRASHED, webViewCrashed);
         savedInstanceState.putParcelable(STATE_URI, mUri);
         savedInstanceState.putInt(STATE_PAGE, mPage);
+        savedInstanceState.putInt(STATE_NUM_PAGES, mNumPages);
         savedInstanceState.putFloat(STATE_ZOOM_RATIO, mZoomRatio);
         savedInstanceState.putInt(STATE_DOCUMENT_ORIENTATION_DEGREES, mDocumentOrientationDegrees);
         savedInstanceState.putString(STATE_ENCRYPTED_DOCUMENT_PASSWORD, mEncryptedDocumentPassword);
@@ -961,59 +945,16 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         }
     }
 
-    private void savePdfState(boolean includeHashMapping, boolean blocking) {
-        if (mUri == null) return;
-
-        Uri currentUri = mUri;
-        int currentPage = mPage;
-        String currentHash = mFileHash;
-
-        if (blocking) {
-            KtUtilsKt.savePdfStateBlocking(
-                    repository,
-                    currentUri.toString(),
-                    currentPage,
-                    currentHash,
-                    includeHashMapping
-            );
-        } else {
-            KtUtilsKt.savePdfStateAsync(
-                    this,
-                    repository,
-                    currentUri.toString(),
-                    currentPage,
-                    currentHash,
-                    includeHashMapping
-            );
-        }
-    }
-
-    private void startHashCalculation() {
-        if (mUri == null) return;
-
-        if (hashCalculationJob != null && hashCalculationJob.isActive()) {
-            hashCalculationJob.cancel(null);
-        }
-
-        hashCalculationJob = KtUtilsKt.calculateFileHashAsync(
-                this,
-                mUri,
-                getContentResolver(),
-                (hash) -> {
-                    mFileHash = hash;
-                    return kotlin.Unit.INSTANCE;
-                }
-        );
-    }
-
-    private void takePersistableUriPermission() {
+    private boolean takePersistableUriPermission() {
         try {
             getContentResolver().takePersistableUriPermission(
                     mUri,
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
             );
+            return true;
         } catch (SecurityException e) {
             Log.e(TAG, "Failed to take persistable URI permission", e);
+            return false;
         }
     }
 
