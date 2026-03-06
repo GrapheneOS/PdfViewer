@@ -13,6 +13,7 @@ import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
@@ -28,6 +29,7 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.WindowCompat;
 import androidx.fragment.app.Fragment;
@@ -117,6 +119,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final int STATE_LOADED = 1;
     private static final int STATE_END = 2;
     private static final int PADDING = 10;
+    private static final int SWIPE_THRESHOLD = 80;
+    private static final int SWIPE_VELOCITY_THRESHOLD = 100;
 
     private boolean webViewCrashed;
     private Uri mUri;
@@ -447,6 +451,43 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                             });
                             return true;
                         }
+                        return false;
+                    }
+
+                    @Override
+                    public boolean onFling(@Nullable MotionEvent e1, @NonNull MotionEvent e2, float velocityX, float velocityY) {
+                        if (e1 == null) return false;
+
+                        float deltaX = e2.getX() - e1.getX();
+                        float deltaY = e2.getY() - e1.getY();
+                        float absDeltaX = Math.abs(deltaX);
+                        float absDeltaY = Math.abs(deltaY);
+
+                        float screenDensity = getResources().getDisplayMetrics().density;
+                        int swipeThreshold = (int) (SWIPE_THRESHOLD * screenDensity);
+                        int swipeVelocityThreshold = (int) (SWIPE_VELOCITY_THRESHOLD * screenDensity);
+
+                        // Check primarily horizontal
+                        if (absDeltaX > absDeltaY &&
+                                absDeltaX > swipeThreshold &&
+                                Math.abs(velocityX) > swipeVelocityThreshold) {
+
+                            boolean swipeLeft = deltaX < 0;
+                            boolean swipeRight = deltaX > 0;
+
+                            // Edge detection
+                            boolean atLeftEdge = !binding.webview.canScrollHorizontally(-1);
+                            boolean atRightEdge = !binding.webview.canScrollHorizontally(1);
+
+                            if (swipeLeft && atRightEdge) {
+                                onJumpToPageInDocument(mPage + 1);
+                                return true;
+                            } else if (swipeRight && atLeftEdge) {
+                                onJumpToPageInDocument(mPage - 1);
+                                return true;
+                            }
+                        }
+
                         return false;
                     }
 
