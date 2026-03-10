@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">PDF Viewer</string>
-    <!--<string name="action_settings">Settings</string>-->
     <string name="action_previous">Previous page</string>
     <string name="action_next">Next page</string>
     <string name="action_open">Open document</string>
@@ -14,6 +13,7 @@
     <string name="action_save_as">Save as</string>
     <string name="action_outline">Outline</string>
     <string name="action_view_document_properties">Properties</string>
+    <string name="action_settings">Settings</string>
     <string name="action_close">Close</string>
 
     <string name="outline_child_button_description">View nested outline entries</string>
@@ -57,4 +57,9 @@
     <string name="pages">Pages</string>
 
     <string name="unknown_file_size">Unknown</string>
+
+    <string name="settings">Settings</string>
+    <string name="resume_last_document">Resume last document</string>
+
+    <string name="msg_previous_document_unavailable">Previous document is no longer accessible. Please reopen it.</string>
 </resources>
