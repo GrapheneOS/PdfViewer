@@ -8,6 +8,13 @@
         <!--android:title="@string/action_settings"/>-->
 
     <item
+        android:id="@+id/action_search"
+        android:icon="@drawable/ic_search_24dp"
+        android:title="@string/action_search"
+        app:actionViewClass="androidx.appcompat.widget.SearchView"
+        app:showAsAction="always" />
+
+    <item
         android:id="@+id/action_previous"
         android:icon="@drawable/ic_navigate_before_24dp"
         android:title="@string/action_previous"
