@@ -51,9 +51,11 @@ import app.grapheneos.pdfviewer.databinding.PdfviewerBinding;
 import app.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
 import app.grapheneos.pdfviewer.fragment.JumpToPageFragment;
 import app.grapheneos.pdfviewer.fragment.PasswordPromptFragment;
+import app.grapheneos.pdfviewer.fragment.SettingsDialog;
 import app.grapheneos.pdfviewer.ktx.ViewKt;
 import app.grapheneos.pdfviewer.loader.DocumentPropertiesAsyncTaskLoader;
 import app.grapheneos.pdfviewer.outline.OutlineFragment;
+import app.grapheneos.pdfviewer.preferences.PdfPreferencesRepository;
 import app.grapheneos.pdfviewer.viewModel.PdfViewModel;
 
 public class PdfViewer extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<CharSequence>> {
@@ -62,6 +64,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final String STATE_WEBVIEW_CRASHED = "webview_crashed";
     private static final String STATE_URI = "uri";
     private static final String STATE_PAGE = "page";
+    private static final String STATE_NUM_PAGES = "numPages";
     private static final String STATE_ZOOM_RATIO = "zoomRatio";
     private static final String STATE_DOCUMENT_ORIENTATION_DEGREES = "documentOrientationDegrees";
     private static final String STATE_ENCRYPTED_DOCUMENT_PASSWORD = "encrypted_document_password";
@@ -146,9 +149,13 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 if (resultData != null) {
                     mUri = result.getData().getData();
                     mPage = 1;
+                    mNumPages = 0;
                     mDocumentProperties = null;
                     mEncryptedDocumentPassword = "";
                     viewModel.clearOutline();
+                    if (mUri != null && PreferenceHelper.INSTANCE.isResumeLastDocumentEnabled(this)) {
+                        viewModel.prepareNewPdf(mUri, mPage);
+                    }
                     loadPdf();
                     invalidateOptionsMenu();
                 }
@@ -227,6 +234,16 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         public void setNumPages(int numPages) {
             mNumPages = numPages;
             runOnUiThread(PdfViewer.this::invalidateOptionsMenu);
+        }
+
+        @JavascriptInterface
+        public void setFingerprint(String fingerprint) {
+            viewModel.setCurrentFingerprint(fingerprint);
+            Integer savedPage = viewModel.getPageByFingerprintBlocking();
+
+            if (savedPage != null) {
+                runOnUiThread(() -> onJumpToPageInDocument(savedPage));
+            }
         }
 
         @JavascriptInterface
@@ -486,6 +503,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             }
             mUri = intent.getData();
             mPage = 1;
+            mNumPages = 0;
         }
 
         if (savedInstanceState != null) {
@@ -498,9 +516,31 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 mUri = uri;
             }
             mPage = savedInstanceState.getInt(STATE_PAGE);
+            mNumPages = savedInstanceState.getInt(STATE_NUM_PAGES);
             mZoomRatio = savedInstanceState.getFloat(STATE_ZOOM_RATIO);
             mDocumentOrientationDegrees = savedInstanceState.getInt(STATE_DOCUMENT_ORIENTATION_DEGREES);
             mEncryptedDocumentPassword = savedInstanceState.getString(STATE_ENCRYPTED_DOCUMENT_PASSWORD);
+        } else {
+            if (mUri != null && PreferenceHelper.INSTANCE.isResumeLastDocumentEnabled(this)) {
+                viewModel.prepareNewPdf(mUri, mPage);
+            } else {
+                PdfPreferencesRepository.PdfState state =
+                        viewModel.maybeLoadPdfStateBlocking();
+
+                if (state != null && state.getLastOpenedUri() != null) {
+                    Uri uri = Uri.parse(state.getLastOpenedUri());
+                    if (viewModel.hasUriPermission(uri)) {
+                        mUri = uri;
+                        mPage = state.getLastOpenedPage();
+                        mNumPages = 0;
+                    } else {
+                        viewModel.clearLastOpened();
+                        Toast.makeText(this,
+                                R.string.msg_previous_document_unavailable,
+                                Toast.LENGTH_LONG).show();
+                    }
+                }
+            }
         }
 
         binding.webviewAlertReload.setOnClickListener(v -> {
@@ -524,6 +564,15 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         binding.webview.removeJavascriptInterface("channel");
         binding.getRoot().removeView(binding.webview);
         binding.webview.destroy();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        if (mUri != null) {
+            viewModel.savePdfStateBlocking(mUri.toString(), mPage, true);
+        }
     }
 
     @Override
@@ -696,6 +745,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         savedInstanceState.putBoolean(STATE_WEBVIEW_CRASHED, webViewCrashed);
         savedInstanceState.putParcelable(STATE_URI, mUri);
         savedInstanceState.putInt(STATE_PAGE, mPage);
+        savedInstanceState.putInt(STATE_NUM_PAGES, mNumPages);
         savedInstanceState.putFloat(STATE_ZOOM_RATIO, mZoomRatio);
         savedInstanceState.putInt(STATE_DOCUMENT_ORIENTATION_DEGREES, mDocumentOrientationDegrees);
         savedInstanceState.putString(STATE_ENCRYPTED_DOCUMENT_PASSWORD, mEncryptedDocumentPassword);
@@ -826,6 +876,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             return true;
         } else if (itemId == R.id.debug_action_crash_webview) {
             binding.webview.loadUrl("chrome://crash");
+            return true;
+        } else if (itemId == R.id.action_settings) {
+            new SettingsDialog().show(getSupportFragmentManager(), "settings");
             return true;
         }
 
