@@ -13,6 +13,7 @@
     <string name="action_share">Share</string>
     <string name="action_save_as">Save as</string>
     <string name="action_outline">Outline</string>
+    <string name="action_toggle_inverted_mode">Toggle inverted mode</string>
     <string name="action_view_document_properties">Properties</string>
     <string name="action_close">Close</string>
 
