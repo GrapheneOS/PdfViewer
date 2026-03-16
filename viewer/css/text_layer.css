@@ -11,14 +11,13 @@
     text-size-adjust: none;
     forced-color-adjust: none;
     caret-color: CanvasText;
-    z-index: 0;
 }
 
 .textLayer.highlighting {
     touch-action: none;
 }
 
-.textLayer :is(span,br) {
+.textLayer :is(span, br) {
     color: var(--text-layer-foreground);
     position: absolute;
     white-space: pre;
@@ -26,7 +25,8 @@
     transform-origin: 0% 0%;
 }
 
-.textLayer  > :not(.markedContent),.textLayer .markedContent span:not(.markedContent) {
+.textLayer> :not(.markedContent),
+.textLayer .markedContent span:not(.markedContent) {
     z-index: 1;
 }
 
@@ -52,14 +52,12 @@
         --highlight-bg-color: transparent;
         --highlight-selected-bg-color: transparent;
         --highlight-backdrop-filter: var(--hcm-highlight-filter);
-        --highlight-selected-backdrop-filter: var(
-        --hcm-highlight-selected-filter
-        );
+        --highlight-selected-backdrop-filter: var(--hcm-highlight-selected-filter);
     }
 }
 
 .textLayer .highlight {
-    margin:-1px;
+    margin: -1px;
     padding: 1px;
     background-color: var(--highlight-bg-color);
     backdrop-filter: var(--highlight-backdrop-filter);
@@ -109,6 +107,6 @@
     top: 0;
 }
 
-.textLayer.selecting ~ .annotationLayer section {
+.textLayer.selecting~.annotationLayer section {
     pointer-events: none;
 }

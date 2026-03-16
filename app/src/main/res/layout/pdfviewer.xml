@@ -104,4 +104,18 @@
 
     </ScrollView>
 
+    <TextView
+        android:id="@+id/page_number_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="10dp"
+        android:layout_marginBottom="10dp"
+        android:visibility="gone"
+        android:elevation="10dp"
+        android:textSize="14sp"
+        android:padding="8dp"
+        android:background="@android:drawable/toast_frame"
+        android:textColor="@android:color/white"/>
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
