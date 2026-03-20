@@ -16,7 +16,6 @@ import androidx.test.espresso.intent.matcher.IntentMatchers.isInternal
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.grapheneos.pdfviewer.documentName
-import app.grapheneos.pdfviewer.documentProperties
 import app.grapheneos.pdfviewer.refreshMenuSync
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
