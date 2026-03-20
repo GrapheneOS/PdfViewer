@@ -242,23 +242,27 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
         @JavascriptInterface
         public void showPasswordPrompt() {
-            if (!getPasswordPromptFragment().isAdded()){
-                getPasswordPromptFragment().show(getSupportFragmentManager(), PasswordPromptFragment.class.getName());
-            }
+            runOnUiThread(() -> {
+                if (!getPasswordPromptFragment().isAdded()){
+                    getPasswordPromptFragment().show(getSupportFragmentManager(), PasswordPromptFragment.class.getName());
+                }
+            });
             viewModel.passwordMissing();
         }
 
         @JavascriptInterface
         public void invalidPassword() {
-            runOnUiThread(() -> viewModel.invalid());
+            viewModel.invalid();
         }
 
         @JavascriptInterface
         public void onLoaded() {
             viewModel.validated();
-            if (getPasswordPromptFragment().isAdded()) {
-                getPasswordPromptFragment().dismiss();
-            }
+            runOnUiThread(() -> {
+                if (getPasswordPromptFragment().isAdded()) {
+                    getPasswordPromptFragment().dismiss();
+                }
+            });
         }
 
         @JavascriptInterface
