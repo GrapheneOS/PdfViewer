@@ -1,60 +1,26 @@
-package app.grapheneos.pdfviewer.loader
+package app.grapheneos.pdfviewer.properties
 
 import android.content.Context
-import android.graphics.Typeface
 import android.net.Uri
 import android.provider.OpenableColumns
-import android.text.SpannableStringBuilder
-import android.text.Spanned
 import android.text.format.Formatter
-import android.text.style.StyleSpan
 import android.util.Log
 import androidx.core.database.getLongOrNull
 import app.grapheneos.pdfviewer.R
 import org.json.JSONException
 
-class DocumentPropertiesLoader(
+class DocumentPropertiesRetriever(
     private val context: Context,
     private val properties: String,
     private val numPages: Int,
-    private val mUri: Uri
+    private val uri: Uri
 ) {
 
-    fun loadAsResult(): DocumentPropertiesResult {
-        val raw = load()
-        val list = raw.map { item ->
-            val name = context.getString(item.key.nameResource)
-            val value = item.value
-
-            SpannableStringBuilder()
-                .append(name)
-                .append(":\n")
-                .append(value)
-                .apply {
-                    setSpan(
-                        StyleSpan(Typeface.BOLD),
-                        0,
-                        name.length,
-                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                    )
-                }
-        }
-        return DocumentPropertiesResult(list = list, documentName = resolveDocumentName(raw))
+    companion object {
+        const val TAG = "DocumentPropertiesRetriever"
     }
 
-    private fun resolveDocumentName(raw: Map<DocumentProperty, String>): String {
-        val fileName = raw[DocumentProperty.FileName].orEmpty()
-        if (fileName.isNotEmpty() && fileName != DEFAULT_VALUE) {
-            return fileName
-        }
-        val title = raw[DocumentProperty.Title].orEmpty()
-        if (title.isNotEmpty() && title != DEFAULT_VALUE) {
-            return title
-        }
-        return ""
-    }
-
-    private fun load(): Map<DocumentProperty, String> {
+    fun retrieve(): Map<DocumentProperty, String> {
         val result = mutableMapOf<DocumentProperty, String>()
         result.addFileProperties()
         result.addPageSizeProperty()
@@ -81,16 +47,13 @@ class DocumentPropertiesLoader(
                 context.getString(R.string.document_properties_invalid_date),
                 parseExceptionListener = { parseException, value ->
                     Log.w(
-                        DocumentPropertiesAsyncTaskLoader.TAG,
+                        TAG,
                         "${parseException.message} for $value at offset: ${parseException.errorOffset}"
                     )
                 }
             ).convert()
-        } catch (e: JSONException) {
-            Log.w(
-                DocumentPropertiesAsyncTaskLoader.TAG,
-                "invalid properties"
-            )
+        } catch (_: JSONException) {
+            Log.w(TAG, "invalid properties")
             emptyMap()
         }
     }
@@ -103,7 +66,7 @@ class DocumentPropertiesLoader(
         )
 
         context.contentResolver.query(
-            mUri,
+            uri,
             proj,
             null,
             null

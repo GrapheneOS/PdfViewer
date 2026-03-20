@@ -1,4 +1,4 @@
-package app.grapheneos.pdfviewer.loader
+package app.grapheneos.pdfviewer.properties
 
 import app.grapheneos.pdfviewer.Utils
 import org.json.JSONException

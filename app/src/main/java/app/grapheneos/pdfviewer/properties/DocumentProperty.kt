@@ -1,4 +1,4 @@
-package app.grapheneos.pdfviewer.loader
+package app.grapheneos.pdfviewer.properties
 
 import androidx.annotation.StringRes
 import app.grapheneos.pdfviewer.R
@@ -17,7 +17,7 @@ const val DEFAULT_VALUE = "-"
 
 enum class DocumentProperty(
     val key: String = "",
-    @StringRes val nameResource: Int,
+    @param:StringRes val nameResource: Int,
     val isDate: Boolean = false
 ) {
     FileName(key = "", nameResource = R.string.file_name),
