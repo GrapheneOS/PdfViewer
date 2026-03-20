@@ -118,17 +118,19 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final int STATE_END = 2;
     private static final int PADDING = 10;
 
+    private final Object streamLock = new Object();
+
     private boolean webViewCrashed;
-    private Uri mUri;
-    public int mPage;
-    public int mNumPages;
-    private float mZoomRatio = 1f;
-    private float mZoomFocusX = 0f;
-    private float mZoomFocusY = 0f;
-    private int mDocumentOrientationDegrees;
+    private volatile Uri mUri;
+    public volatile int mPage;
+    public volatile int mNumPages;
+    private volatile float mZoomRatio = 1f;
+    private volatile float mZoomFocusX = 0f;
+    private volatile float mZoomFocusY = 0f;
+    private volatile int mDocumentOrientationDegrees;
     private int mDocumentState;
-    private String mEncryptedDocumentPassword;
-    private List<CharSequence> mDocumentProperties;
+    private volatile String mEncryptedDocumentPassword;
+    private volatile List<CharSequence> mDocumentProperties;
     private InputStream mInputStream;
 
     private PdfviewerBinding binding;
@@ -349,18 +351,20 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 Log.d(TAG, "path " + path);
 
                 if ("/placeholder.pdf".equals(path)) {
-                    maybeCloseInputStream();
-                    try {
-                        mInputStream = getContentResolver().openInputStream(mUri);
-                        if (mInputStream == null) {
-                            throw new FileNotFoundException();
+                    synchronized (streamLock) {
+                        maybeCloseInputStream();
+                        try {
+                            mInputStream = getContentResolver().openInputStream(mUri);
+                            if (mInputStream == null) {
+                                throw new FileNotFoundException();
+                            }
+                        } catch (final FileNotFoundException | IllegalArgumentException |
+                                       IllegalStateException | SecurityException ignored) {
+                            runOnUiThread(() -> snackbar.setText(R.string.error_while_opening).show());
+                            return null;
                         }
-                    } catch (final FileNotFoundException | IllegalArgumentException |
-                            IllegalStateException | SecurityException ignored) {
-                        snackbar.setText(R.string.error_while_opening).show();
-                        return null;
+                        return new WebResourceResponse("application/pdf", null, mInputStream);
                     }
-                    return new WebResourceResponse("application/pdf", null, mInputStream);
                 }
 
                 if ("/viewer/index.html".equals(path)) {
@@ -534,14 +538,16 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     void maybeCloseInputStream() {
-        InputStream stream = mInputStream;
-        if (stream == null) {
-            return;
+        synchronized (streamLock) {
+            InputStream stream = mInputStream;
+            if (stream == null) {
+                return;
+            }
+            mInputStream = null;
+            try {
+                stream.close();
+            } catch (IOException ignored) {}
         }
-        mInputStream = null;
-        try {
-            stream.close();
-        } catch (IOException ignored) {}
     }
 
     private PasswordPromptFragment getPasswordPromptFragment() {
