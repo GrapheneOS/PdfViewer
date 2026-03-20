@@ -10,20 +10,20 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 class DocumentPropertiesFragment : DialogFragment() {
 
     // TODO replace with nav args once the `PdfViewer` activity is converted to kotlin
-    private val mDocumentProperties: List<String> by lazy {
+    private val documentProperties: List<String> by lazy {
         requireArguments().getStringArrayList(KEY_DOCUMENT_PROPERTIES)?.toList() ?: emptyList()
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         return MaterialAlertDialogBuilder(requireActivity())
             .setPositiveButton(android.R.string.ok, null).apply {
-                if (mDocumentProperties.isNotEmpty()) {
+                if (documentProperties.isNotEmpty()) {
                     setTitle(getString(R.string.action_view_document_properties))
                     setAdapter(
                         ArrayAdapter(
                             requireActivity(),
                             android.R.layout.simple_list_item_1,
-                            mDocumentProperties
+                            documentProperties
                         ), null
                     )
                 } else {

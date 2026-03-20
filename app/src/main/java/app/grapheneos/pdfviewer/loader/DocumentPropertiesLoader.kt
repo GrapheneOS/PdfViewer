@@ -17,7 +17,7 @@ class DocumentPropertiesLoader(
     private val context: Context,
     private val properties: String,
     private val numPages: Int,
-    private val mUri: Uri
+    private val uri: Uri
 ) {
 
     fun loadAsList(): List<CharSequence> {
@@ -89,7 +89,7 @@ class DocumentPropertiesLoader(
         )
 
         context.contentResolver.query(
-            mUri,
+            uri,
             proj,
             null,
             null
