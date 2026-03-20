@@ -14,16 +14,16 @@ public class DocumentPropertiesAsyncTaskLoader extends AsyncTaskLoader<List<Char
 
     public static final int ID = 1;
 
-    private final String mProperties;
-    private final int mNumPages;
-    private final Uri mUri;
+    private final String properties;
+    private final int numPages;
+    private final Uri uri;
 
     public DocumentPropertiesAsyncTaskLoader(Context context, String properties, int numPages, Uri uri) {
         super(context);
 
-        mProperties = properties;
-        mNumPages = numPages;
-        mUri = uri;
+        this.properties = properties;
+        this.numPages = numPages;
+        this.uri = uri;
     }
 
 
@@ -38,9 +38,9 @@ public class DocumentPropertiesAsyncTaskLoader extends AsyncTaskLoader<List<Char
 
         DocumentPropertiesLoader loader = new DocumentPropertiesLoader(
                 getContext(),
-                mProperties,
-                mNumPages,
-                mUri
+                properties,
+                numPages,
+                uri
         );
 
         return loader.loadAsList();

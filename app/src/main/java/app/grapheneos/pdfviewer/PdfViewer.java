@@ -119,23 +119,23 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final int PADDING = 10;
 
     private boolean webViewCrashed;
-    private Uri mUri;
-    public int mPage;
-    public int mNumPages;
-    private float mZoomRatio = 1f;
-    private float mZoomFocusX = 0f;
-    private float mZoomFocusY = 0f;
-    private int mDocumentOrientationDegrees;
-    private int mDocumentState;
-    private String mEncryptedDocumentPassword;
-    private List<CharSequence> mDocumentProperties;
-    private InputStream mInputStream;
+    private Uri uri;
+    public int page;
+    public int numPages;
+    private float zoomRatio = 1f;
+    private float zoomFocusX = 0f;
+    private float zoomFocusY = 0f;
+    private int documentOrientationDegrees;
+    private int documentState;
+    private String encryptedDocumentPassword;
+    private List<CharSequence> documentProperties;
+    private InputStream inputStream;
 
     private PdfviewerBinding binding;
-    private TextView mTextView;
-    private Toast mToast;
+    private TextView textView;
+    private Toast toast;
     private Snackbar snackbar;
-    private PasswordPromptFragment mPasswordPromptFragment;
+    private PasswordPromptFragment passwordPromptFragment;
     public PdfViewModel viewModel;
 
     private final ActivityResultLauncher<Intent> openDocumentLauncher = registerForActivityResult(
@@ -144,10 +144,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 if (result.getResultCode() != RESULT_OK) return;
                 Intent resultData = result.getData();
                 if (resultData != null) {
-                    mUri = result.getData().getData();
-                    mPage = 1;
-                    mDocumentProperties = null;
-                    mEncryptedDocumentPassword = "";
+                    uri = result.getData().getData();
+                    page = 1;
+                    documentProperties = null;
+                    encryptedDocumentPassword = "";
                     viewModel.clearOutline();
                     loadPdf();
                     invalidateOptionsMenu();
@@ -180,17 +180,17 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
         @JavascriptInterface
         public int getPage() {
-            return mPage;
+            return page;
         }
 
         @JavascriptInterface
         public float getZoomRatio() {
-            return mZoomRatio;
+            return zoomRatio;
         }
 
         @JavascriptInterface
         public void setZoomRatio(final float ratio) {
-            mZoomRatio = Math.max(Math.min(ratio, MAX_ZOOM_RATIO), MIN_ZOOM_RATIO);
+            zoomRatio = Math.max(Math.min(ratio, MAX_ZOOM_RATIO), MIN_ZOOM_RATIO);
         }
 
         @JavascriptInterface
@@ -200,12 +200,12 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
         @JavascriptInterface
         public float getZoomFocusX() {
-            return mZoomFocusX;
+            return zoomFocusX;
         }
 
         @JavascriptInterface
         public float getZoomFocusY() {
-            return mZoomFocusY;
+            return zoomFocusY;
         }
 
         @JavascriptInterface
@@ -220,18 +220,18 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
         @JavascriptInterface
         public int getDocumentOrientationDegrees() {
-            return mDocumentOrientationDegrees;
+            return documentOrientationDegrees;
         }
 
         @JavascriptInterface
         public void setNumPages(int numPages) {
-            mNumPages = numPages;
+            PdfViewer.this.numPages = numPages;
             runOnUiThread(PdfViewer.this::invalidateOptionsMenu);
         }
 
         @JavascriptInterface
         public void setDocumentProperties(final String properties) {
-            if (mDocumentProperties != null) {
+            if (documentProperties != null) {
                 throw new SecurityException("mDocumentProperties not null");
             }
 
@@ -263,7 +263,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
         @JavascriptInterface
         public String getPassword() {
-            return mEncryptedDocumentPassword != null ? mEncryptedDocumentPassword : "";
+            return encryptedDocumentPassword != null ? encryptedDocumentPassword : "";
         }
     }
 
@@ -351,8 +351,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 if ("/placeholder.pdf".equals(path)) {
                     maybeCloseInputStream();
                     try {
-                        mInputStream = getContentResolver().openInputStream(mUri);
-                        if (mInputStream == null) {
+                        inputStream = getContentResolver().openInputStream(uri);
+                        if (inputStream == null) {
                             throw new FileNotFoundException();
                         }
                     } catch (final FileNotFoundException | IllegalArgumentException |
@@ -360,7 +360,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                         snackbar.setText(R.string.error_while_opening).show();
                         return null;
                     }
-                    return new WebResourceResponse("application/pdf", null, mInputStream);
+                    return new WebResourceResponse("application/pdf", null, inputStream);
                 }
 
                 if ("/viewer/index.html".equals(path)) {
@@ -413,9 +413,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                mDocumentState = STATE_LOADED;
+                documentState = STATE_LOADED;
                 invalidateOptionsMenu();
-                loadPdfWithPassword(mEncryptedDocumentPassword);
+                loadPdfWithPassword(encryptedDocumentPassword);
             }
 
             @Override
@@ -435,7 +435,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 new GestureHelper.GestureListener() {
                     @Override
                     public boolean onTapUp() {
-                        if (mUri != null) {
+                        if (uri != null) {
                             binding.webview.evaluateJavascript("isTextSelected()", selection -> {
                                 if (!Boolean.parseBoolean(selection)) {
                                     if (getSupportActionBar().isShowing()) {
@@ -461,11 +461,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     }
                 });
 
-        mTextView = new TextView(this);
-        mTextView.setBackgroundColor(Color.DKGRAY);
-        mTextView.setTextColor(ColorStateList.valueOf(Color.WHITE));
-        mTextView.setTextSize(18);
-        mTextView.setPadding(PADDING, 0, PADDING, 0);
+        textView = new TextView(this);
+        textView.setBackgroundColor(Color.DKGRAY);
+        textView.setTextColor(ColorStateList.valueOf(Color.WHITE));
+        textView.setTextSize(18);
+        textView.setPadding(PADDING, 0, PADDING, 0);
 
         // If loaders are not being initialized in onCreate(), the result will not be delivered
         // after orientation change (See FragmentHostCallback), thus initialize the
@@ -484,23 +484,23 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             if (type == null) {
                 Log.w(TAG, "MIME type is null, but we'll try to load it anyway");
             }
-            mUri = intent.getData();
-            mPage = 1;
+            uri = intent.getData();
+            page = 1;
         }
 
         if (savedInstanceState != null) {
             webViewCrashed = savedInstanceState.getBoolean(STATE_WEBVIEW_CRASHED);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                mUri = savedInstanceState.getParcelable(STATE_URI, Uri.class);
+                uri = savedInstanceState.getParcelable(STATE_URI, Uri.class);
             } else {
                 @SuppressWarnings("deprecation")
                 final Uri uri = savedInstanceState.getParcelable(STATE_URI);
-                mUri = uri;
+                this.uri = uri;
             }
-            mPage = savedInstanceState.getInt(STATE_PAGE);
-            mZoomRatio = savedInstanceState.getFloat(STATE_ZOOM_RATIO);
-            mDocumentOrientationDegrees = savedInstanceState.getInt(STATE_DOCUMENT_ORIENTATION_DEGREES);
-            mEncryptedDocumentPassword = savedInstanceState.getString(STATE_ENCRYPTED_DOCUMENT_PASSWORD);
+            page = savedInstanceState.getInt(STATE_PAGE);
+            zoomRatio = savedInstanceState.getFloat(STATE_ZOOM_RATIO);
+            documentOrientationDegrees = savedInstanceState.getInt(STATE_DOCUMENT_ORIENTATION_DEGREES);
+            encryptedDocumentPassword = savedInstanceState.getString(STATE_ENCRYPTED_DOCUMENT_PASSWORD);
         }
 
         binding.webviewAlertReload.setOnClickListener(v -> {
@@ -510,8 +510,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
         if (webViewCrashed) {
             showWebViewCrashed();
-        } else if (mUri != null) {
-            if ("file".equals(mUri.getScheme())) {
+        } else if (uri != null) {
+            if ("file".equals(uri.getScheme())) {
                 snackbar.setText(R.string.legacy_file_uri).show();
                 return;
             }
@@ -534,26 +534,26 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     void maybeCloseInputStream() {
-        InputStream stream = mInputStream;
+        InputStream stream = inputStream;
         if (stream == null) {
             return;
         }
-        mInputStream = null;
+        inputStream = null;
         try {
             stream.close();
         } catch (IOException ignored) {}
     }
 
     private PasswordPromptFragment getPasswordPromptFragment() {
-        if (mPasswordPromptFragment == null) {
+        if (passwordPromptFragment == null) {
             final Fragment fragment = getSupportFragmentManager().findFragmentByTag(PasswordPromptFragment.class.getName());
             if (fragment != null) {
-                mPasswordPromptFragment = (PasswordPromptFragment) fragment;
+                passwordPromptFragment = (PasswordPromptFragment) fragment;
             } else {
-                mPasswordPromptFragment = new PasswordPromptFragment();
+                passwordPromptFragment = new PasswordPromptFragment();
             }
         }
-        return mPasswordPromptFragment;
+        return passwordPromptFragment;
     }
 
     private void setToolbarTitleWithDocumentName() {
@@ -593,12 +593,12 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     @NonNull
     @Override
     public Loader<List<CharSequence>> onCreateLoader(int id, Bundle args) {
-        return new DocumentPropertiesAsyncTaskLoader(this, args.getString(KEY_PROPERTIES), mNumPages, mUri);
+        return new DocumentPropertiesAsyncTaskLoader(this, args.getString(KEY_PROPERTIES), numPages, uri);
     }
 
     @Override
     public void onLoadFinished(@NonNull Loader<List<CharSequence>> loader, List<CharSequence> data) {
-        mDocumentProperties = data;
+        documentProperties = data;
         invalidateOptionsMenu();
         setToolbarTitleWithDocumentName();
         LoaderManager.getInstance(this).destroyLoader(DocumentPropertiesAsyncTaskLoader.ID);
@@ -606,18 +606,18 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     @Override
     public void onLoaderReset(@NonNull Loader<List<CharSequence>> loader) {
-        mDocumentProperties = null;
+        documentProperties = null;
     }
 
     private void loadPdf() {
-        mDocumentState = 0;
+        documentState = 0;
         showSystemUi();
         invalidateOptionsMenu();
         binding.webview.loadUrl("https://localhost/viewer/index.html");
     }
 
     public void loadPdfWithPassword(final String password) {
-        mEncryptedDocumentPassword = password;
+        encryptedDocumentPassword = password;
         binding.webview.evaluateJavascript("loadDocument()", null);
     }
 
@@ -626,9 +626,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     private void documentOrientationChanged(final int orientationDegreesOffset) {
-        mDocumentOrientationDegrees = (mDocumentOrientationDegrees + orientationDegreesOffset) % 360;
-        if (mDocumentOrientationDegrees < 0) {
-            mDocumentOrientationDegrees += 360;
+        documentOrientationDegrees = (documentOrientationDegrees + orientationDegreesOffset) % 360;
+        if (documentOrientationDegrees < 0) {
+            documentOrientationDegrees += 360;
         }
         renderPage(0);
     }
@@ -641,10 +641,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     private void shareDocument() {
-        if (mUri != null) {
+        if (uri != null) {
             Intent shareIntent = new Intent(Intent.ACTION_SEND);
-            shareIntent.setDataAndTypeAndNormalize(mUri, "application/pdf");
-            shareIntent.putExtra(Intent.EXTRA_STREAM, mUri);
+            shareIntent.setDataAndTypeAndNormalize(uri, "application/pdf");
+            shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
             shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(Intent.createChooser(shareIntent, getString(R.string.action_share)));
         } else {
@@ -653,9 +653,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     private void zoom(float scaleFactor, float focusX, float focusY, boolean end) {
-        mZoomRatio = Math.min(Math.max(mZoomRatio * scaleFactor, MIN_ZOOM_RATIO), MAX_ZOOM_RATIO);
-        mZoomFocusX = focusX;
-        mZoomFocusY = focusY;
+        zoomRatio = Math.min(Math.max(zoomRatio * scaleFactor, MIN_ZOOM_RATIO), MAX_ZOOM_RATIO);
+        zoomFocusX = focusX;
+        zoomFocusY = focusY;
         renderPage(end ? 1 : 2);
         invalidateOptionsMenu();
     }
@@ -672,8 +672,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     public void onJumpToPageInDocument(final int selected_page) {
-        if (selected_page >= 1 && selected_page <= mNumPages && mPage != selected_page) {
-            mPage = selected_page;
+        if (selected_page >= 1 && selected_page <= numPages && page != selected_page) {
+            page = selected_page;
             renderPage(0);
             showPageNumber();
             invalidateOptionsMenu();
@@ -694,23 +694,23 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     public void onSaveInstanceState(@NonNull Bundle savedInstanceState) {
         super.onSaveInstanceState(savedInstanceState);
         savedInstanceState.putBoolean(STATE_WEBVIEW_CRASHED, webViewCrashed);
-        savedInstanceState.putParcelable(STATE_URI, mUri);
-        savedInstanceState.putInt(STATE_PAGE, mPage);
-        savedInstanceState.putFloat(STATE_ZOOM_RATIO, mZoomRatio);
-        savedInstanceState.putInt(STATE_DOCUMENT_ORIENTATION_DEGREES, mDocumentOrientationDegrees);
-        savedInstanceState.putString(STATE_ENCRYPTED_DOCUMENT_PASSWORD, mEncryptedDocumentPassword);
+        savedInstanceState.putParcelable(STATE_URI, uri);
+        savedInstanceState.putInt(STATE_PAGE, page);
+        savedInstanceState.putFloat(STATE_ZOOM_RATIO, zoomRatio);
+        savedInstanceState.putInt(STATE_DOCUMENT_ORIENTATION_DEGREES, documentOrientationDegrees);
+        savedInstanceState.putString(STATE_ENCRYPTED_DOCUMENT_PASSWORD, encryptedDocumentPassword);
     }
 
     private void showPageNumber() {
-        if (mToast != null) {
-            mToast.cancel();
+        if (toast != null) {
+            toast.cancel();
         }
-        mTextView.setText(String.format("%s/%s", mPage, mNumPages));
-        mToast = new Toast(this);
-        mToast.setGravity(Gravity.BOTTOM | Gravity.END, PADDING, PADDING);
-        mToast.setDuration(Toast.LENGTH_SHORT);
-        mToast.setView(mTextView);
-        mToast.show();
+        textView.setText(String.format("%s/%s", page, numPages));
+        toast = new Toast(this);
+        toast.setGravity(Gravity.BOTTOM | Gravity.END, PADDING, PADDING);
+        toast.setDuration(Toast.LENGTH_SHORT);
+        toast.setView(textView);
+        toast.show();
     }
 
     @Override
@@ -735,32 +735,32 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             ids.add(R.id.debug_action_toggle_text_layer_visibility);
             ids.add(R.id.debug_action_crash_webview);
         }
-        if (mDocumentState < STATE_LOADED) {
+        if (documentState < STATE_LOADED) {
             for (final int id : ids) {
                 final MenuItem item = menu.findItem(id);
                 if (item.isVisible()) {
                     item.setVisible(false);
                 }
             }
-        } else if (mDocumentState == STATE_LOADED) {
+        } else if (documentState == STATE_LOADED) {
             for (final int id : ids) {
                 final MenuItem item = menu.findItem(id);
                 if (!item.isVisible()) {
                     item.setVisible(true);
                 }
             }
-            mDocumentState = STATE_END;
+            documentState = STATE_END;
         }
 
 
         enableDisableMenuItem(menu.findItem(R.id.action_open),
                 !webViewCrashed && getWebViewRelease() >= MIN_WEBVIEW_RELEASE);
-        enableDisableMenuItem(menu.findItem(R.id.action_share), mUri != null);
-        enableDisableMenuItem(menu.findItem(R.id.action_next), mPage < mNumPages);
-        enableDisableMenuItem(menu.findItem(R.id.action_previous), mPage > 1);
-        enableDisableMenuItem(menu.findItem(R.id.action_save_as), mUri != null);
+        enableDisableMenuItem(menu.findItem(R.id.action_share), uri != null);
+        enableDisableMenuItem(menu.findItem(R.id.action_next), page < numPages);
+        enableDisableMenuItem(menu.findItem(R.id.action_previous), page > 1);
+        enableDisableMenuItem(menu.findItem(R.id.action_save_as), uri != null);
         enableDisableMenuItem(menu.findItem(R.id.action_view_document_properties),
-                mDocumentProperties != null);
+                documentProperties != null);
 
         menu.findItem(R.id.action_outline).setVisible(viewModel.hasOutline());
 
@@ -777,16 +777,16 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     public boolean onOptionsItemSelected(MenuItem item) {
         final int itemId = item.getItemId();
         if (itemId == R.id.action_previous) {
-            onJumpToPageInDocument(mPage - 1);
+            onJumpToPageInDocument(page - 1);
             return true;
         } else if (itemId == R.id.action_next) {
-            onJumpToPageInDocument(mPage + 1);
+            onJumpToPageInDocument(page + 1);
             return true;
         } else if (itemId == R.id.action_first) {
             onJumpToPageInDocument(1);
             return true;
         } else if (itemId == R.id.action_last) {
-            onJumpToPageInDocument(mNumPages);
+            onJumpToPageInDocument(numPages);
             return true;
         } else if (itemId == R.id.action_open) {
             openDocument();
@@ -799,7 +799,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             return true;
         } else if (itemId == R.id.action_outline) {
             OutlineFragment outlineFragment =
-                    OutlineFragment.newInstance(mPage, getCurrentDocumentName());
+                    OutlineFragment.newInstance(page, getCurrentDocumentName());
             getSupportFragmentManager().beginTransaction()
                     .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
                     // fullscreen fragment, since content root view == activity's root view
@@ -809,7 +809,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             return true;
         } else if (itemId == R.id.action_view_document_properties) {
             DocumentPropertiesFragment
-                .newInstance(mDocumentProperties)
+                .newInstance(documentProperties)
                 .show(getSupportFragmentManager(), DocumentPropertiesFragment.TAG);
             return true;
         } else if (itemId == R.id.action_jump_to_page) {
@@ -841,10 +841,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     private String getCurrentDocumentName() {
-        if (mDocumentProperties == null || mDocumentProperties.isEmpty()) return "";
+        if (documentProperties == null || documentProperties.isEmpty()) return "";
         String fileName = "";
         String title = "";
-        for (CharSequence property : mDocumentProperties) {
+        for (CharSequence property : documentProperties) {
             if (property.toString().startsWith("File name:")) {
                 fileName = property.toString().replace("File name:", "");
             }
@@ -856,8 +856,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     private void saveDocumentAs(final Uri uri) {
-        try (final InputStream input = getContentResolver().openInputStream(mUri);
-                final OutputStream output = getContentResolver().openOutputStream(uri)) {
+        try (final InputStream input = getContentResolver().openInputStream(this.uri);
+             final OutputStream output = getContentResolver().openOutputStream(uri)) {
             if (input == null || output == null) {
                 throw new FileNotFoundException();
             }
