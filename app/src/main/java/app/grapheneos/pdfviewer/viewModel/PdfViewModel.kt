@@ -1,13 +1,21 @@
 package app.grapheneos.pdfviewer.viewModel
 
+import android.content.ContentResolver
+import android.net.Uri
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import app.grapheneos.pdfviewer.outline.OutlineNode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.FileNotFoundException
+import java.io.IOException
 
 class PdfViewModel : ViewModel() {
 
@@ -31,6 +39,9 @@ class PdfViewModel : ViewModel() {
     // Outline state as LiveData, since we require the Activity to observe so it can use the
     // WebView to get outline. Lazily loaded, and will be cached until a different PDF is loaded.
     val outline: MutableLiveData<OutlineStatus> = MutableLiveData(OutlineStatus.NotLoaded)
+
+    private val _saveError = MutableLiveData<Boolean>()
+    val saveError: LiveData<Boolean> get() = _saveError
 
     private val scope = CoroutineScope(Dispatchers.IO)
 
@@ -88,6 +99,33 @@ class PdfViewModel : ViewModel() {
     fun setHasOutline(hasOutline: Boolean) {
         if (outline.value == OutlineStatus.NotLoaded) {
             outline.postValue(if (hasOutline) OutlineStatus.Available else OutlineStatus.NoOutline)
+        }
+    }
+
+    fun clearSaveError() {
+        _saveError.value = false
+    }
+
+    fun saveDocumentAs(contentResolver: ContentResolver, source: Uri, destination: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                contentResolver.openInputStream(source)?.use { input ->
+                    contentResolver.openOutputStream(destination)?.use { output ->
+                        input.copyTo(output)
+                    } ?: throw FileNotFoundException()
+                } ?: throw FileNotFoundException()
+            } catch (e: Exception) {
+                coroutineContext.ensureActive()
+                when (e) {
+                    is IOException, is IllegalArgumentException,
+                    is IllegalStateException, is SecurityException -> {
+                        withContext(Dispatchers.Main) {
+                            _saveError.value = true
+                        }
+                    }
+                    else -> throw e
+                }
+            }
         }
     }
 }

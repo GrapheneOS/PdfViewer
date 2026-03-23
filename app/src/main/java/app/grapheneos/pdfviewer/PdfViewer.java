@@ -41,7 +41,6 @@ import com.google.android.material.snackbar.Snackbar;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -296,6 +295,13 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             if (requested instanceof PdfViewModel.OutlineStatus.Requested) {
                 viewModel.setLoadingOutline();
                 binding.webview.evaluateJavascript("getDocumentOutline()", null);
+            }
+        });
+
+        viewModel.getSaveError().observe(this, error -> {
+            if (error) {
+                snackbar.setText(R.string.error_while_saving).show();
+                viewModel.clearSaveError();
             }
         });
 
@@ -865,24 +871,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         return fileName.length() > 2 ? fileName : title;
     }
 
-    private void saveDocumentAs(final Uri uri) {
-        try (final InputStream input = getContentResolver().openInputStream(this.uri);
-             final OutputStream output = getContentResolver().openOutputStream(uri)) {
-            if (input == null || output == null) {
-                throw new FileNotFoundException();
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                input.transferTo(output);
-            } else {
-                final byte[] buffer = new byte[16384];
-                int read;
-                while ((read = input.read(buffer)) != -1) {
-                    output.write(buffer, 0, read);
-                }
-            }
-        } catch (final IOException | IllegalArgumentException | IllegalStateException |
-                SecurityException e) {
-            snackbar.setText(R.string.error_while_saving).show();
-        }
+    private void saveDocumentAs(final Uri saveUri) {
+        viewModel.saveDocumentAs(getContentResolver(), uri, saveUri);
     }
 }
