@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class PdfViewModel : ViewModel() {
 
@@ -71,23 +72,28 @@ class PdfViewModel : ViewModel() {
     }
 
     fun clearOutline() {
-        outline.postValue(OutlineStatus.NotLoaded)
+        outline.value = OutlineStatus.NotLoaded
         scope.coroutineContext.cancelChildren()
     }
 
     fun parseOutlineString(outlineString: String?) {
         if (outlineString != null) {
             scope.launch {
-                outline.postValue(OutlineStatus.Loaded(OutlineNode.parse(outlineString)))
+                val parsed = OutlineNode.parse(outlineString)
+                withContext(Dispatchers.Main) {
+                    if (outline.value is OutlineStatus.Loading) {
+                        outline.value = OutlineStatus.Loaded(parsed)
+                    }
+                }
             }
-        } else {
-            outline.postValue(OutlineStatus.Loaded(emptyList()))
+        } else if (outline.value is OutlineStatus.Loading) {
+            outline.value = OutlineStatus.Loaded(emptyList())
         }
     }
 
     fun setHasOutline(hasOutline: Boolean) {
         if (outline.value == OutlineStatus.NotLoaded) {
-            outline.postValue(if (hasOutline) OutlineStatus.Available else OutlineStatus.NoOutline)
+            outline.value = if (hasOutline) OutlineStatus.Available else OutlineStatus.NoOutline
         }
     }
 }

@@ -170,12 +170,12 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private class Channel {
         @JavascriptInterface
         public void setHasDocumentOutline(final boolean hasOutline) {
-            viewModel.setHasOutline(hasOutline);
+            runOnUiThread(() -> viewModel.setHasOutline(hasOutline));
         }
 
         @JavascriptInterface
         public void setDocumentOutline(final String outline) {
-            viewModel.parseOutlineString(outline);
+            runOnUiThread(() -> viewModel.parseOutlineString(outline));
         }
 
         @JavascriptInterface
@@ -291,6 +291,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 viewModel.setLoadingOutline();
                 binding.webview.evaluateJavascript("getDocumentOutline()", null);
             }
+            invalidateOptionsMenu();
         });
 
         getSupportFragmentManager().setFragmentResultListener(OutlineFragment.RESULT_KEY, this,
