@@ -293,6 +293,13 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             }
         });
 
+        viewModel.getSaveError().observe(this, error -> {
+            if (error) {
+                snackbar.setText(R.string.error_while_saving).show();
+                viewModel.clearSaveError();
+            }
+        });
+
         getSupportFragmentManager().setFragmentResultListener(OutlineFragment.RESULT_KEY, this,
                 (requestKey, result) -> {
             final int newPage = result.getInt(OutlineFragment.PAGE_KEY, -1);
@@ -855,24 +862,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         return fileName.length() > 2 ? fileName : title;
     }
 
-    private void saveDocumentAs(final Uri uri) {
-        try (final InputStream input = getContentResolver().openInputStream(mUri);
-                final OutputStream output = getContentResolver().openOutputStream(uri)) {
-            if (input == null || output == null) {
-                throw new FileNotFoundException();
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                input.transferTo(output);
-            } else {
-                final byte[] buffer = new byte[16384];
-                int read;
-                while ((read = input.read(buffer)) != -1) {
-                    output.write(buffer, 0, read);
-                }
-            }
-        } catch (final IOException | IllegalArgumentException | IllegalStateException |
-                SecurityException e) {
-            snackbar.setText(R.string.error_while_saving).show();
-        }
+    private void saveDocumentAs(final Uri saveUri) {
+        viewModel.saveDocumentAs(getContentResolver(), mUri, saveUri);
     }
 }
