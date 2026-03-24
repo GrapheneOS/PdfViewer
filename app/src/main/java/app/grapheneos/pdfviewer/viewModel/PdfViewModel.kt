@@ -1,15 +1,22 @@
 package app.grapheneos.pdfviewer.viewModel
 
+import android.app.Application
+import android.net.Uri
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import app.grapheneos.pdfviewer.loader.DocumentPropertiesLoader
+import app.grapheneos.pdfviewer.loader.DocumentProperty
 import app.grapheneos.pdfviewer.outline.OutlineNode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-class PdfViewModel : ViewModel() {
+class PdfViewModel(application: Application) : AndroidViewModel(application) {
 
     enum class PasswordStatus {
         MissingPassword,
@@ -31,6 +38,10 @@ class PdfViewModel : ViewModel() {
     // Outline state as LiveData, since we require the Activity to observe so it can use the
     // WebView to get outline. Lazily loaded, and will be cached until a different PDF is loaded.
     val outline: MutableLiveData<OutlineStatus> = MutableLiveData(OutlineStatus.NotLoaded)
+
+    private val _documentProperties = MutableLiveData<Map<DocumentProperty, String>?>()
+    val documentProperties: LiveData<Map<DocumentProperty, String>?> get() = _documentProperties
+    private var documentPropertiesLoading = false
 
     private val scope = CoroutineScope(Dispatchers.IO)
 
@@ -89,5 +100,23 @@ class PdfViewModel : ViewModel() {
         if (outline.value == OutlineStatus.NotLoaded) {
             outline.postValue(if (hasOutline) OutlineStatus.Available else OutlineStatus.NoOutline)
         }
+    }
+
+    fun loadDocumentProperties(properties: String, numPages: Int, uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val loader = DocumentPropertiesLoader(getApplication(), properties, numPages, uri)
+            val result = loader.load()
+            withContext(Dispatchers.Main) {
+                if (documentPropertiesLoading) {
+                    _documentProperties.value = result
+                }
+            }
+        }
+        documentPropertiesLoading = true
+    }
+
+    fun clearDocumentProperties() {
+        _documentProperties.value = null
+        documentPropertiesLoading = false
     }
 }

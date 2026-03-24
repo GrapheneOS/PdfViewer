@@ -33,8 +33,6 @@ import androidx.core.view.WindowCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.loader.app.LoaderManager;
-import androidx.loader.content.Loader;
 
 import com.google.android.material.snackbar.Snackbar;
 
@@ -45,18 +43,18 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
+import java.util.Map;
 
 import app.grapheneos.pdfviewer.databinding.PdfviewerBinding;
 import app.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
 import app.grapheneos.pdfviewer.fragment.JumpToPageFragment;
 import app.grapheneos.pdfviewer.fragment.PasswordPromptFragment;
 import app.grapheneos.pdfviewer.ktx.ViewKt;
-import app.grapheneos.pdfviewer.loader.DocumentPropertiesAsyncTaskLoader;
+import app.grapheneos.pdfviewer.loader.DocumentProperty;
 import app.grapheneos.pdfviewer.outline.OutlineFragment;
 import app.grapheneos.pdfviewer.viewModel.PdfViewModel;
 
-public class PdfViewer extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<CharSequence>> {
+public class PdfViewer extends AppCompatActivity {
     private static final String TAG = "PdfViewer";
 
     private static final String STATE_WEBVIEW_CRASHED = "webview_crashed";
@@ -65,7 +63,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final String STATE_ZOOM_RATIO = "zoomRatio";
     private static final String STATE_DOCUMENT_ORIENTATION_DEGREES = "documentOrientationDegrees";
     private static final String STATE_ENCRYPTED_DOCUMENT_PASSWORD = "encrypted_document_password";
-    private static final String KEY_PROPERTIES = "properties";
     private static final int MIN_WEBVIEW_RELEASE = 133;
 
     private static final String CONTENT_SECURITY_POLICY =
@@ -128,8 +125,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private int mDocumentOrientationDegrees;
     private int mDocumentState;
     private String mEncryptedDocumentPassword;
-    private List<CharSequence> mDocumentProperties;
     private InputStream mInputStream;
+    private boolean documentPropertiesSet;
 
     private PdfviewerBinding binding;
     private TextView mTextView;
@@ -146,7 +143,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 if (resultData != null) {
                     mUri = result.getData().getData();
                     mPage = 1;
-                    mDocumentProperties = null;
+                    documentPropertiesSet = false;
+                    viewModel.clearDocumentProperties();
                     mEncryptedDocumentPassword = "";
                     viewModel.clearOutline();
                     loadPdf();
@@ -231,13 +229,13 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
         @JavascriptInterface
         public void setDocumentProperties(final String properties) {
-            if (mDocumentProperties != null) {
-                throw new SecurityException("mDocumentProperties not null");
+            if (documentPropertiesSet) {
+                throw new SecurityException("setDocumentProperties already called");
             }
-
-            final Bundle args = new Bundle();
-            args.putString(KEY_PROPERTIES, properties);
-            runOnUiThread(() -> LoaderManager.getInstance(PdfViewer.this).restartLoader(DocumentPropertiesAsyncTaskLoader.ID, args, PdfViewer.this));
+            documentPropertiesSet = true;
+            final int numPages = mNumPages;
+            final Uri uri = mUri;
+            runOnUiThread(() -> viewModel.loadDocumentProperties(properties, numPages, uri));
         }
 
         @JavascriptInterface
@@ -291,6 +289,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 viewModel.setLoadingOutline();
                 binding.webview.evaluateJavascript("getDocumentOutline()", null);
             }
+        });
+
+        viewModel.getDocumentProperties().observe(this, properties -> {
+            setToolbarTitleWithDocumentName();
+            invalidateOptionsMenu();
         });
 
         getSupportFragmentManager().setFragmentResultListener(OutlineFragment.RESULT_KEY, this,
@@ -467,11 +470,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         mTextView.setTextSize(18);
         mTextView.setPadding(PADDING, 0, PADDING, 0);
 
-        // If loaders are not being initialized in onCreate(), the result will not be delivered
-        // after orientation change (See FragmentHostCallback), thus initialize the
-        // loader manager impl so that the result will be delivered.
-        LoaderManager.getInstance(this);
-
         snackbar = Snackbar.make(binding.getRoot(), "", Snackbar.LENGTH_LONG);
 
         final Intent intent = getIntent();
@@ -590,26 +588,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         return Integer.parseInt(webViewVersionName.substring(0, webViewVersionName.indexOf(".")));
     }
 
-    @NonNull
-    @Override
-    public Loader<List<CharSequence>> onCreateLoader(int id, Bundle args) {
-        return new DocumentPropertiesAsyncTaskLoader(this, args.getString(KEY_PROPERTIES), mNumPages, mUri);
-    }
-
-    @Override
-    public void onLoadFinished(@NonNull Loader<List<CharSequence>> loader, List<CharSequence> data) {
-        mDocumentProperties = data;
-        invalidateOptionsMenu();
-        setToolbarTitleWithDocumentName();
-        LoaderManager.getInstance(this).destroyLoader(DocumentPropertiesAsyncTaskLoader.ID);
-    }
-
-    @Override
-    public void onLoaderReset(@NonNull Loader<List<CharSequence>> loader) {
-        mDocumentProperties = null;
-    }
-
     private void loadPdf() {
+        documentPropertiesSet = false;
         mDocumentState = 0;
         showSystemUi();
         invalidateOptionsMenu();
@@ -760,7 +740,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         enableDisableMenuItem(menu.findItem(R.id.action_previous), mPage > 1);
         enableDisableMenuItem(menu.findItem(R.id.action_save_as), mUri != null);
         enableDisableMenuItem(menu.findItem(R.id.action_view_document_properties),
-                mDocumentProperties != null);
+                viewModel.getDocumentProperties().getValue() != null);
 
         menu.findItem(R.id.action_outline).setVisible(viewModel.hasOutline());
 
@@ -809,8 +789,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             return true;
         } else if (itemId == R.id.action_view_document_properties) {
             DocumentPropertiesFragment
-                .newInstance(mDocumentProperties)
-                .show(getSupportFragmentManager(), DocumentPropertiesFragment.TAG);
+                    .newInstance()
+                    .show(getSupportFragmentManager(), DocumentPropertiesFragment.TAG);
             return true;
         } else if (itemId == R.id.action_jump_to_page) {
             new JumpToPageFragment()
@@ -841,18 +821,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     private String getCurrentDocumentName() {
-        if (mDocumentProperties == null || mDocumentProperties.isEmpty()) return "";
-        String fileName = "";
-        String title = "";
-        for (CharSequence property : mDocumentProperties) {
-            if (property.toString().startsWith("File name:")) {
-                fileName = property.toString().replace("File name:", "");
-            }
-            if (property.toString().startsWith("Title:-")) {
-                title = property.toString().replace("Title:-", "");
-            }
-        }
-        return fileName.length() > 2 ? fileName : title;
+        Map<DocumentProperty, String> properties = viewModel.getDocumentProperties().getValue();
+        if (properties == null || properties.isEmpty()) return "";
+        String fileName = properties.getOrDefault(DocumentProperty.FileName, "");
+        String title = properties.getOrDefault(DocumentProperty.Title, "");
+        return !(fileName != null && fileName.isEmpty()) ? fileName : title;
     }
 
     private void saveDocumentAs(final Uri uri) {
