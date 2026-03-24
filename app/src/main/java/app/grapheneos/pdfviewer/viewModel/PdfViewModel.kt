@@ -1,11 +1,14 @@
 package app.grapheneos.pdfviewer.viewModel
 
+import android.app.Application
 import android.content.ContentResolver
 import android.net.Uri
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.grapheneos.pdfviewer.loader.DocumentPropertiesLoader
+import app.grapheneos.pdfviewer.loader.DocumentProperty
 import app.grapheneos.pdfviewer.outline.OutlineNode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,7 +20,7 @@ import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
 import java.io.IOException
 
-class PdfViewModel : ViewModel() {
+class PdfViewModel(application: Application) : AndroidViewModel(application) {
 
     enum class PasswordStatus {
         MissingPassword,
@@ -42,6 +45,9 @@ class PdfViewModel : ViewModel() {
 
     private val _saveError = MutableLiveData<Boolean>()
     val saveError: LiveData<Boolean> get() = _saveError
+    private val _documentProperties = MutableLiveData<Map<DocumentProperty, String>?>()
+    val documentProperties: LiveData<Map<DocumentProperty, String>?> get() = _documentProperties
+    private var documentPropertiesLoading = false
 
     private val scope = CoroutineScope(Dispatchers.IO)
 
@@ -127,5 +133,23 @@ class PdfViewModel : ViewModel() {
                 }
             }
         }
+    }
+
+    fun loadDocumentProperties(properties: String, numPages: Int, uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val loader = DocumentPropertiesLoader(getApplication(), properties, numPages, uri)
+            val result = loader.load()
+            withContext(Dispatchers.Main) {
+                if (documentPropertiesLoading) {
+                    _documentProperties.value = result
+                }
+            }
+        }
+        documentPropertiesLoading = true
+    }
+
+    fun clearDocumentProperties() {
+        _documentProperties.value = null
+        documentPropertiesLoading = false
     }
 }
