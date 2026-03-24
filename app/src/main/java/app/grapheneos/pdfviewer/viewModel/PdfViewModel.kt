@@ -1,11 +1,15 @@
 package app.grapheneos.pdfviewer.viewModel
 
+import android.app.Application
 import android.content.ContentResolver
 import android.net.Uri
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.grapheneos.pdfviewer.loader.DEFAULT_VALUE
+import app.grapheneos.pdfviewer.loader.DocumentPropertiesLoader
+import app.grapheneos.pdfviewer.loader.DocumentProperty
 import app.grapheneos.pdfviewer.outline.OutlineNode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,7 +21,7 @@ import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
 import java.io.IOException
 
-class PdfViewModel : ViewModel() {
+class PdfViewModel(application: Application) : AndroidViewModel(application) {
 
     enum class PasswordStatus {
         MissingPassword,
@@ -42,6 +46,11 @@ class PdfViewModel : ViewModel() {
 
     private val _saveError = MutableLiveData<Boolean>()
     val saveError: LiveData<Boolean> get() = _saveError
+    private val _documentProperties = MutableLiveData<Map<DocumentProperty, String>?>()
+    val documentProperties: LiveData<Map<DocumentProperty, String>?> get() = _documentProperties
+    private val _documentName = MutableLiveData("")
+    val documentName: LiveData<String> get() = _documentName
+    private var documentPropertiesLoading = false
 
     private val scope = CoroutineScope(Dispatchers.IO)
 
@@ -128,4 +137,38 @@ class PdfViewModel : ViewModel() {
             }
         }
     }
+
+    fun loadDocumentProperties(properties: String, numPages: Int, uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val loader = DocumentPropertiesLoader(getApplication(), properties, numPages, uri)
+            val result = loader.load()
+            val name = resolveDocumentName(result)
+            withContext(Dispatchers.Main) {
+                if (documentPropertiesLoading) {
+                    _documentProperties.value = result
+                    _documentName.value = name
+                }
+            }
+        }
+        documentPropertiesLoading = true
+    }
+
+    fun clearDocumentProperties() {
+        _documentProperties.value = null
+        _documentName.value = ""
+        documentPropertiesLoading = false
+    }
+
+    private fun resolveDocumentName(properties: Map<DocumentProperty, String>): String {
+        val fileName = properties[DocumentProperty.FileName].orEmpty()
+        if (fileName.isNotEmpty() && fileName != DEFAULT_VALUE) {
+            return fileName
+        }
+        val title = properties[DocumentProperty.Title].orEmpty()
+        if (title.isNotEmpty() && title != DEFAULT_VALUE) {
+            return title
+        }
+        return ""
+    }
+
 }
