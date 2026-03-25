@@ -71,9 +71,23 @@ function display(newCanvas, zoom) {
 }
 
 function setLayerTransform(pageWidth, pageHeight, layerDiv) {
+    const cs = globalThis.getComputedStyle(canvas);
+    const insetLeft = parseFloat(cs.paddingLeft) || 0;
+    const insetTop = parseFloat(cs.paddingTop) || 0;
+    const insetRight = parseFloat(cs.paddingRight) || 0;
+    const insetBottom = parseFloat(cs.paddingBottom) || 0;
+
+    const isOverflownY = canvas.clientHeight > document.body.clientHeight;
+    const isOverflownX = canvas.clientWidth > document.body.clientWidth;
+    // Translate the text layer to stay aligned with the rendered page including canvas insets and
+    // grid centering effects.
     const translate = {
-        X: Math.max(0, pageWidth - document.body.clientWidth) / 2,
-        Y: Math.max(0, pageHeight - document.body.clientHeight) / 2
+        X: isOverflownX
+            ? insetLeft - (document.body.clientWidth - pageWidth) / 2
+            : (insetLeft - insetRight) / 2,
+        Y: isOverflownY
+            ? insetTop - (document.body.clientHeight - pageHeight) / 2
+            : (insetTop - insetBottom) / 2
     };
     layerDiv.style.translate = `${translate.X}px ${translate.Y}px`;
 }
@@ -274,6 +288,13 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
         newCanvas.style.width = viewport.width + "px";
         const newContext = newCanvas.getContext("2d", { alpha: false });
         newContext.scale(ratio, ratio);
+
+        // Add padding to the canvas to allow the page to be scrolled bellow/above any
+        // system/app ui that might be visible.
+        canvas.style.paddingLeft = (channel.getInsetLeft() / ratio) + "px";
+        canvas.style.paddingTop = (channel.getInsetTop() / ratio) + "px";
+        canvas.style.paddingRight = (channel.getInsetRight() / ratio) + "px";
+        canvas.style.paddingBottom = (channel.getInsetBottom() / ratio) + "px";
 
         task = page.render({
             canvasContext: newContext,
