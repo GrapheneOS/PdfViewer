@@ -420,6 +420,9 @@ globalThis.loadDocument = function () {
         channel.onLoaded();
         pdfDoc = newDoc;
         channel.setNumPages(pdfDoc.numPages);
+        // In pdf.js, they only use the original ID to track view history
+        // See https://github.com/mozilla/pdf.js/blob/eb159abd6a053d98fd0dfe7976c08f8d09618a51/web/app.js#L1486
+        channel.setFingerprint(pdfDoc.fingerprints[0]);
         pdfDoc.getMetadata().then(function (data) {
             channel.setDocumentProperties(JSON.stringify(data.info));
         }).catch(function (error) {
