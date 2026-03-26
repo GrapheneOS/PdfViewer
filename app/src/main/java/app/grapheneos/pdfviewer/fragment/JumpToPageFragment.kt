@@ -31,8 +31,8 @@ class JumpToPageFragment : DialogFragment() {
             picker.value = savedInstanceState.getInt(STATE_PICKER_CUR)
         } else {
             picker.minValue = 1
-            picker.maxValue = viewerActivity.numPages
-            picker.value = viewerActivity.page
+            picker.maxValue = viewerActivity.viewModel.numPages
+            picker.value = viewerActivity.viewModel.page
         }
         val layout = FrameLayout(requireActivity())
         layout.addView(
