@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.grapheneos.pdfviewer.loader.DEFAULT_VALUE
 import app.grapheneos.pdfviewer.loader.DocumentPropertiesLoader
@@ -21,7 +22,53 @@ import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
 import java.io.IOException
 
-class PdfViewModel(application: Application) : AndroidViewModel(application) {
+class PdfViewModel(
+    application: Application,
+    private val savedStateHandle: SavedStateHandle
+) : AndroidViewModel(application) {
+
+    companion object {
+        private const val STATE_URI: String = "uri"
+        private const val STATE_PAGE: String = "page"
+        private const val STATE_ZOOM_RATIO: String = "zoomRatio"
+        private const val STATE_DOCUMENT_ORIENTATION_DEGREES: String = "documentOrientationDegrees"
+    }
+
+    @Volatile
+    var uri: Uri? = savedStateHandle[STATE_URI]
+        set(value) {
+            field = value
+            savedStateHandle[STATE_URI] = value
+        }
+
+    @Volatile
+    var page: Int = savedStateHandle[STATE_PAGE] ?: 1
+        set(value) {
+            field = value
+            savedStateHandle[STATE_PAGE] = value
+        }
+
+    @Volatile
+    var zoomRatio: Float = savedStateHandle[STATE_ZOOM_RATIO] ?: 1f
+        set(value) {
+            field = value
+            savedStateHandle[STATE_ZOOM_RATIO] = value
+        }
+
+    @Volatile
+    var documentOrientationDegrees: Int = savedStateHandle[STATE_DOCUMENT_ORIENTATION_DEGREES] ?: 0
+        set(value) {
+            field = value
+            savedStateHandle[STATE_DOCUMENT_ORIENTATION_DEGREES] = value
+        }
+
+    @Volatile
+    var numPages: Int = 0
+
+    @Volatile
+    var encryptedDocumentPassword: String = ""
+
+    var webViewCrashed: Boolean = false
 
     enum class PasswordStatus {
         MissingPassword,
