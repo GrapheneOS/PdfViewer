@@ -134,6 +134,7 @@ public class PdfViewer extends AppCompatActivity {
                     viewModel.clearDocumentProperties();
                     viewModel.setEncryptedDocumentPassword("");
                     viewModel.clearOutline();
+                    viewModel.setZoomRatio(0f);
                     loadPdf();
                     invalidateOptionsMenu();
                 }
@@ -487,6 +488,7 @@ public class PdfViewer extends AppCompatActivity {
                 Log.w(TAG, "MIME type is null, but we'll try to load it anyway");
             }
             handleNewUri(intent.getData());
+            viewModel.setZoomRatio(0f);
             viewModel.setPage(1);
         }
 
