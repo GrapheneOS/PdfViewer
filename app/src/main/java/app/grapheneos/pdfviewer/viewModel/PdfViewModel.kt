@@ -49,7 +49,7 @@ class PdfViewModel(
         }
 
     @Volatile
-    var zoomRatio: Float = savedStateHandle[STATE_ZOOM_RATIO] ?: 1f
+    var zoomRatio: Float = savedStateHandle[STATE_ZOOM_RATIO] ?: 0f
         set(value) {
             field = value
             savedStateHandle[STATE_ZOOM_RATIO] = value
