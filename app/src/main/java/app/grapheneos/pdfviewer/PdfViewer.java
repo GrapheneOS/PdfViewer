@@ -117,8 +117,6 @@ public class PdfViewer extends AppCompatActivity {
     private static final int MAX_RENDER_PIXELS = 1 << 23; // 8 mega-pixels
     private static final int ALPHA_LOW = 130;
     private static final int ALPHA_HIGH = 255;
-    private static final int STATE_LOADED = 1;
-    private static final int STATE_END = 2;
     private static final int PADDING = 10;
 
     private final Object streamLock = new Object();
@@ -131,7 +129,7 @@ public class PdfViewer extends AppCompatActivity {
     private volatile float insetTop = 0f;
     private volatile float insetRight = 0f;
     private volatile float insetBottom = 0f;
-    private int documentState;
+    private boolean documentLoaded;
     private volatile InputStream inputStream;
     private volatile boolean documentPropertiesLoaded;
 
@@ -503,7 +501,7 @@ public class PdfViewer extends AppCompatActivity {
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                documentState = STATE_LOADED;
+                documentLoaded = true;
                 invalidateOptionsMenu();
                 loadPdfWithPassword(viewModel.getEncryptedDocumentPassword());
             }
@@ -709,7 +707,7 @@ public class PdfViewer extends AppCompatActivity {
 
     private void loadPdf() {
         documentPropertiesLoaded = false;
-        documentState = 0;
+        documentLoaded = false;
         showSystemUi();
         invalidateOptionsMenu();
         binding.webview.loadUrl("https://localhost/viewer/index.html");
@@ -764,10 +762,11 @@ public class PdfViewer extends AppCompatActivity {
         renderPage(1);
     }
 
-    private static void enableDisableMenuItem(MenuItem item, boolean enable) {
-        item.setEnabled(enable);
+    private static void setMenuItemState(MenuItem item, boolean visible, boolean enabled) {
+        item.setVisible(visible);
+        item.setEnabled(enabled);
         if (item.getIcon() != null) {
-            item.getIcon().setAlpha(enable ? ALPHA_HIGH : ALPHA_LOW);
+            item.getIcon().setAlpha(enabled ? ALPHA_HIGH : ALPHA_LOW);
         }
     }
 
@@ -815,48 +814,35 @@ public class PdfViewer extends AppCompatActivity {
 
     @Override
     public boolean onPrepareOptionsMenu(@NonNull Menu menu) {
-        final ArrayList<Integer> ids = new ArrayList<>(Arrays.asList(R.id.action_jump_to_page,
-                R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
-                R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
-                R.id.action_view_document_properties, R.id.action_share, R.id.action_save_as,
-                R.id.action_outline));
+        final boolean loaded = documentLoaded;
+        final boolean crashed = viewModel.getWebViewCrashed();
+        final boolean enabled = loaded && !crashed;
+
+        setMenuItemState(menu.findItem(R.id.action_open), true,
+                !crashed && getWebViewRelease() >= MIN_WEBVIEW_RELEASE);
+        setMenuItemState(menu.findItem(R.id.action_jump_to_page), loaded, enabled);
+        setMenuItemState(menu.findItem(R.id.action_next), loaded,
+                enabled && viewModel.getPage() < viewModel.getNumPages());
+        setMenuItemState(menu.findItem(R.id.action_previous), loaded,
+                enabled && viewModel.getPage() > 1);
+        setMenuItemState(menu.findItem(R.id.action_first), loaded, enabled);
+        setMenuItemState(menu.findItem(R.id.action_last), loaded, enabled);
+        setMenuItemState(menu.findItem(R.id.action_rotate_clockwise), loaded, enabled);
+        setMenuItemState(menu.findItem(R.id.action_rotate_counterclockwise), loaded, enabled);
+        setMenuItemState(menu.findItem(R.id.action_view_document_properties), loaded,
+                enabled && viewModel.getDocumentProperties().getValue() != null);
+        setMenuItemState(menu.findItem(R.id.action_share), loaded,
+                enabled && viewModel.getUri() != null);
+        setMenuItemState(menu.findItem(R.id.action_save_as), loaded,
+                enabled && viewModel.getUri() != null);
+        setMenuItemState(menu.findItem(R.id.action_outline),
+                loaded && viewModel.hasOutline(), enabled);
+
         if (BuildConfig.DEBUG) {
-            ids.add(R.id.debug_action_toggle_text_layer_visibility);
-            ids.add(R.id.debug_action_crash_webview);
-        }
-        if (documentState < STATE_LOADED) {
-            for (final int id : ids) {
-                final MenuItem item = menu.findItem(id);
-                if (item.isVisible()) {
-                    item.setVisible(false);
-                }
-            }
-        } else if (documentState == STATE_LOADED) {
-            for (final int id : ids) {
-                final MenuItem item = menu.findItem(id);
-                if (!item.isVisible()) {
-                    item.setVisible(true);
-                }
-            }
-            documentState = STATE_END;
-        }
-
-
-        enableDisableMenuItem(menu.findItem(R.id.action_open),
-                !viewModel.getWebViewCrashed() && getWebViewRelease() >= MIN_WEBVIEW_RELEASE);
-        enableDisableMenuItem(menu.findItem(R.id.action_share), viewModel.getUri() != null);
-        enableDisableMenuItem(menu.findItem(R.id.action_next), viewModel.getPage() < viewModel.getNumPages());
-        enableDisableMenuItem(menu.findItem(R.id.action_previous), viewModel.getPage() > 1);
-        enableDisableMenuItem(menu.findItem(R.id.action_save_as), viewModel.getUri() != null);
-        enableDisableMenuItem(menu.findItem(R.id.action_view_document_properties),
-                viewModel.getDocumentProperties().getValue() != null);
-
-        menu.findItem(R.id.action_outline).setVisible(viewModel.hasOutline());
-
-        if (viewModel.getWebViewCrashed()) {
-            for (final int id : ids) {
-                enableDisableMenuItem(menu.findItem(id), false);
-            }
+            setMenuItemState(menu.findItem(R.id.debug_action_toggle_text_layer_visibility),
+                    loaded, enabled);
+            setMenuItemState(menu.findItem(R.id.debug_action_crash_webview),
+                    loaded, enabled);
         }
 
         return true;
@@ -910,6 +896,7 @@ public class PdfViewer extends AppCompatActivity {
             return true;
         } else if (itemId == R.id.action_save_as) {
             saveDocument();
+            return true;
         } else if (itemId == R.id.debug_action_toggle_text_layer_visibility) {
             binding.webview.evaluateJavascript("toggleTextLayerVisibility()", null);
             return true;
