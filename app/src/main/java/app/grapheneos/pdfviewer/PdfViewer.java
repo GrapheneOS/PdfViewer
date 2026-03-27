@@ -3,12 +3,10 @@ package app.grapheneos.pdfviewer;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
-import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -21,8 +19,6 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -38,8 +34,6 @@ import com.google.android.material.snackbar.Snackbar;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -103,7 +97,6 @@ public class PdfViewer extends AppCompatActivity {
     private static final int MAX_RENDER_PIXELS = 1 << 23; // 8 mega-pixels
     private static final int ALPHA_LOW = 130;
     private static final int ALPHA_HIGH = 255;
-    private static final int PADDING = 10;
 
     private final Object streamLock = new Object();
 
@@ -111,11 +104,9 @@ public class PdfViewer extends AppCompatActivity {
     private volatile float zoomFocusY = 0f;
     private boolean documentLoaded;
     private volatile InputStream inputStream;
-    private boolean documentPropertiesLoaded;
+    private volatile boolean documentPropertiesLoaded;
 
     private PdfviewerBinding binding;
-    private TextView textView;
-    private Toast toast;
     private Snackbar snackbar;
     private PasswordPromptFragment passwordPromptFragment;
     public PdfViewModel viewModel;
@@ -467,12 +458,6 @@ public class PdfViewer extends AppCompatActivity {
                     }
                 });
 
-        textView = new TextView(this);
-        textView.setBackgroundColor(Color.DKGRAY);
-        textView.setTextColor(ColorStateList.valueOf(Color.WHITE));
-        textView.setTextSize(18);
-        textView.setPadding(PADDING, 0, PADDING, 0);
-
         snackbar = Snackbar.make(binding.getRoot(), "", Snackbar.LENGTH_LONG);
 
         final Intent intent = getIntent();
@@ -663,15 +648,9 @@ public class PdfViewer extends AppCompatActivity {
     }
 
     private void showPageNumber() {
-        if (toast != null) {
-            toast.cancel();
-        }
-        textView.setText(String.format("%s/%s", viewModel.getPage(), viewModel.getNumPages()));
-        toast = new Toast(this);
-        toast.setGravity(Gravity.BOTTOM | Gravity.END, PADDING, PADDING);
-        toast.setDuration(Toast.LENGTH_SHORT);
-        toast.setView(textView);
-        toast.show();
+        Snackbar.make(binding.webview,
+                String.format("%s/%s", viewModel.getPage(), viewModel.getNumPages()),
+                Snackbar.LENGTH_SHORT).show();
     }
 
     @Override
