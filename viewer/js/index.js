@@ -215,7 +215,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
 
         const defaultZoomRatio = getDefaultZoomRatio(page, orientationDegrees);
 
-        if (cache.length === 0) {
+        if (newZoomRatio === 0) {
             zoomRatio = defaultZoomRatio;
             newZoomRatio = defaultZoomRatio;
             channel.setZoomRatio(defaultZoomRatio);

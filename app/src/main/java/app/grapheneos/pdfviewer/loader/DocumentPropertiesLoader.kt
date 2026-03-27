@@ -1,13 +1,9 @@
 package app.grapheneos.pdfviewer.loader
 
 import android.content.Context
-import android.graphics.Typeface
 import android.net.Uri
 import android.provider.OpenableColumns
-import android.text.SpannableStringBuilder
-import android.text.Spanned
 import android.text.format.Formatter
-import android.text.style.StyleSpan
 import android.util.Log
 import androidx.core.database.getLongOrNull
 import app.grapheneos.pdfviewer.R
@@ -17,30 +13,14 @@ class DocumentPropertiesLoader(
     private val context: Context,
     private val properties: String,
     private val numPages: Int,
-    private val mUri: Uri
+    private val uri: Uri
 ) {
 
-    fun loadAsList(): List<CharSequence> {
-        return load().map { item ->
-            val name = context.getString(item.key.nameResource)
-            val value = item.value
-
-            SpannableStringBuilder()
-                .append(name)
-                .append(":\n")
-                .append(value)
-                .apply {
-                    setSpan(
-                        StyleSpan(Typeface.BOLD),
-                        0,
-                        name.length,
-                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                    )
-                }
-        }
+    companion object {
+        const val TAG = "DocumentPropertiesLoader"
     }
 
-    private fun load(): Map<DocumentProperty, String> {
+    fun load(): Map<DocumentProperty, String> {
         val result = mutableMapOf<DocumentProperty, String>()
         result.addFileProperties()
         result.addPageSizeProperty()
@@ -67,16 +47,13 @@ class DocumentPropertiesLoader(
                 context.getString(R.string.document_properties_invalid_date),
                 parseExceptionListener = { parseException, value ->
                     Log.w(
-                        DocumentPropertiesAsyncTaskLoader.TAG,
+                        TAG,
                         "${parseException.message} for $value at offset: ${parseException.errorOffset}"
                     )
                 }
             ).convert()
-        } catch (e: JSONException) {
-            Log.w(
-                DocumentPropertiesAsyncTaskLoader.TAG,
-                "invalid properties"
-            )
+        } catch (_: JSONException) {
+            Log.w(TAG, "invalid properties")
             emptyMap()
         }
     }
@@ -89,7 +66,7 @@ class DocumentPropertiesLoader(
         )
 
         context.contentResolver.query(
-            mUri,
+            uri,
             proj,
             null,
             null

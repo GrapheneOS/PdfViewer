@@ -19,24 +19,24 @@ class JumpToPageFragment : DialogFragment() {
         private const val STATE_PICKER_MAX = "picker_max"
     }
 
-    private val mPicker: NumberPicker by lazy { NumberPicker(requireActivity()) }
+    private val picker: NumberPicker by lazy { NumberPicker(requireActivity()) }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
 
         val viewerActivity: PdfViewer = (requireActivity() as PdfViewer)
 
         if (savedInstanceState != null) {
-            mPicker.minValue = savedInstanceState.getInt(STATE_PICKER_MIN)
-            mPicker.maxValue = savedInstanceState.getInt(STATE_PICKER_MAX)
-            mPicker.value = savedInstanceState.getInt(STATE_PICKER_CUR)
+            picker.minValue = savedInstanceState.getInt(STATE_PICKER_MIN)
+            picker.maxValue = savedInstanceState.getInt(STATE_PICKER_MAX)
+            picker.value = savedInstanceState.getInt(STATE_PICKER_CUR)
         } else {
-            mPicker.minValue = 1
-            mPicker.maxValue = viewerActivity.mNumPages
-            mPicker.value = viewerActivity.mPage
+            picker.minValue = 1
+            picker.maxValue = viewerActivity.viewModel.numPages
+            picker.value = viewerActivity.viewModel.page
         }
         val layout = FrameLayout(requireActivity())
         layout.addView(
-            mPicker, FrameLayout.LayoutParams(
+            picker, FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.CENTER
@@ -45,16 +45,16 @@ class JumpToPageFragment : DialogFragment() {
         return MaterialAlertDialogBuilder(requireActivity())
             .setView(layout)
             .setPositiveButton(android.R.string.ok) { _: DialogInterface?, _: Int ->
-                mPicker.clearFocus()
-                viewerActivity.onJumpToPageInDocument(mPicker.value)
+                picker.clearFocus()
+                viewerActivity.onJumpToPageInDocument(picker.value)
             }
             .setNegativeButton(android.R.string.cancel, null)
             .create()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        outState.putInt(STATE_PICKER_MIN, mPicker.minValue)
-        outState.putInt(STATE_PICKER_MAX, mPicker.maxValue)
-        outState.putInt(STATE_PICKER_CUR, mPicker.value)
+        outState.putInt(STATE_PICKER_MIN, picker.minValue)
+        outState.putInt(STATE_PICKER_MAX, picker.maxValue)
+        outState.putInt(STATE_PICKER_CUR, picker.value)
     }
 }
