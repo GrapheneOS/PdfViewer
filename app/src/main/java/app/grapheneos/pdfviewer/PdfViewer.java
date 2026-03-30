@@ -13,7 +13,9 @@ import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.RenderProcessGoneDetail;
@@ -29,6 +31,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.WindowCompat;
 import androidx.fragment.app.Fragment;
@@ -128,6 +131,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private float mZoomRatio = 1f;
     private float mZoomFocusX = 0f;
     private float mZoomFocusY = 0f;
+    private int mSwipeThreshold;
+    private int mSwipeVelocityThreshold;
     private int mDocumentOrientationDegrees;
     private int mDocumentState;
     private String mEncryptedDocumentPassword;
@@ -444,6 +449,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             }
         });
 
+        initializeGestures();
+
         GestureHelper.attach(PdfViewer.this, binding.webview,
                 new GestureHelper.GestureListener() {
                     @Override
@@ -460,6 +467,39 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                             });
                             return true;
                         }
+                        return false;
+                    }
+
+                    @Override
+                    public boolean onFling(@Nullable MotionEvent e1, @NonNull MotionEvent e2, float velocityX, float velocityY) {
+                        if (e1 == null) return false;
+
+                        float deltaX = e2.getX() - e1.getX();
+                        float deltaY = e2.getY() - e1.getY();
+                        float absDeltaX = Math.abs(deltaX);
+                        float absDeltaY = Math.abs(deltaY);
+
+                        // Check primarily horizontal
+                        if (absDeltaX > absDeltaY &&
+                                absDeltaX > mSwipeThreshold &&
+                                Math.abs(velocityX) > mSwipeVelocityThreshold) {
+
+                            boolean swipeLeft = deltaX < 0;
+                            boolean swipeRight = deltaX > 0;
+
+                            // Edge detection
+                            boolean atLeftEdge = !binding.webview.canScrollHorizontally(-1);
+                            boolean atRightEdge = !binding.webview.canScrollHorizontally(1);
+
+                            if (swipeLeft && atRightEdge) {
+                                onJumpToPageInDocument(mPage + 1);
+                                return true;
+                            } else if (swipeRight && atLeftEdge) {
+                                onJumpToPageInDocument(mPage - 1);
+                                return true;
+                            }
+                        }
+
                         return false;
                     }
 
@@ -531,6 +571,12 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
             loadPdf();
         }
+    }
+
+    private void initializeGestures() {
+        ViewConfiguration vc = ViewConfiguration.get(this);
+        mSwipeThreshold = vc.getScaledTouchSlop() * 6;
+        mSwipeVelocityThreshold = vc.getScaledMinimumFlingVelocity();
     }
 
     private void purgeWebView() {
