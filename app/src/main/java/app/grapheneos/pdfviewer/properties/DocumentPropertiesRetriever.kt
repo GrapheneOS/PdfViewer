@@ -1,4 +1,4 @@
-package app.grapheneos.pdfviewer.loader
+package app.grapheneos.pdfviewer.properties
 
 import android.content.Context
 import android.net.Uri
@@ -9,7 +9,7 @@ import androidx.core.database.getLongOrNull
 import app.grapheneos.pdfviewer.R
 import org.json.JSONException
 
-class DocumentPropertiesLoader(
+class DocumentPropertiesRetriever(
     private val context: Context,
     private val properties: String,
     private val numPages: Int,
@@ -17,10 +17,10 @@ class DocumentPropertiesLoader(
 ) {
 
     companion object {
-        const val TAG = "DocumentPropertiesLoader"
+        const val TAG = "DocumentPropertiesRetriever"
     }
 
-    fun load(): Map<DocumentProperty, String> {
+    fun retrieve(): Map<DocumentProperty, String> {
         val result = mutableMapOf<DocumentProperty, String>()
         result.addFileProperties()
         result.addPageSizeProperty()

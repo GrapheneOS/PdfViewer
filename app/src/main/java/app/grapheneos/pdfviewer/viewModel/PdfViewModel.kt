@@ -9,8 +9,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.grapheneos.pdfviewer.loader.DEFAULT_VALUE
-import app.grapheneos.pdfviewer.loader.DocumentPropertiesLoader
-import app.grapheneos.pdfviewer.loader.DocumentProperty
+import app.grapheneos.pdfviewer.properties.DocumentPropertiesRetriever
+import app.grapheneos.pdfviewer.properties.DocumentProperty
 import app.grapheneos.pdfviewer.outline.OutlineNode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -185,10 +185,10 @@ class PdfViewModel(
         }
     }
 
-    fun loadDocumentProperties(properties: String, numPages: Int, uri: Uri) {
+    fun retrieveDocumentProperties(properties: String, numPages: Int, uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
-            val loader = DocumentPropertiesLoader(getApplication(), properties, numPages, uri)
-            val result = loader.load()
+            val loader = DocumentPropertiesRetriever(getApplication(), properties, numPages, uri)
+            val result = loader.retrieve()
             val name = resolveDocumentName(result)
             withContext(Dispatchers.Main) {
                 if (documentPropertiesLoading) {

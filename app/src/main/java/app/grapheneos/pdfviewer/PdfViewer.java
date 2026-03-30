@@ -25,8 +25,8 @@ import android.webkit.WebViewClient;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.annotation.VisibleForTesting;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.OnApplyWindowInsetsListener;
@@ -258,7 +258,9 @@ public class PdfViewer extends AppCompatActivity {
             documentPropertiesLoaded = true;
             final int numPages = viewModel.getNumPages();
             final Uri uri = viewModel.getUri();
-            runOnUiThread(() -> viewModel.loadDocumentProperties(properties, numPages, uri));
+            if (uri != null) {
+                runOnUiThread(() -> viewModel.retrieveDocumentProperties(properties, numPages, uri));
+            }
         }
 
         @JavascriptInterface
@@ -924,7 +926,6 @@ public class PdfViewer extends AppCompatActivity {
         viewModel.setZoomRatio(1f);
         viewModel.setDocumentOrientationDegrees(0);
         viewModel.setEncryptedDocumentPassword("");
-        documentState = 0;
         viewModel.clearOutline();
         viewModel.clearDocumentProperties();
     }
