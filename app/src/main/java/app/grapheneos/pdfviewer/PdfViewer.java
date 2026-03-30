@@ -42,7 +42,7 @@ import app.grapheneos.pdfviewer.fragment.DocumentPropertiesFragment;
 import app.grapheneos.pdfviewer.fragment.JumpToPageFragment;
 import app.grapheneos.pdfviewer.fragment.PasswordPromptFragment;
 import app.grapheneos.pdfviewer.ktx.ViewKt;
-import app.grapheneos.pdfviewer.loader.DocumentProperty;
+import app.grapheneos.pdfviewer.properties.DocumentProperty;
 import app.grapheneos.pdfviewer.outline.OutlineFragment;
 import app.grapheneos.pdfviewer.viewModel.PdfViewModel;
 
@@ -214,7 +214,9 @@ public class PdfViewer extends AppCompatActivity {
             documentPropertiesLoaded = true;
             final int numPages = viewModel.getNumPages();
             final Uri uri = viewModel.getUri();
-            runOnUiThread(() -> viewModel.loadDocumentProperties(properties, numPages, uri));
+            if (uri != null) {
+                runOnUiThread(() -> viewModel.retrieveDocumentProperties(properties, numPages, uri));
+            }
         }
 
         @JavascriptInterface

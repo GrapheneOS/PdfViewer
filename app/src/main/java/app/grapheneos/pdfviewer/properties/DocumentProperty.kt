@@ -1,4 +1,4 @@
-package app.grapheneos.pdfviewer.loader
+package app.grapheneos.pdfviewer.properties
 
 import androidx.annotation.StringRes
 import app.grapheneos.pdfviewer.R

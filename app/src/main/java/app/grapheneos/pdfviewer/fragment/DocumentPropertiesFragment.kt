@@ -10,7 +10,7 @@ import android.widget.ArrayAdapter
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
 import app.grapheneos.pdfviewer.R
-import app.grapheneos.pdfviewer.loader.DocumentProperty
+import app.grapheneos.pdfviewer.properties.DocumentProperty
 import app.grapheneos.pdfviewer.viewModel.PdfViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
