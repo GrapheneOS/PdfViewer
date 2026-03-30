@@ -15,6 +15,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.RenderProcessGoneDetail;
@@ -119,8 +120,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final int STATE_LOADED = 1;
     private static final int STATE_END = 2;
     private static final int PADDING = 10;
-    private static final int SWIPE_THRESHOLD = 80;
-    private static final int SWIPE_VELOCITY_THRESHOLD = 100;
 
     private boolean webViewCrashed;
     private Uri mUri;
@@ -129,6 +128,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private float mZoomRatio = 1f;
     private float mZoomFocusX = 0f;
     private float mZoomFocusY = 0f;
+    private int swipeThreshold;
+    private int swipeVelocityThreshold;
     private int mDocumentOrientationDegrees;
     private int mDocumentState;
     private String mEncryptedDocumentPassword;
@@ -435,6 +436,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             }
         });
 
+        initializeGestures();
+
         GestureHelper.attach(PdfViewer.this, binding.webview,
                 new GestureHelper.GestureListener() {
                     @Override
@@ -462,10 +465,6 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                         float deltaY = e2.getY() - e1.getY();
                         float absDeltaX = Math.abs(deltaX);
                         float absDeltaY = Math.abs(deltaY);
-
-                        float screenDensity = getResources().getDisplayMetrics().density;
-                        int swipeThreshold = (int) (SWIPE_THRESHOLD * screenDensity);
-                        int swipeVelocityThreshold = (int) (SWIPE_VELOCITY_THRESHOLD * screenDensity);
 
                         // Check primarily horizontal
                         if (absDeltaX > absDeltaY &&
@@ -559,6 +558,12 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
             loadPdf();
         }
+    }
+
+    private void initializeGestures() {
+        ViewConfiguration vc = ViewConfiguration.get(this);
+        swipeThreshold = vc.getScaledTouchSlop() * 4;
+        swipeVelocityThreshold = vc.getScaledMinimumFlingVelocity();
     }
 
     private void purgeWebView() {
