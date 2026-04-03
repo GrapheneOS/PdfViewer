@@ -7,6 +7,9 @@ import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 /*
     The GestureHelper present a simple gesture api for the PdfViewer
 */
@@ -14,20 +17,13 @@ import android.view.View;
 class GestureHelper {
     public interface GestureListener {
         boolean onTapUp();
+        boolean onFling(@Nullable MotionEvent e1, @NonNull MotionEvent e2, float velocityX, float velocityY);
         void onZoom(float scaleFactor, float focusX, float focusY);
         void onZoomEnd();
     }
 
     @SuppressLint("ClickableViewAccessibility")
     static void attach(Context context, View gestureView, GestureListener listener) {
-
-        final GestureDetector detector = new GestureDetector(context,
-                new GestureDetector.SimpleOnGestureListener() {
-                    @Override
-                    public boolean onSingleTapUp(MotionEvent motionEvent) {
-                        return listener.onTapUp();
-                    }
-                });
 
         final ScaleGestureDetector scaleDetector = new ScaleGestureDetector(context,
                 new ScaleGestureDetector.SimpleOnScaleGestureListener() {
@@ -42,6 +38,29 @@ class GestureHelper {
                     @Override
                     public void onScaleEnd(ScaleGestureDetector detector) {
                         listener.onZoomEnd();
+                    }
+                });
+
+        final GestureDetector detector = new GestureDetector(context,
+                new GestureDetector.SimpleOnGestureListener() {
+                    @Override
+                    public boolean onSingleTapUp(@NonNull MotionEvent motionEvent) {
+                        return listener.onTapUp();
+                    }
+
+                    @Override
+                    public boolean onFling(@Nullable MotionEvent e1, @NonNull MotionEvent e2,
+                                           float velocityX, float velocityY) {
+                        if (scaleDetector.isInProgress()) {
+                            return false;
+                        }
+
+                        // Ignore multi-touch
+                        if (e1 != null && (e1.getPointerCount() > 1 || e2.getPointerCount() > 1)) {
+                            return false;
+                        }
+
+                        return listener.onFling(e1, e2, velocityX, velocityY);
                     }
                 });
 
