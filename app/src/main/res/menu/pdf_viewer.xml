@@ -77,4 +77,10 @@
         android:title="@string/action_view_document_properties"
         app:showAsAction="never" />
 
+    <item
+        android:id="@+id/action_settings"
+        android:icon="@drawable/ic_settings_24dp"
+        android:title="@string/action_settings"
+        app:showAsAction="ifRoom" />
+
 </menu>
