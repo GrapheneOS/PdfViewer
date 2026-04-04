@@ -1,29 +1,53 @@
 package app.grapheneos.pdfviewer.fragment
 
 import android.app.Dialog
+import android.graphics.Typeface
 import android.os.Bundle
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.StyleSpan
 import android.widget.ArrayAdapter
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.activityViewModels
 import app.grapheneos.pdfviewer.R
+import app.grapheneos.pdfviewer.properties.DocumentProperty
+import app.grapheneos.pdfviewer.viewModel.PdfViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class DocumentPropertiesFragment : DialogFragment() {
 
-    // TODO replace with nav args once the `PdfViewer` activity is converted to kotlin
-    private val mDocumentProperties: List<String> by lazy {
-        requireArguments().getStringArrayList(KEY_DOCUMENT_PROPERTIES)?.toList() ?: emptyList()
+    private val viewModel by activityViewModels<PdfViewModel>()
+
+    private fun formatProperties(properties: Map<DocumentProperty, String>): List<CharSequence> {
+        return properties.map { (property, value) ->
+            val name = getString(property.nameResource)
+            SpannableStringBuilder()
+                .append(name)
+                .append(":\n")
+                .append(value)
+                .apply {
+                    setSpan(
+                        StyleSpan(Typeface.BOLD),
+                        0,
+                        name.length,
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                }
+        }
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val properties = viewModel.documentProperties.value
+
         return MaterialAlertDialogBuilder(requireActivity())
             .setPositiveButton(android.R.string.ok, null).apply {
-                if (mDocumentProperties.isNotEmpty()) {
+                if (!properties.isNullOrEmpty()) {
                     setTitle(getString(R.string.action_view_document_properties))
                     setAdapter(
                         ArrayAdapter(
                             requireActivity(),
                             android.R.layout.simple_list_item_1,
-                            mDocumentProperties
+                            formatProperties(properties)
                         ), null
                     )
                 } else {
@@ -36,18 +60,8 @@ class DocumentPropertiesFragment : DialogFragment() {
     companion object {
 
         const val TAG = "DocumentPropertiesFragment"
-        private const val KEY_DOCUMENT_PROPERTIES = "document_properties"
 
         @JvmStatic
-        fun newInstance(metaData: List<CharSequence>): DocumentPropertiesFragment {
-            val fragment = DocumentPropertiesFragment()
-            val args = Bundle()
-            args.putCharSequenceArrayList(
-                KEY_DOCUMENT_PROPERTIES,
-                metaData as ArrayList<CharSequence>
-            )
-            fragment.arguments = args
-            return fragment
-        }
+        fun newInstance() = DocumentPropertiesFragment()
     }
 }
