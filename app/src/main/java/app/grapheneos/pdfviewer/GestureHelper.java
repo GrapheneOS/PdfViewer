@@ -10,6 +10,8 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 /*
     The GestureHelper present a simple gesture api for the PdfViewer
 */
@@ -25,10 +27,12 @@ class GestureHelper {
     @SuppressLint("ClickableViewAccessibility")
     static void attach(Context context, View gestureView, GestureListener listener) {
 
+        AtomicBoolean wasScaling = new AtomicBoolean(false);
+
         final ScaleGestureDetector scaleDetector = new ScaleGestureDetector(context,
                 new ScaleGestureDetector.SimpleOnScaleGestureListener() {
                     @Override
-                    public boolean onScale(ScaleGestureDetector detector) {
+                    public boolean onScale(@NonNull ScaleGestureDetector detector) {
                         listener.onZoom(detector.getScaleFactor(), detector.getFocusX(),
                                 detector.getFocusY());
 
@@ -36,7 +40,7 @@ class GestureHelper {
                     }
 
                     @Override
-                    public void onScaleEnd(ScaleGestureDetector detector) {
+                    public void onScaleEnd(@NonNull ScaleGestureDetector detector) {
                         listener.onZoomEnd();
                     }
                 });
@@ -51,12 +55,7 @@ class GestureHelper {
                     @Override
                     public boolean onFling(@Nullable MotionEvent e1, @NonNull MotionEvent e2,
                                            float velocityX, float velocityY) {
-                        if (scaleDetector.isInProgress()) {
-                            return false;
-                        }
-
-                        // Ignore multi-touch
-                        if (e1 != null && (e1.getPointerCount() > 1 || e2.getPointerCount() > 1)) {
+                        if (wasScaling.get()) {
                             return false;
                         }
 
@@ -65,8 +64,20 @@ class GestureHelper {
                 });
 
         gestureView.setOnTouchListener((view, motionEvent) -> {
+            int action = motionEvent.getActionMasked();
+
+            if (action == MotionEvent.ACTION_DOWN) {
+                wasScaling.set(false);
+            }
+
             detector.onTouchEvent(motionEvent);
             scaleDetector.onTouchEvent(motionEvent);
+
+            // Check after scaleDetector processes the event
+            if (scaleDetector.isInProgress()) {
+                wasScaling.set(true);
+            }
+
             return false;
         });
     }

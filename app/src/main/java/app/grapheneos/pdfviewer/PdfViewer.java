@@ -562,7 +562,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     private void initializeGestures() {
         ViewConfiguration vc = ViewConfiguration.get(this);
-        swipeThreshold = vc.getScaledTouchSlop() * 4;
+        swipeThreshold = vc.getScaledTouchSlop() * 6;
         swipeVelocityThreshold = vc.getScaledMinimumFlingVelocity();
     }
 
