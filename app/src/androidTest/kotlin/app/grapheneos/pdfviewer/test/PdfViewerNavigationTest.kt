@@ -1,0 +1,200 @@
+package app.grapheneos.pdfviewer.test
+
+import android.app.Activity
+import android.app.Instrumentation
+import android.content.Intent
+import android.util.Log
+import androidx.test.core.app.ActivityScenario
+import androidx.test.espresso.intent.Intents
+import androidx.test.espresso.intent.Intents.intending
+import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.grapheneos.pdfviewer.PdfViewer
+import app.grapheneos.pdfviewer.R
+import app.grapheneos.pdfviewer.currentPage
+import app.grapheneos.pdfviewer.documentProperties
+import app.grapheneos.pdfviewer.refreshMenuSync
+import app.grapheneos.pdfviewer.totalPages
+import app.grapheneos.pdfviewer.util.PdfViewerLauncher
+import app.grapheneos.pdfviewer.util.PdfViewerRobot
+import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
+import org.junit.Assert.assertEquals
+import org.junit.Test
+import org.junit.runner.RunWith
+
+/**
+ * Page navigation and JumpToPage dialog.
+ */
+@RunWith(AndroidJUnit4::class)
+class PdfViewerNavigationTest {
+
+    private val robot = PdfViewerRobot()
+
+    private fun setupNavigableState(
+        scenario: ActivityScenario<PdfViewer>,
+        page: Int,
+        numPages: Int
+    ) {
+        scenario.onActivity {
+            it.currentPage = page
+            it.totalPages = numPages
+            it.refreshMenuSync()
+        }
+    }
+
+    // Next / Previous clicks
+
+    @Test
+    fun tapNext_increasesPage() {
+        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
+            PdfViewerTestUtils.waitForDocumentLoaded()
+            setupNavigableState(scenario, page = 2, numPages = 5)
+
+            robot.clickNext()
+            scenario.onActivity {
+                assertEquals(3, it.currentPage)
+            }
+        }
+    }
+
+    @Test
+    fun tapPrevious_decreasesPage() {
+        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
+            PdfViewerTestUtils.waitForDocumentLoaded()
+            setupNavigableState(scenario, page = 3, numPages = 5)
+
+            robot.clickPrevious()
+            scenario.onActivity {
+                assertEquals(2, it.currentPage)
+            }
+        }
+    }
+
+    @Test
+    fun tapNext_updatesMenuState() {
+        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
+            PdfViewerTestUtils.waitForDocumentLoaded()
+            setupNavigableState(scenario, page = 1, numPages = 3)
+
+            robot.assertNavigationState(previousEnabled = false, nextEnabled = true)
+            robot.clickNext()
+            scenario.onActivity { it.refreshMenuSync() }
+            robot.assertNavigationState(previousEnabled = true, nextEnabled = true)
+        }
+    }
+
+    // First / Last buttons
+
+    @Test
+    fun tapFirst_goesToFirstPage() {
+        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
+            PdfViewerTestUtils.waitForDocumentLoaded()
+            setupNavigableState(scenario, page = 4, numPages = 5)
+
+            robot.clickMenuItem(R.id.action_first, R.string.action_first)
+            scenario.onActivity {
+                assertEquals(1, it.currentPage)
+            }
+        }
+    }
+
+    @Test
+    fun tapLast_goesToLastPage() {
+        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
+            PdfViewerTestUtils.waitForDocumentLoaded()
+            setupNavigableState(scenario, page = 2, numPages = 5)
+
+            robot.clickMenuItem(R.id.action_last, R.string.action_last)
+            scenario.onActivity {
+                assertEquals(5, it.currentPage)
+            }
+        }
+    }
+
+    // JumpToPageFragment
+
+    @Test
+    fun jumpToPageDialog_opensWithCorrectValues() {
+        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
+            PdfViewerTestUtils.waitForDocumentLoaded()
+            setupNavigableState(scenario, page = 3, numPages = 10)
+
+            robot.clickMenuItem(R.id.action_jump_to_page, R.string.action_jump_to_page)
+            robot.assertNumberPickerState(minValue = 1, maxValue = 10, currentValue = 3)
+        }
+    }
+
+    @Test
+    fun jumpToPageDialog_okNavigatesToSelectedPage() {
+        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
+            PdfViewerTestUtils.waitForDocumentLoaded()
+            setupNavigableState(scenario, page = 1, numPages = 10)
+
+            robot.clickMenuItem(R.id.action_jump_to_page, R.string.action_jump_to_page)
+            robot.setNumberPickerValue(7)
+            robot.clickDialogOk()
+
+            scenario.onActivity {
+                assertEquals(7, it.currentPage)
+            }
+        }
+    }
+
+    @Test
+    fun jumpToPageDialog_cancelDoesNotNavigate() {
+        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
+            PdfViewerTestUtils.waitForDocumentLoaded()
+            setupNavigableState(scenario, page = 3, numPages = 10)
+
+            robot.clickMenuItem(R.id.action_jump_to_page, R.string.action_jump_to_page)
+            robot.setNumberPickerValue(7)
+            robot.clickDialogCancel()
+
+            scenario.onActivity {
+                assertEquals(3, it.currentPage)
+            }
+        }
+    }
+
+    @Test
+    fun openSecondDocument_resetsStateAndLoadsNewDocument() {
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            scenario.onActivity {
+                it.onJumpToPageInDocument(3)
+            }
+            scenario.onActivity {
+                assertEquals(3, it.currentPage)
+                assertEquals(4, it.totalPages)
+            }
+
+            Intents.init()
+            try {
+                val secondUri = PdfViewerLauncher.testAssetUri("test-simple.pdf")
+                intending(hasAction(Intent.ACTION_OPEN_DOCUMENT))
+                    .respondWith(
+                        Instrumentation.ActivityResult(
+                            Activity.RESULT_OK,
+                            Intent().apply { data = secondUri }
+                        )
+                    )
+
+                robot.clickMenuItem(R.id.action_open, R.string.action_open)
+            } finally {
+                Intents.release()
+            }
+
+            PdfViewerTestUtils.waitForDocumentChanged(scenario, expectedPages = 1)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            scenario.onActivity {
+                assertEquals("Page should reset to 1", 1, it.currentPage)
+                assertEquals("New document should have 1 page", 1, it.totalPages)
+            }
+
+            PdfViewerTestUtils.assertTextLayerContent(scenario, "Test Text")
+        }
+    }
+}

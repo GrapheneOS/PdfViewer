@@ -28,6 +28,7 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.WindowCompat;
 import androidx.fragment.app.Fragment;
@@ -119,7 +120,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private static final int STATE_END = 2;
     private static final int PADDING = 10;
 
-    private boolean webViewCrashed;
+    @VisibleForTesting
+    boolean webViewCrashed;
     private Uri mUri;
     public int mPage;
     public int mNumPages;
@@ -129,7 +131,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private int mDocumentOrientationDegrees;
     private int mDocumentState;
     private String mEncryptedDocumentPassword;
-    private List<CharSequence> mDocumentProperties;
+    @VisibleForTesting
+    List<CharSequence> mDocumentProperties;
     private String mDocumentName;
     private InputStream mInputStream;
 
@@ -559,7 +562,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         return mPasswordPromptFragment;
     }
 
-    private void setToolbarTitleWithDocumentName() {
+    @VisibleForTesting
+    void setToolbarTitleWithDocumentName() {
         String documentName = getCurrentDocumentName();
         if (documentName != null && !documentName.isEmpty()) {
             getSupportActionBar().setTitle(documentName);
