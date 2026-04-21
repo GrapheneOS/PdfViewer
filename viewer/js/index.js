@@ -79,8 +79,8 @@ function setLayerTransform(pageWidth, pageHeight, layerDiv) {
     layerDiv.style.translate = `${translate.X}px ${translate.Y}px`;
 }
 
-function getDefaultZoomRatio(page, orientationDegrees) {
-    const totalRotation = (orientationDegrees + page.rotate) % 360;
+function getDefaultZoomRatio(page, degrees) {
+    const totalRotation = (degrees + page.rotate) % 360;
     const viewport = page.getViewport({scale: 1, rotation: totalRotation});
     const widthZoomRatio = document.body.clientWidth / viewport.width;
     const heightZoomRatio = document.body.clientHeight / viewport.height;
