@@ -17,6 +17,7 @@ export default [
             sourceType: "module"
         },
         rules: {
+            "no-shadow": ["error"],
             "no-var": ["error"],
             "@stylistic/brace-style": ["error", "1tbs"],
             "@stylistic/indent": ["error", 4],
