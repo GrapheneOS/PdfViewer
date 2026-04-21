@@ -54,7 +54,7 @@ public class Utils {
         int seconds = 0;
 
         // All succeeding fields are optional, but each preceding field must be present
-        if (date.length() > 8) {
+        if (date.length() >= 8) {
             field = date.substring(position, 8);
             if (!TextUtils.isDigitsOnly(field)) {
                 throw new ParseException("Invalid month", position);
@@ -65,7 +65,7 @@ public class Utils {
             }
             position += 2;
         }
-        if (date.length() > 10) {
+        if (date.length() >= 10) {
             field = date.substring(8, 10);
             if (!TextUtils.isDigitsOnly(field)) {
                 throw new ParseException("Invalid day", position);
@@ -76,7 +76,7 @@ public class Utils {
             }
             position += 2;
         }
-        if (date.length() > 12) {
+        if (date.length() >= 12) {
             field = date.substring(10, 12);
             if (!TextUtils.isDigitsOnly(field)) {
                 throw new ParseException("Invalid hours", position);
@@ -87,7 +87,7 @@ public class Utils {
             }
             position += 2;
         }
-        if (date.length() > 14) {
+        if (date.length() >= 14) {
             field = date.substring(12, 14);
             if (!TextUtils.isDigitsOnly(field)) {
                 throw new ParseException("Invalid minutes", position);
@@ -98,7 +98,7 @@ public class Utils {
             }
             position += 2;
         }
-        if (date.length() > 16) {
+        if (date.length() >= 16) {
             field = date.substring(14, 16);
             if (!TextUtils.isDigitsOnly(field)) {
                 throw new ParseException("Invalid seconds", position);
