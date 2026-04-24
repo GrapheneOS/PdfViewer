@@ -1,9 +1,14 @@
 {
   "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
   "devDependencies": {
     "@stylistic/eslint-plugin": "^5.10.0",
     "esbuild": "^0.28.0",
     "eslint": "^9.39.2",
-    "pdfjs-dist": "^5.6.205"
+    "pdfjs-dist": "^5.6.205",
+    "vitest": "^2.1.0"
   }
 }

@@ -3,16 +3,13 @@ package app.grapheneos.pdfviewer.test
 import android.app.Activity
 import android.app.Instrumentation
 import android.content.Intent
-import android.util.Log
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.intent.Intents
 import androidx.test.espresso.intent.Intents.intending
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.grapheneos.pdfviewer.PdfViewer
-import app.grapheneos.pdfviewer.R
 import app.grapheneos.pdfviewer.currentPage
-import app.grapheneos.pdfviewer.documentProperties
 import app.grapheneos.pdfviewer.refreshMenuSync
 import app.grapheneos.pdfviewer.totalPages
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
@@ -91,7 +88,7 @@ class PdfViewerNavigationTest {
             PdfViewerTestUtils.waitForDocumentLoaded()
             setupNavigableState(scenario, page = 4, numPages = 5)
 
-            robot.clickMenuItem(R.id.action_first, R.string.action_first)
+            robot.click(PdfViewerRobot.AppMenuItem.First)
             scenario.onActivity {
                 assertEquals(1, it.currentPage)
             }
@@ -104,7 +101,7 @@ class PdfViewerNavigationTest {
             PdfViewerTestUtils.waitForDocumentLoaded()
             setupNavigableState(scenario, page = 2, numPages = 5)
 
-            robot.clickMenuItem(R.id.action_last, R.string.action_last)
+            robot.click(PdfViewerRobot.AppMenuItem.Last)
             scenario.onActivity {
                 assertEquals(5, it.currentPage)
             }
@@ -119,8 +116,8 @@ class PdfViewerNavigationTest {
             PdfViewerTestUtils.waitForDocumentLoaded()
             setupNavigableState(scenario, page = 3, numPages = 10)
 
-            robot.clickMenuItem(R.id.action_jump_to_page, R.string.action_jump_to_page)
-            robot.assertNumberPickerState(minValue = 1, maxValue = 10, currentValue = 3)
+            robot.click(PdfViewerRobot.AppMenuItem.JumpToPage)
+            robot.assertNumberPickerStateInDialog(minValue = 1, maxValue = 10, currentValue = 3)
         }
     }
 
@@ -130,7 +127,7 @@ class PdfViewerNavigationTest {
             PdfViewerTestUtils.waitForDocumentLoaded()
             setupNavigableState(scenario, page = 1, numPages = 10)
 
-            robot.clickMenuItem(R.id.action_jump_to_page, R.string.action_jump_to_page)
+            robot.click(PdfViewerRobot.AppMenuItem.JumpToPage)
             robot.setNumberPickerValue(7)
             robot.clickDialogOk()
 
@@ -146,7 +143,7 @@ class PdfViewerNavigationTest {
             PdfViewerTestUtils.waitForDocumentLoaded()
             setupNavigableState(scenario, page = 3, numPages = 10)
 
-            robot.clickMenuItem(R.id.action_jump_to_page, R.string.action_jump_to_page)
+            robot.click(PdfViewerRobot.AppMenuItem.JumpToPage)
             robot.setNumberPickerValue(7)
             robot.clickDialogCancel()
 
@@ -181,7 +178,7 @@ class PdfViewerNavigationTest {
                         )
                     )
 
-                robot.clickMenuItem(R.id.action_open, R.string.action_open)
+                robot.click(PdfViewerRobot.AppMenuItem.Open)
             } finally {
                 Intents.release()
             }
