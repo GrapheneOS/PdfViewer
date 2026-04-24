@@ -1,7 +1,6 @@
 package app.grapheneos.pdfviewer.test
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.grapheneos.pdfviewer.R
 import app.grapheneos.pdfviewer.crashed
 import app.grapheneos.pdfviewer.currentPage
 import app.grapheneos.pdfviewer.documentProperties
@@ -102,12 +101,12 @@ class PdfViewerMenuStateTest {
                 it.refreshMenuSync()
             }
 
-            robot.assertMenuItemEnabled(scenario, R.id.action_open, expected = false)
-            robot.assertMenuItemEnabled(scenario, R.id.action_next, expected = false)
-            robot.assertMenuItemEnabled(scenario, R.id.action_previous, expected = false)
-            robot.assertMenuItemEnabled(scenario, R.id.action_share, expected = false)
-            robot.assertMenuItemEnabled(scenario, R.id.action_save_as, expected = false)
-            robot.assertMenuItemEnabled(scenario, R.id.action_jump_to_page, expected = false)
+            robot.assertMenuItemEnabled(scenario, PdfViewerRobot.AppMenuItem.Open, expected = false)
+            robot.assertMenuItemEnabled(scenario, PdfViewerRobot.AppMenuItem.Next, expected = false)
+            robot.assertMenuItemEnabled(scenario, PdfViewerRobot.AppMenuItem.Previous, expected = false)
+            robot.assertMenuItemEnabled(scenario, PdfViewerRobot.AppMenuItem.Share, expected = false)
+            robot.assertMenuItemEnabled(scenario, PdfViewerRobot.AppMenuItem.SaveAs, expected = false)
+            robot.assertMenuItemEnabled(scenario, PdfViewerRobot.AppMenuItem.JumpToPage, expected = false)
         }
     }
 
@@ -117,7 +116,7 @@ class PdfViewerMenuStateTest {
     fun postLoadState_noOutline_outlineItemNotVisible() {
         PdfViewerLauncher.launchWithFakeUri().use { scenario ->
             PdfViewerTestUtils.waitForDocumentLoaded()
-            robot.assertMenuItemVisible(scenario, R.id.action_outline, expected = false)
+            robot.assertMenuItemVisible(scenario, PdfViewerRobot.AppMenuItem.Outline, expected = false)
         }
     }
 
@@ -131,7 +130,7 @@ class PdfViewerMenuStateTest {
                 it.refreshMenuSync()
             }
 
-            robot.assertMenuItemVisible(scenario, R.id.action_outline, expected = true)
+            robot.assertMenuItemVisible(scenario, PdfViewerRobot.AppMenuItem.Outline, expected = true)
         }
     }
 
@@ -143,7 +142,7 @@ class PdfViewerMenuStateTest {
             PdfViewerTestUtils.waitForDocumentLoaded()
 
             robot.assertMenuItemEnabled(
-                scenario, R.id.action_view_document_properties, expected = false
+                scenario, PdfViewerRobot.AppMenuItem.ViewDocumentProperties, expected = false
             )
         }
     }
@@ -159,7 +158,7 @@ class PdfViewerMenuStateTest {
             }
 
             robot.assertMenuItemEnabled(
-                scenario, R.id.action_view_document_properties, expected = true
+                scenario, PdfViewerRobot.AppMenuItem.ViewDocumentProperties, expected = true
             )
         }
     }

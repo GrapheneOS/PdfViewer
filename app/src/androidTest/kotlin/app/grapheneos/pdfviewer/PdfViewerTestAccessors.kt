@@ -10,6 +10,8 @@ import com.google.android.material.appbar.MaterialToolbar
  * All tests should read/write activity states through these extensions.
  */
 
+const val MIN_ZOOM_RATIO: Float = 0.2f
+
 var PdfViewer.currentPage: Int
     get() = mPage
     set(value) {
@@ -40,22 +42,22 @@ var PdfViewer.outlineStatus: PdfViewModel.OutlineStatus
         viewModel.outline.value = value
     }
 
+val PdfViewer.toolbar: MaterialToolbar
+    get() = findViewById(R.id.toolbar)
+
 /**
  * Synchronously refreshes menu item states by calling [onPrepareOptionsMenu]
  * with live [Menu]. [invalidateOptionsMenu] schedules update using Choreographer,
  * which Espresso does not wait for.
  */
 fun PdfViewer.refreshMenuSync() {
-    val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
     onPrepareOptionsMenu(toolbar.menu)
 }
 
 fun PdfViewer.isMenuItemEnabled(@IdRes id: Int): Boolean {
-    val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
     return toolbar.menu.findItem(id)?.isEnabled ?: false
 }
 
 fun PdfViewer.isMenuItemVisible(@IdRes id: Int): Boolean {
-    val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
     return toolbar.menu.findItem(id)?.isVisible ?: false
 }

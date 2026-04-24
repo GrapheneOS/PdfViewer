@@ -1,5 +1,7 @@
 package app.grapheneos.pdfviewer.util
 
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.util.Log
 import android.webkit.WebView
 import androidx.test.core.app.ActivityScenario
@@ -7,6 +9,8 @@ import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
+import androidx.test.espresso.matcher.ViewMatchers.withText
+import androidx.test.platform.app.InstrumentationRegistry
 import app.grapheneos.pdfviewer.PdfViewer
 import app.grapheneos.pdfviewer.R
 import app.grapheneos.pdfviewer.documentProperties
@@ -45,21 +49,45 @@ object PdfViewerTestUtils {
         return result
     }
 
+    fun pollUntil(
+        timeout: Long = 10_000,
+        interval: Long = 200,
+        description: () -> String = { "condition" },
+        condition: () -> Boolean
+    ) {
+        val start = System.currentTimeMillis()
+        while (System.currentTimeMillis() - start < timeout) {
+            try {
+                if (condition()) return
+            } catch (_: Throwable) { /* retry */ }
+            Thread.sleep(interval)
+        }
+        throw AssertionError("${description()} not met within ${timeout}ms")
+    }
+
+    fun pollUntilAssertion(
+        timeout: Long = 10_000,
+        interval: Long = 200,
+        assertion: () -> Unit
+    ) {
+        val start = System.currentTimeMillis()
+        while (System.currentTimeMillis() - start < timeout) {
+            try {
+                assertion()
+                return
+            } catch (_: Throwable) { Thread.sleep(interval) }
+        }
+        assertion()
+    }
+
     /**
      * Blocks until the WebView's viewer page has finished loading and the
      * document state has become STATE_LOADED.
      */
     fun waitForDocumentLoaded(timeout: Long = 10_000) {
-        val start = System.currentTimeMillis()
-        while (System.currentTimeMillis() - start < timeout) {
-            try {
-                onView(withId(R.id.action_previous)).check(matches(isDisplayed()))
-                return
-            } catch (_: Throwable) {
-                Thread.sleep(200)
-            }
+        pollUntilAssertion(timeout) {
+            onView(withId(R.id.action_previous)).check(matches(isDisplayed()))
         }
-        onView(withId(R.id.action_previous)).check(matches(isDisplayed()))
     }
 
     /**
@@ -69,9 +97,12 @@ object PdfViewerTestUtils {
         scenario: ActivityScenario<PdfViewer>,
         timeout: Long = 15_000
     ) {
-        val start = System.currentTimeMillis()
         Log.d("WAIT", "waitForDocumentFullyLoaded: start")
-        while (System.currentTimeMillis() - start < timeout) {
+        val start = System.currentTimeMillis()
+        pollUntil(
+            timeout = timeout,
+            description = { "Document not fully loaded within ${timeout}ms" }
+        ) {
             var loaded = false
             var props = false
             var pages = 0
@@ -81,44 +112,34 @@ object PdfViewerTestUtils {
                 loaded = props && pages > 0
             }
             Log.d("WAIT", "  props=$props, pages=$pages, elapsed=${System.currentTimeMillis() - start}ms")
-            if (loaded) {
-                Log.d("WAIT", "waitForDocumentFullyLoaded: done in ${System.currentTimeMillis() - start}ms")
-                return
-            }
-            Thread.sleep(200)
+            loaded
         }
-        scenario.onActivity { activity ->
-            assertEquals(
-                "Document Properties should be non-null",
-                true,
-                activity.documentProperties != null
-            )
-        }
+        Log.d("WAIT", "waitForDocumentFullyLoaded: done in ${System.currentTimeMillis() - start}ms")
     }
 
     fun waitForCanvasRendered(
         scenario: ActivityScenario<PdfViewer>,
         timeout: Long = 15_000
     ) {
-        val start = System.currentTimeMillis()
         Log.d("WAIT", "waitForCanvasRendered: start")
-        while (System.currentTimeMillis() - start < timeout) {
+        val start = System.currentTimeMillis()
+        pollUntil(
+            timeout = timeout,
+            description = { "Canvas not rendered within ${timeout}ms" }
+        ) {
             try {
                 val result = evaluateJs(scenario,
                     "document.getElementById('content').width > 0 " +
                             "&& document.getElementById('content').height > 0"
                 )
                 Log.d("WAIT", "  canvas check result=$result, elapsed=${System.currentTimeMillis() - start}ms")
-                if (result == "true") {
-                    Log.d("WAIT", "waitForCanvasRendered: done in ${System.currentTimeMillis() - start}ms")
-                    return
-                }
+                result == "true"
             } catch (t: Throwable) {
                 Log.w("WAIT", "  canvas check exception at ${System.currentTimeMillis() - start}ms: ${t.message}")
+                false
             }
-            Thread.sleep(200)
         }
-        throw AssertionError("Canvas not rendered within ${timeout}ms")
+        Log.d("WAIT", "waitForCanvasRendered: done in ${System.currentTimeMillis() - start}ms")
     }
 
     fun assertTextLayerContent(
@@ -126,78 +147,73 @@ object PdfViewerTestUtils {
         expected: String,
         timeout: Long = 15_000
     ) {
-        val start = System.currentTimeMillis()
         Log.d("WAIT", "assertTextLayerContent($expected): start")
-        while (System.currentTimeMillis() - start < timeout) {
-            try {
-                val result = evaluateJs(scenario,
-                    "document.getElementById('text').textContent"
-                )
-                Log.d("WAIT", "  text layer result=${result.take(80)}, elapsed=${System.currentTimeMillis() - start}ms")
-                if (result.contains(expected)) {
-                    Log.d("WAIT", "assertTextLayerContent: done in ${System.currentTimeMillis() - start}ms")
-                    return
+        val start = System.currentTimeMillis()
+        try {
+            pollUntil(
+                timeout = timeout,
+                description = { "Text layer did not contain '$expected' within ${timeout}ms" }
+            ) {
+                try {
+                    val result = evaluateJs(scenario,
+                        "document.getElementById('text').textContent"
+                    )
+                    Log.d("WAIT", "  text layer result=${result.take(80)}, elapsed=${System.currentTimeMillis() - start}ms")
+                    result.contains(expected)
+                } catch (t: Throwable) {
+                    Log.w("WAIT", "  text layer exception at ${System.currentTimeMillis() - start}ms: ${t.message}")
+                    false
                 }
-            } catch (t: Throwable) {
-                Log.w("WAIT", "  text layer exception at ${System.currentTimeMillis() - start}ms: ${t.message}")
             }
-            Thread.sleep(200)
+            Log.d("WAIT", "assertTextLayerContent: done in ${System.currentTimeMillis() - start}ms")
+        } catch (_: AssertionError) {
+            val actual = try {
+                evaluateJs(scenario, "document.getElementById('text').textContent")
+            } catch (e: Throwable) {
+                "JS evaluation failed: ${e.message}"
+            }
+            throw AssertionError(
+                "Text layer did not contain '$expected' within ${timeout}ms. Actual: $actual"
+            )
         }
-        val actual = try {
-            evaluateJs(scenario, "document.getElementById('text').textContent")
-        } catch (e: Throwable) {
-            "JS evaluation failed: ${e.message}"
-        }
-        throw AssertionError(
-            "Text layer did not contain '$expected' within ${timeout}ms. Actual: $actual"
-        )
     }
 
     fun waitForOutlineAvailable(
         scenario: ActivityScenario<PdfViewer>,
         timeout: Long = 15_000
     ) {
-        val start = System.currentTimeMillis()
-        while (System.currentTimeMillis() - start < timeout) {
+        pollUntil(
+            timeout = timeout,
+            description = { "Outline not available within ${timeout}ms" }
+        ) {
             var available = false
-            scenario.onActivity {
-                available = it.viewModel.hasOutline()
-            }
-            if (available) return
-            Thread.sleep(200)
+            scenario.onActivity { available = it.viewModel.hasOutline() }
+            available
         }
-        throw AssertionError("Outline not available within ${timeout}ms")
     }
 
     fun waitForOutlineLoaded(
         scenario: ActivityScenario<PdfViewer>,
         timeout: Long = 15_000
     ) {
-        val start = System.currentTimeMillis()
-        while (System.currentTimeMillis() - start < timeout) {
+        pollUntil(
+            timeout = timeout,
+            interval = 250,
+            description = { "Outline not loaded within ${timeout}ms" }
+        ) {
             var loaded = false
             scenario.onActivity {
                 loaded = it.outlineStatus is PdfViewModel.OutlineStatus.Loaded
             }
-            if (loaded) return
-            Thread.sleep(250)
+            loaded
         }
-        throw AssertionError("Outline not loaded within ${timeout}ms")
     }
 
     fun waitForCrashUiDismissed(timeout: Long = 10_000) {
-        val start = System.currentTimeMillis()
-        while (System.currentTimeMillis() - start < timeout) {
-            try {
-                onView(withId(R.id.webview_alert_layout))
-                    .check(matches(not(isDisplayed())))
-                return
-            } catch (_: Throwable) {
-                Thread.sleep(200)
-            }
+        pollUntilAssertion(timeout) {
+            onView(withId(R.id.webview_alert_layout))
+                .check(matches(not(isDisplayed())))
         }
-        onView(withId(R.id.webview_alert_layout))
-            .check(matches(not(isDisplayed())))
     }
 
     fun waitForToolbarState(
@@ -205,21 +221,14 @@ object PdfViewerTestUtils {
         visible: Boolean,
         timeout: Long = 5_000
     ) {
-        val start = System.currentTimeMillis()
-        while (System.currentTimeMillis() - start < timeout) {
+        pollUntil(
+            timeout = timeout,
+            interval = 100,
+            description = { "Toolbar visibility should be visible=$visible" }
+        ) {
             var matches = false
-            scenario.onActivity {
-                matches = (it.supportActionBar?.isShowing == visible)
-            }
-            if (matches) return
-            Thread.sleep(100)
-        }
-        scenario.onActivity {
-            assertEquals(
-                "Toolbar visibility should be visible=$visible",
-                visible,
-                it.supportActionBar?.isShowing
-            )
+            scenario.onActivity { matches = (it.supportActionBar?.isShowing == visible) }
+            matches
         }
     }
 
@@ -229,22 +238,17 @@ object PdfViewerTestUtils {
         previousHeight: Int,
         timeout: Long = 15_000
     ) {
-        val start = System.currentTimeMillis()
-        while (System.currentTimeMillis() - start < timeout) {
-            try {
-                val w = evaluateJs(scenario,
-                    "document.getElementById('content').width").toIntOrNull()
-                val h = evaluateJs(scenario,
-                    "document.getElementById('content').height").toIntOrNull()
-                if (w != null && h != null &&
-                    (w != previousWidth || h != previousHeight)) return
-            } catch (_: Throwable) {}
-            Thread.sleep(200)
+        pollUntil(
+            timeout = timeout,
+            description = {
+                "Canvas dimensions did not change from ${previousWidth}x${previousHeight} " +
+                        "within ${timeout}ms"
+            }
+        ) {
+            val w = evaluateJs(scenario, "document.getElementById('content').width").toIntOrNull()
+            val h = evaluateJs(scenario, "document.getElementById('content').height").toIntOrNull()
+            w != null && h != null && (w != previousWidth || h != previousHeight)
         }
-        throw AssertionError(
-            "Canvas dimensions did not change from ${previousWidth}x${previousHeight} " +
-                    "within ${timeout}ms"
-        )
     }
 
     fun waitForDocumentChanged(
@@ -252,19 +256,99 @@ object PdfViewerTestUtils {
         expectedPages: Int,
         timeout: Long = 15_000
     ) {
-        val start = System.currentTimeMillis()
-        while (System.currentTimeMillis() - start < timeout) {
+        pollUntil(
+            timeout = timeout,
+            description = {
+                "Document did not change to expected state (expectedPages=$expectedPages) " +
+                        "within ${timeout}ms"
+            }
+        ) {
             var matches = false
             scenario.onActivity { activity ->
                 matches = activity.totalPages == expectedPages &&
                         activity.documentProperties != null
             }
-            if (matches) return
-            Thread.sleep(200)
+            matches
         }
-        throw AssertionError(
-            "Document did not change to expected state " +
-                    "(expectedPages=$expectedPages) within ${timeout}ms"
+    }
+
+    fun waitForDocumentRotation(
+        scenario: ActivityScenario<PdfViewer>,
+        expected: Int,
+        timeout: Long = 10_000
+    ) {
+        val robot = PdfViewerRobot()
+        pollUntil(
+            timeout = timeout,
+            description = {
+                "Document orientation did not reach ${expected}° " +
+                        "(was ${robot.getDocumentRotationDegrees(scenario)}°)"
+            }
+        ) {
+            robot.getDocumentRotationDegrees(scenario) == expected
+        }
+    }
+
+    fun waitForSnackbar(message: PdfViewerRobot.SnackbarMessage, timeout: Long = 10_000) {
+        pollUntilAssertion(timeout) {
+            onView(withId(com.google.android.material.R.id.snackbar_text))
+                .check(matches(withText(message.stringRes)))
+        }
+    }
+
+    fun setDeviceOrientation(scenario: ActivityScenario<PdfViewer>, landscape: Boolean) {
+        val targetOrientation = if (landscape)
+            Configuration.ORIENTATION_LANDSCAPE
+        else
+            Configuration.ORIENTATION_PORTRAIT
+        scenario.onActivity {
+            it.requestedOrientation = if (landscape)
+                ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            else
+                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+        pollUntil(
+            timeout = 10_000,
+            description = { "Activity did not reach orientation=landscape($landscape) within 10s" }
+        ) {
+            var matches = false
+            scenario.onActivity {
+                matches = it.resources.configuration.orientation == targetOrientation
+            }
+            matches
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+    }
+
+    fun selectAllText(scenario: ActivityScenario<PdfViewer>) {
+        evaluateJs(
+            scenario, """
+        (function() {
+                var range = document.createRange();
+                range.selectNodeContents(document.getElementById('text'));
+                var sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+                return window.getSelection().toString().length > 0;
+            })()
+    """.trimIndent()
         )
+    }
+
+    fun assertToolbarStableVisibility(
+        scenario: ActivityScenario<PdfViewer>,
+        expectedVisible: Boolean,
+        observeFor: Long = 500
+    ) {
+        val start = System.currentTimeMillis()
+        while (System.currentTimeMillis() - start < observeFor) {
+            var actual = false
+            scenario.onActivity { actual = it.supportActionBar?.isShowing == true }
+            assertEquals(
+                "Toolbar visibility should stay visible=$expectedVisible during ${observeFor}ms",
+                expectedVisible, actual
+            )
+            Thread.sleep(50)
+        }
     }
 }

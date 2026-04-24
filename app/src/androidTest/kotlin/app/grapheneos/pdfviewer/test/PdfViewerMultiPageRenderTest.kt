@@ -1,13 +1,15 @@
 package app.grapheneos.pdfviewer.test
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.grapheneos.pdfviewer.R
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.UiDevice
 import app.grapheneos.pdfviewer.currentPage
 import app.grapheneos.pdfviewer.outlineStatus
 import app.grapheneos.pdfviewer.refreshMenuSync
 import app.grapheneos.pdfviewer.totalPages
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
+import app.grapheneos.pdfviewer.util.PdfViewerRobot.AppMenuItem
 import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
 import app.grapheneos.pdfviewer.viewModel.PdfViewModel
 import org.junit.Assert.assertEquals
@@ -75,11 +77,11 @@ class PdfViewerMultiPageRenderTest {
             PdfViewerTestUtils.waitForCanvasRendered(scenario)
             PdfViewerTestUtils.assertTextLayerContent(scenario, "Page One Content")
 
-            robot.clickMenuItem(R.id.action_last, R.string.action_last)
+            robot.click(PdfViewerRobot.AppMenuItem.Last)
             PdfViewerTestUtils.assertTextLayerContent(scenario, "Page Four Content")
             robot.assertBridgePage(scenario, 4)
 
-            robot.clickMenuItem(R.id.action_first, R.string.action_first)
+            robot.click(PdfViewerRobot.AppMenuItem.First)
             PdfViewerTestUtils.assertTextLayerContent(scenario, "Page One Content")
             robot.assertBridgePage(scenario, 1)
         }
@@ -94,7 +96,7 @@ class PdfViewerMultiPageRenderTest {
             scenario.onActivity { it.refreshMenuSync() }
             robot.assertNavigationState(previousEnabled = false, nextEnabled = true)
 
-            robot.clickMenuItem(R.id.action_last, R.string.action_last)
+            robot.click(PdfViewerRobot.AppMenuItem.Last)
             PdfViewerTestUtils.assertTextLayerContent(scenario, "Page Four Content")
 
             scenario.onActivity { it.refreshMenuSync() }
@@ -118,7 +120,7 @@ class PdfViewerMultiPageRenderTest {
                 )
             }
 
-            robot.assertMenuItemVisible(scenario, R.id.action_outline, expected = true)
+            robot.assertMenuItemVisible(scenario, AppMenuItem.Outline, expected = true)
         }
     }
 
@@ -158,6 +160,21 @@ class PdfViewerMultiPageRenderTest {
             scenario.onActivity {
                 assertEquals(2, it.currentPage)
             }
+        }
+    }
+
+    @Test
+    fun outlineFragment_dismissesOnBackPress() {
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForOutlineAvailable(scenario)
+            scenario.onActivity { it.refreshMenuSync() }
+
+            robot.openOutlineFragment()
+            robot.waitForOutlineEntries()
+
+            UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressBack()
+            robot.waitForOutlineFragmentDismissed()
         }
     }
 }
