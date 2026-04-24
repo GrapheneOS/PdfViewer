@@ -11,18 +11,18 @@ import androidx.test.espresso.intent.Intents.intended
 import androidx.test.espresso.intent.Intents.intending
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasExtra
-import androidx.test.espresso.intent.matcher.IntentMatchers.hasExtraWithKey
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasType
 import androidx.test.espresso.intent.matcher.IntentMatchers.isInternal
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import app.grapheneos.pdfviewer.R
 import app.grapheneos.pdfviewer.documentProperties
 import app.grapheneos.pdfviewer.refreshMenuSync
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
+import app.grapheneos.pdfviewer.util.PdfViewerRobot.AppMenuItem
 import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
 import org.hamcrest.Matchers.allOf
+import org.hamcrest.Matchers.`is`
 import org.hamcrest.Matchers.not
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertTrue
@@ -56,7 +56,7 @@ class PdfViewerIntentTest {
             try {
                 stubAllExternalIntents()
 
-                robot.clickMenuItem(R.id.action_open, R.string.action_open)
+                robot.click(AppMenuItem.Open)
 
                 intended(allOf(
                     hasAction(Intent.ACTION_OPEN_DOCUMENT),
@@ -72,20 +72,30 @@ class PdfViewerIntentTest {
      * action_share fires ACTION_CHOOSER with EXTRA_INTENT.
      */
     @Test
-    fun actionShare_firesChooserIntent() {
-        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
+    fun actionShare_firesChooserWithCorrectPayload() {
+        val uri = Uri.parse("content://app.grapheneos.pdfviewer.test/fake.pdf")
+        PdfViewerLauncher.launchWithPdf(uri).use {
             PdfViewerTestUtils.waitForDocumentLoaded()
 
             Intents.init()
             try {
                 stubAllExternalIntents()
 
-                robot.clickMenuItem(R.id.action_share, R.string.action_share)
+                robot.click(AppMenuItem.Share)
 
-                intended(allOf(
-                    hasAction(Intent.ACTION_CHOOSER),
-                    hasExtraWithKey(Intent.EXTRA_INTENT)
-                ))
+                intended(
+                    allOf(
+                        hasAction(Intent.ACTION_CHOOSER),
+                        hasExtra(
+                            `is`(Intent.EXTRA_INTENT),
+                            allOf(
+                                hasAction(Intent.ACTION_SEND),
+                                hasType("application/pdf"),
+                                hasExtra(Intent.EXTRA_STREAM, uri)
+                            )
+                        )
+                    )
+                )
             } finally {
                 Intents.release()
             }
@@ -113,7 +123,7 @@ class PdfViewerIntentTest {
             try {
                 stubAllExternalIntents()
 
-                robot.clickMenuItem(R.id.action_save_as, R.string.action_save_as)
+                robot.click(AppMenuItem.SaveAs)
 
                 intended(allOf(
                     hasAction(Intent.ACTION_CREATE_DOCUMENT),
@@ -147,7 +157,7 @@ class PdfViewerIntentTest {
                         )
                     )
 
-                robot.clickMenuItem(R.id.action_save_as, R.string.action_save_as)
+                robot.click(AppMenuItem.SaveAs)
             } finally {
                 Intents.release()
             }
@@ -186,12 +196,12 @@ class PdfViewerIntentTest {
                         )
                     )
 
-                robot.clickMenuItem(R.id.action_save_as, R.string.action_save_as)
+                robot.click(AppMenuItem.SaveAs)
             } finally {
                 Intents.release()
             }
 
-            robot.assertSnackbar(R.string.error_while_saving)
+            PdfViewerTestUtils.waitForSnackbar(PdfViewerRobot.SnackbarMessage.SaveError)
         }
 
         if (outputFile.exists()) outputFile.delete()

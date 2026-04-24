@@ -41,4 +41,21 @@ class PdfViewerToolbarToggleTest {
             robot.assertToolbarVisible(scenario)
         }
     }
+
+    @Test
+    fun tapWebView_whenTextSelected_doesNotToggleToolbar() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+            PdfViewerTestUtils.assertTextLayerContent(scenario, "Test Text")
+
+            PdfViewerTestUtils.selectAllText(scenario)
+
+            robot.assertToolbarVisible(scenario)
+            robot.tapWebView()
+            PdfViewerTestUtils.assertToolbarStableVisibility(
+                scenario, expectedVisible = true
+            )
+        }
+    }
 }

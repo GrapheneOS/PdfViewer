@@ -2,11 +2,11 @@ package app.grapheneos.pdfviewer.test
 
 import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.grapheneos.pdfviewer.R
 import app.grapheneos.pdfviewer.currentPage
 import app.grapheneos.pdfviewer.totalPages
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
+import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -49,7 +49,7 @@ class PdfViewerLaunchTest {
     fun launch_withInvalidMime_showsError() {
         val uri = Uri.parse("content://localhost/test.png")
         PdfViewerLauncher.launchWithMimeType(uri, "image/png").use { scenario ->
-            robot.assertSnackbar(R.string.invalid_mime_type)
+            PdfViewerTestUtils.waitForSnackbar(PdfViewerRobot.SnackbarMessage.InvalidMime)
 
             scenario.onActivity {
                 assertEquals(0, it.currentPage)
@@ -61,7 +61,14 @@ class PdfViewerLaunchTest {
     fun launch_withFileUri_showsLegacyFileUriSnackbar() {
         val uri = Uri.parse("file:///sdcard/Documents/test.pdf")
         PdfViewerLauncher.launchWithPdf(uri).use {
-            robot.assertSnackbar(R.string.legacy_file_uri)
+            PdfViewerTestUtils.waitForSnackbar(PdfViewerRobot.SnackbarMessage.LegacyFileUri)
+        }
+    }
+
+    @Test
+    fun launch_withUnreadablePdfUri_showsOpeningError() {
+        PdfViewerLauncher.launchWithFakeUri().use {
+            PdfViewerTestUtils.waitForSnackbar(PdfViewerRobot.SnackbarMessage.FileOpenError)
         }
     }
 

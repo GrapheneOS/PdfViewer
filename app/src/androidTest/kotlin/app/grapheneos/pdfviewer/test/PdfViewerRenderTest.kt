@@ -1,8 +1,10 @@
 package app.grapheneos.pdfviewer.test
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.grapheneos.pdfviewer.MIN_ZOOM_RATIO
 import app.grapheneos.pdfviewer.currentPage
 import app.grapheneos.pdfviewer.documentProperties
+import app.grapheneos.pdfviewer.refreshMenuSync
 import app.grapheneos.pdfviewer.totalPages
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
@@ -12,6 +14,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.math.abs
 
 /**
  * Document load and rendering verification.
@@ -153,6 +156,73 @@ class PdfViewerRenderTest {
 
             PdfViewerTestUtils.assertTextLayerContent(scenario, "Test Text")
             robot.assertTextLayerAligned(scenario)
+        }
+    }
+
+    @Test
+    fun zoomOut_decreasesDimensionsAndPreservesTextLayer() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            robot.performPinchZoomIn()
+            val initialWidth = robot.getCanvasWidth(scenario)
+            val initialHeight = robot.getCanvasHeight(scenario)
+
+            robot.performPinchZoomOut()
+
+            PdfViewerTestUtils.waitForCanvasDimensionsChanged(
+                scenario, initialWidth, initialHeight
+            )
+
+            val zoomedWidth = robot.getCanvasWidth(scenario)
+            val zoomedHeight = robot.getCanvasHeight(scenario)
+            assertTrue(
+                "Canvas width should decrease after zoom out " +
+                        "($initialWidth → $zoomedWidth)",
+                zoomedWidth < initialWidth
+            )
+            assertTrue(
+                "Canvas height should decrease after zoom out " +
+                        "($initialHeight → $zoomedHeight)",
+                zoomedHeight < initialHeight
+            )
+
+            PdfViewerTestUtils.assertTextLayerContent(scenario, "Test Text")
+            robot.assertTextLayerAligned(scenario)
+        }
+    }
+
+    @Test
+    fun zoomOut_clampsToMinimumZoomRatio() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            repeat(5) { robot.performPinchZoomOut() }
+
+            PdfViewerTestUtils.pollUntil(
+                timeout = 5_000,
+                description = {
+                    "Zoom ratio did not clamp to MIN_ZOOM_RATIO " +
+                            "(was ${robot.getZoomRatio(scenario)})"
+                }
+            ) {
+                abs(robot.getZoomRatio(scenario) - MIN_ZOOM_RATIO) < 0.001f
+            }
+        }
+    }
+
+    @Test
+    fun documentPropertiesDialog_showsExpectedRows() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            scenario.onActivity { it.refreshMenuSync() }
+
+            robot.click(PdfViewerRobot.AppMenuItem.ViewDocumentProperties)
+
+            robot.assertDocumentPropertyVisible("Test Document")
+            robot.assertDocumentPropertyVisible("Test Author")
         }
     }
 }
