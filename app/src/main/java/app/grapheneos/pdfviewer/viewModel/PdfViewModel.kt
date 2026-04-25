@@ -1,15 +1,30 @@
 package app.grapheneos.pdfviewer.viewModel
 
+import android.app.Application
+import android.content.ContentResolver
+import android.content.Intent
+import android.net.Uri
+import android.util.Log
+import androidx.core.net.toUri
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import app.grapheneos.pdfviewer.PreferenceHelper
 import app.grapheneos.pdfviewer.outline.OutlineNode
+import app.grapheneos.pdfviewer.preferences.PdfPreferencesRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
-class PdfViewModel : ViewModel() {
+class PdfViewModel(application: Application) : AndroidViewModel(application) {
+
+    companion object {
+        private const val TAG = "PdfViewModel"
+    }
 
     enum class PasswordStatus {
         MissingPassword,
@@ -33,6 +48,10 @@ class PdfViewModel : ViewModel() {
     val outline: MutableLiveData<OutlineStatus> = MutableLiveData(OutlineStatus.NotLoaded)
 
     private val scope = CoroutineScope(Dispatchers.IO)
+
+    private val repository = PdfPreferencesRepository(application)
+    private val contentResolver: ContentResolver = application.contentResolver
+    var currentFingerprint: String? = null
 
     override fun onCleared() {
         super.onCleared()
@@ -89,5 +108,121 @@ class PdfViewModel : ViewModel() {
         if (outline.value == OutlineStatus.NotLoaded) {
             outline.postValue(if (hasOutline) OutlineStatus.Available else OutlineStatus.NoOutline)
         }
+    }
+
+    /**
+     * Load initial PDF state if preference is enabled
+     */
+    fun maybeLoadPdfStateBlocking(): PdfPreferencesRepository.PdfState? {
+        return runBlocking {
+            if (PreferenceHelper.isResumeLastDocumentEnabled(getApplication())) {
+                repository.pdfStateFlow.first()
+            } else {
+                null
+            }
+        }
+    }
+
+    /**
+     * Get saved page by fingerprint
+     *
+     * @return saved page number, or null if no fingerprint or no saved page
+     */
+    fun getPageByFingerprintBlocking(): Int? {
+        return runBlocking {
+            currentFingerprint?.let { repository.getPageForFile(it) }
+        }
+    }
+
+    /**
+     * Save PDF state
+     *
+     * @param uriString Document URI string
+     * @param page Current page
+     * @param includeHashMapping Whether to also save hash->page mapping
+     */
+    fun savePdfState(uriString: String, page: Int, includeHashMapping: Boolean) {
+        viewModelScope.launch {
+            savePdfStateCommon(uriString, page, includeHashMapping)
+        }
+    }
+
+    /**
+     * Save PDF state (blocking)
+     * Use in onStop to ensure completion before process death
+     *
+     * @param uriString Document URI string
+     * @param page Current page
+     * @param includeHashMapping Whether to also save hash->page mapping
+     */
+    fun savePdfStateBlocking(uriString: String, page: Int, includeHashMapping: Boolean) {
+        runBlocking {
+            savePdfStateCommon(uriString, page, includeHashMapping)
+        }
+    }
+
+    private suspend fun savePdfStateCommon(uriString: String, page: Int, includeHashMapping: Boolean) {
+        val oldState = repository.pdfStateFlow.first()
+        val oldUri = oldState.lastOpenedUri
+
+        repository.saveLastOpened(uriString, page)
+
+        // Release old permission if it's different from new URI
+        if (oldUri != null && oldUri != uriString) {
+            releaseUriPermissionIfHeld(oldUri.toUri())
+        }
+
+        if (includeHashMapping && currentFingerprint != null) {
+            repository.updatePagePosition(currentFingerprint!!, page)
+        }
+    }
+
+    fun clearLastOpened() {
+        viewModelScope.launch {
+            val state = repository.pdfStateFlow.first()
+            val currentUri = state.lastOpenedUri
+
+            repository.clearLastOpened()
+
+            if (currentUri != null) {
+                releaseUriPermissionIfHeld(currentUri.toUri())
+            }
+        }
+    }
+
+    fun prepareNewPdf(uri: Uri, page: Int) {
+        if (takePersistableUriPermission(uri)) {
+            savePdfState(uri.toString(), page, false)
+        }
+    }
+
+    private fun releaseUriPermissionIfHeld(uri: Uri) {
+        try {
+            contentResolver.releasePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Permission release failed", e)
+        }
+    }
+
+    private fun takePersistableUriPermission(uri: Uri): Boolean {
+        try {
+            contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            return true
+        } catch (_: SecurityException) {
+            return false
+        }
+    }
+
+    fun hasUriPermission(uri: Uri?): Boolean {
+        return contentResolver.persistedUriPermissions
+            .any { permission ->
+                permission.uri == uri && permission.isReadPermission
+            }
     }
 }
