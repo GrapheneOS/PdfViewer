@@ -53,10 +53,11 @@ import app.grapheneos.pdfviewer.fragment.JumpToPageFragment;
 import app.grapheneos.pdfviewer.fragment.PasswordPromptFragment;
 import app.grapheneos.pdfviewer.ktx.ViewKt;
 import app.grapheneos.pdfviewer.loader.DocumentPropertiesAsyncTaskLoader;
+import app.grapheneos.pdfviewer.loader.DocumentPropertiesResult;
 import app.grapheneos.pdfviewer.outline.OutlineFragment;
 import app.grapheneos.pdfviewer.viewModel.PdfViewModel;
 
-public class PdfViewer extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<CharSequence>> {
+public class PdfViewer extends AppCompatActivity implements LoaderManager.LoaderCallbacks<DocumentPropertiesResult> {
     private static final String TAG = "PdfViewer";
 
     private static final String STATE_WEBVIEW_CRASHED = "webview_crashed";
@@ -129,6 +130,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private int mDocumentState;
     private String mEncryptedDocumentPassword;
     private List<CharSequence> mDocumentProperties;
+    private String mDocumentName;
     private InputStream mInputStream;
 
     private PdfviewerBinding binding;
@@ -147,6 +149,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     mUri = result.getData().getData();
                     mPage = 1;
                     mDocumentProperties = null;
+                    mDocumentName = null;
                     mEncryptedDocumentPassword = "";
                     viewModel.clearOutline();
                     loadPdf();
@@ -592,21 +595,28 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
     @NonNull
     @Override
-    public Loader<List<CharSequence>> onCreateLoader(int id, Bundle args) {
+    public Loader<DocumentPropertiesResult> onCreateLoader(int id, Bundle args) {
         return new DocumentPropertiesAsyncTaskLoader(this, args.getString(KEY_PROPERTIES), mNumPages, mUri);
     }
 
     @Override
-    public void onLoadFinished(@NonNull Loader<List<CharSequence>> loader, List<CharSequence> data) {
-        mDocumentProperties = data;
+    public void onLoadFinished(@NonNull Loader<DocumentPropertiesResult> loader, DocumentPropertiesResult data) {
+        if (data != null) {
+            mDocumentProperties = data.getList();
+            mDocumentName = data.getDocumentName();
+        } else {
+            mDocumentProperties = null;
+            mDocumentName = null;
+        }
         invalidateOptionsMenu();
         setToolbarTitleWithDocumentName();
         LoaderManager.getInstance(this).destroyLoader(DocumentPropertiesAsyncTaskLoader.ID);
     }
 
     @Override
-    public void onLoaderReset(@NonNull Loader<List<CharSequence>> loader) {
+    public void onLoaderReset(@NonNull Loader<DocumentPropertiesResult> loader) {
         mDocumentProperties = null;
+        mDocumentName = null;
     }
 
     private void loadPdf() {
@@ -841,18 +851,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     }
 
     private String getCurrentDocumentName() {
-        if (mDocumentProperties == null || mDocumentProperties.isEmpty()) return "";
-        String fileName = "";
-        String title = "";
-        for (CharSequence property : mDocumentProperties) {
-            if (property.toString().startsWith("File name:")) {
-                fileName = property.toString().replace("File name:", "");
-            }
-            if (property.toString().startsWith("Title:-")) {
-                title = property.toString().replace("Title:-", "");
-            }
-        }
-        return fileName.length() > 2 ? fileName : title;
+        return mDocumentName != null ? mDocumentName : "";
     }
 
     private void saveDocumentAs(final Uri uri) {
