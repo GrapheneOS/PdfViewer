@@ -20,8 +20,9 @@ class DocumentPropertiesLoader(
     private val mUri: Uri
 ) {
 
-    fun loadAsList(): List<CharSequence> {
-        return load().map { item ->
+    fun loadAsResult(): DocumentPropertiesResult {
+        val raw = load()
+        val list = raw.map { item ->
             val name = context.getString(item.key.nameResource)
             val value = item.value
 
@@ -38,6 +39,19 @@ class DocumentPropertiesLoader(
                     )
                 }
         }
+        return DocumentPropertiesResult(list = list, documentName = resolveDocumentName(raw))
+    }
+
+    private fun resolveDocumentName(raw: Map<DocumentProperty, String>): String {
+        val fileName = raw[DocumentProperty.FileName].orEmpty()
+        if (fileName.isNotEmpty() && fileName != DEFAULT_VALUE) {
+            return fileName
+        }
+        val title = raw[DocumentProperty.Title].orEmpty()
+        if (title.isNotEmpty() && title != DEFAULT_VALUE) {
+            return title
+        }
+        return ""
     }
 
     private fun load(): Map<DocumentProperty, String> {

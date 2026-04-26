@@ -6,9 +6,7 @@ import android.net.Uri;
 import androidx.annotation.Nullable;
 import androidx.loader.content.AsyncTaskLoader;
 
-import java.util.List;
-
-public class DocumentPropertiesAsyncTaskLoader extends AsyncTaskLoader<List<CharSequence>> {
+public class DocumentPropertiesAsyncTaskLoader extends AsyncTaskLoader<DocumentPropertiesResult> {
 
     public static final String TAG = "DocumentPropertiesLoader";
 
@@ -34,7 +32,7 @@ public class DocumentPropertiesAsyncTaskLoader extends AsyncTaskLoader<List<Char
 
     @Nullable
     @Override
-    public List<CharSequence> loadInBackground() {
+    public DocumentPropertiesResult loadInBackground() {
 
         DocumentPropertiesLoader loader = new DocumentPropertiesLoader(
                 getContext(),
@@ -43,6 +41,6 @@ public class DocumentPropertiesAsyncTaskLoader extends AsyncTaskLoader<List<Char
                 mUri
         );
 
-        return loader.loadAsList();
+        return loader.loadAsResult();
     }
 }
