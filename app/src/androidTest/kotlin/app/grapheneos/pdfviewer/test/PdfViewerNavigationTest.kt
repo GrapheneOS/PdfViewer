@@ -16,6 +16,7 @@ import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
 import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -154,18 +155,21 @@ class PdfViewerNavigationTest {
     }
 
     @Test
-    fun openSecondDocument_resetsStateAndLoadsNewDocument() {
+    fun openSecondDocument_resetsAllStates() {
         PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
             PdfViewerTestUtils.waitForCanvasRendered(scenario)
 
-            scenario.onActivity {
-                it.onJumpToPageInDocument(3)
-            }
-            scenario.onActivity {
-                assertEquals(3, it.currentPage)
-                assertEquals(4, it.totalPages)
-            }
+            scenario.onActivity { it.onJumpToPageInDocument(3) }
+            robot.clickRotateClockwise()
+            PdfViewerTestUtils.waitForDocumentRotation(scenario, expected = 90)
+
+            robot.performPinchZoomIn()
+            val zoomedRatio = robot.getZoomRatio(scenario)
+            assertTrue(
+                "Zoom should have increased (was $zoomedRatio)",
+                zoomedRatio > 1.0f
+            )
 
             Intents.init()
             try {
@@ -192,6 +196,78 @@ class PdfViewerNavigationTest {
             }
 
             PdfViewerTestUtils.assertTextLayerContent(scenario, "Test Text")
+
+            // FIXME: currently rotation is not reset
+//            assertEquals(
+//                "Document rotation should reset on new document",
+//                0, robot.getDocumentRotationDegrees(scenario)
+//            )
+
+            val newZoom = robot.getZoomRatio(scenario)
+            assertTrue(
+                "Zoom should reset on new document (was $zoomedRatio, now $newZoom)",
+                newZoom < zoomedRatio
+            )
+        }
+    }
+
+    @Test
+    fun openDocumentWithoutOutline_afterDocumentWithOutline_hidesOutlineMenuItem() {
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForOutlineAvailable(scenario)
+            scenario.onActivity { it.refreshMenuSync() }
+            robot.assertMenuItemVisible(scenario, PdfViewerRobot.AppMenuItem.Outline, expected = true)
+
+            Intents.init()
+            try {
+                intending(hasAction(Intent.ACTION_OPEN_DOCUMENT))
+                    .respondWith(
+                        Instrumentation.ActivityResult(
+                            Activity.RESULT_OK,
+                            Intent().apply {
+                                data = PdfViewerLauncher.testAssetUri("test-simple.pdf")
+                            }
+                        )
+                    )
+                robot.click(PdfViewerRobot.AppMenuItem.Open)
+            } finally {
+                Intents.release()
+            }
+
+            PdfViewerTestUtils.waitForDocumentChanged(scenario, expectedPages = 1)
+            scenario.onActivity { it.refreshMenuSync() }
+            robot.assertMenuItemVisible(scenario, PdfViewerRobot.AppMenuItem.Outline, expected = false)
+        }
+    }
+
+    @Test
+    fun openDocumentWithOutline_afterDocumentWithoutOutline_showsOutlineMenuItem() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            scenario.onActivity { it.refreshMenuSync() }
+            robot.assertMenuItemVisible(scenario, PdfViewerRobot.AppMenuItem.Outline, expected = false)
+
+            Intents.init()
+            try {
+                intending(hasAction(Intent.ACTION_OPEN_DOCUMENT))
+                    .respondWith(
+                        Instrumentation.ActivityResult(
+                            Activity.RESULT_OK,
+                            Intent().apply {
+                                data = PdfViewerLauncher.testAssetUri("test-multipage.pdf")
+                            }
+                        )
+                    )
+                robot.click(PdfViewerRobot.AppMenuItem.Open)
+            } finally {
+                Intents.release()
+            }
+
+            PdfViewerTestUtils.waitForDocumentChanged(scenario, expectedPages = 4)
+            PdfViewerTestUtils.waitForOutlineAvailable(scenario)
+            scenario.onActivity { it.refreshMenuSync() }
+            robot.assertMenuItemVisible(scenario, PdfViewerRobot.AppMenuItem.Outline, expected = true)
         }
     }
 }

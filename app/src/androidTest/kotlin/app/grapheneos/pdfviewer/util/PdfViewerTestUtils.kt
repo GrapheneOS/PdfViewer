@@ -80,6 +80,23 @@ object PdfViewerTestUtils {
         assertion()
     }
 
+    fun assertStableCondition(
+        duration: Long = 3_000,
+        interval: Long = 200,
+        description: () -> String = { "condition" },
+        condition: () -> Boolean
+    ) {
+        val start = System.currentTimeMillis()
+        while (System.currentTimeMillis() - start < duration) {
+            if (!condition()) {
+                throw AssertionError(
+                    "${description()} became false during ${duration}ms window"
+                )
+            }
+            Thread.sleep(interval)
+        }
+    }
+
     /**
      * Blocks until the WebView's viewer page has finished loading and the
      * document state has become STATE_LOADED.
@@ -338,17 +355,16 @@ object PdfViewerTestUtils {
     fun assertToolbarStableVisibility(
         scenario: ActivityScenario<PdfViewer>,
         expectedVisible: Boolean,
-        observeFor: Long = 500
+        duration: Long = 500
     ) {
-        val start = System.currentTimeMillis()
-        while (System.currentTimeMillis() - start < observeFor) {
+        assertStableCondition(
+            duration = duration,
+            interval = 50,
+            description = { "Toolbar visibility should stay visible=$expectedVisible" }
+        ) {
             var actual = false
             scenario.onActivity { actual = it.supportActionBar?.isShowing == true }
-            assertEquals(
-                "Toolbar visibility should stay visible=$expectedVisible during ${observeFor}ms",
-                expectedVisible, actual
-            )
-            Thread.sleep(50)
+            actual == expectedVisible
         }
     }
 }
