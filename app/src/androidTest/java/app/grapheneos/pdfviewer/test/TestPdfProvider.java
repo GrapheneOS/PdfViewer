@@ -35,6 +35,11 @@ public class TestPdfProvider extends ContentProvider {
             throw new FileNotFoundException("URI must include a filename");
         }
 
+        String failAfter = uri.getQueryParameter("failAfter");
+        if (failAfter != null) {
+            return openFailingPipe(filename, Integer.parseInt(failAfter));
+        }
+
         File file = new File(getContext().getCacheDir(), filename);
         if (!file.exists()) {
             try {
@@ -54,6 +59,39 @@ public class TestPdfProvider extends ContentProvider {
         }
 
         return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
+    }
+
+    private ParcelFileDescriptor openFailingPipe(final String filename, final int bytesBeforeFailure)
+            throws FileNotFoundException {
+        final ParcelFileDescriptor[] pipe;
+        try {
+            pipe = ParcelFileDescriptor.createReliablePipe();
+        } catch (IOException e) {
+            throw new FileNotFoundException("Failed to create pipe: " + e.getMessage());
+        }
+        final ParcelFileDescriptor readEnd = pipe[0];
+        final ParcelFileDescriptor writeEnd = pipe[1];
+
+        new Thread(() -> {
+            try (InputStream in = getContext().getAssets().open(filename)) {
+                FileOutputStream out = new FileOutputStream(writeEnd.getFileDescriptor());
+                byte[] buffer = new byte[8192];
+                int totalWritten = 0;
+                while (totalWritten < bytesBeforeFailure) {
+                    int toRead = Math.min(buffer.length, bytesBeforeFailure - totalWritten);
+                    int read = in.read(buffer, 0, toRead);
+                    if (read == -1) break;
+                    out.write(buffer, 0, read);
+                    totalWritten += read;
+                }
+                out.flush();
+            } catch (IOException ignored) {}
+            try {
+                writeEnd.closeWithError("Simulated mid-read failure");
+            } catch (IOException ignored) {}
+        }, "TestPdfProvider-failing-pipe").start();
+
+        return readEnd;
     }
 
     @Override

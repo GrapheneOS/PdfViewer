@@ -1,5 +1,11 @@
 package app.grapheneos.pdfviewer.test
 
+import android.app.Activity
+import android.app.Instrumentation
+import android.content.Intent
+import androidx.test.espresso.intent.Intents
+import androidx.test.espresso.intent.Intents.intending
+import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.grapheneos.pdfviewer.documentProperties
 import app.grapheneos.pdfviewer.totalPages
@@ -82,6 +88,42 @@ class PdfViewerEncryptedPdfTest {
                     "Properties should contain the PDF title",
                     props.any { p -> p.contains("Encrypted Document") }
                 )
+            }
+        }
+    }
+
+    @Test
+    fun openEncryptedPdf_afterNonEncrypted_promptsForPassword() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            Intents.init()
+            try {
+                intending(hasAction(Intent.ACTION_OPEN_DOCUMENT))
+                    .respondWith(
+                        Instrumentation.ActivityResult(
+                            Activity.RESULT_OK,
+                            Intent().apply {
+                                data = PdfViewerLauncher.testAssetUri("test-encrypted.pdf")
+                            }
+                        )
+                    )
+                robot.click(PdfViewerRobot.AppMenuItem.Open)
+            } finally {
+                Intents.release()
+            }
+
+            robot.waitForPasswordDialog()
+            robot.typePassword("testpass")
+            robot.clickPasswordPositiveButton()
+
+            robot.waitForPasswordDialogDismissed()
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.assertTextLayerContent(scenario, "Password-Protected Content")
+
+            scenario.onActivity {
+                assertEquals(1, it.totalPages)
             }
         }
     }

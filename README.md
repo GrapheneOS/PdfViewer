@@ -13,3 +13,33 @@ code itself is memory safe with dynamic code evaluation disabled, and even if
 an attacker did gain code execution by exploiting the underlying web rendering
 engine, they're within the Chromium renderer sandbox with less access than it
 would have within the browser.
+
+## Tests
+
+### Android instrumentation tests
+
+Requires a connected device or running emulator.
+
+```sh
+./gradlew connectedAndroidTest
+```
+
+To run a single test:
+
+```sh
+./gradlew connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=app.grapheneos.pdfviewer.test.PdfViewerLaunchTest
+```
+
+### JavaScript unit tests
+
+Requires Node.js 20+. Make sure modules are installed:
+
+```sh
+npm install
+```
+
+Run the tests:
+
+```sh
+npm test
+```

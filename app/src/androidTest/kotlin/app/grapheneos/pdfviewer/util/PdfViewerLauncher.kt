@@ -51,4 +51,16 @@ object PdfViewerLauncher {
         }
         return ActivityScenario.launch(intent)
     }
+
+    fun launchWithFailingMidRead(
+        assetName: String,
+        bytesBeforeFailure: Int
+    ): ActivityScenario<PdfViewer> =
+        launchWithPdf(testAssetUriFailingMidRead(assetName, bytesBeforeFailure))
+
+    private fun testAssetUriFailingMidRead(assetName: String, bytesBeforeFailure: Int): Uri =
+        Uri.parse(
+            "content://${TestPdfProvider.AUTHORITY}/$assetName" +
+                    "?failAfter=$bytesBeforeFailure"
+        )
 }
