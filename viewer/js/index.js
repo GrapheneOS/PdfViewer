@@ -309,7 +309,12 @@ globalThis.loadDocument = function () {
         cMapPacked: true,
         password: pdfPassword,
         iccUrl: "https://localhost/viewer/iccs/",
-        isEvalSupported: false,
+        // This flag controls jpx/icc and PostScript Calculator function compiler at the same time.
+        // See https://github.com/GrapheneOS/PdfViewer/issues/634#issuecomment-4356820142
+        // for security justifications.
+        //
+        // Note that CSP is only applied to index.html, not workers where WASM runs
+        useWasm: true,
         // If a font isn't embedded, the viewer falls back to default system fonts. On Android,
         // there often isn't a good substitution provided by the OS, so we need to bundle standard
         // fonts to improve the rendering of certain PDFs:

@@ -408,13 +408,16 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 }
 
                 if ("/viewer/js/index.js".equals(path) ||
-                        "/viewer/wasm/openjpeg_nowasm_fallback.js".equals(path)) {
+                        "/viewer/wasm/openjpeg_nowasm_fallback.js".equals(path) ||
+                        "/viewer/wasm/jbig2_nowasm_fallback.js".equals(path) ||
+                        "/viewer/wasm/quickjs-eval.js".equals(path)) {
                     return fromAsset("application/javascript", path);
                 }
 
                 if ("/viewer/wasm/openjpeg.wasm".equals(path) ||
                         "/viewer/wasm/qcms_bg.wasm".equals(path) ||
-                        "/viewer/wasm/jbig2.wasm".equals(path)) {
+                        "/viewer/wasm/jbig2.wasm".equals(path) ||
+                        "/viewer/wasm/quickjs-eval.wasm".equals(path)) {
                     return fromAsset("application/wasm", path);
                 }
 
