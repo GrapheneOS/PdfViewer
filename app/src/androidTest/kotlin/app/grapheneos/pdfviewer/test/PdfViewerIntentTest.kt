@@ -15,6 +15,7 @@ import androidx.test.espresso.intent.matcher.IntentMatchers.hasType
 import androidx.test.espresso.intent.matcher.IntentMatchers.isInternal
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.grapheneos.pdfviewer.documentName
 import app.grapheneos.pdfviewer.documentProperties
 import app.grapheneos.pdfviewer.refreshMenuSync
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
@@ -113,9 +114,10 @@ class PdfViewerIntentTest {
 
             scenario.onActivity {
                 it.documentProperties = listOf(
-                    "File name:test_document.pdf",
-                    "Title:-My PDF Title"
+                    "File name:\ntest_document.pdf",
+                    "Title:\nMy PDF Title"
                 )
+                it.documentName = "test_document.pdf"
                 it.refreshMenuSync()
             }
 

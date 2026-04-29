@@ -133,7 +133,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private String mEncryptedDocumentPassword;
     @VisibleForTesting
     List<CharSequence> mDocumentProperties;
-    private String mDocumentName;
+    @VisibleForTesting
+    String mDocumentName;
     private InputStream mInputStream;
 
     private PdfviewerBinding binding;

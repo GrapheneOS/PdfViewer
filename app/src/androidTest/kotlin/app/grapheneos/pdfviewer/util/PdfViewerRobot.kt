@@ -354,10 +354,10 @@ class PdfViewerRobot {
 
     fun assertCanvasRendered(scenario: ActivityScenario<PdfViewer>) {
         val result = PdfViewerTestUtils.evaluateJs(scenario,
-            "document.getElementById('content').width > 0 " +
-                    "&& document.getElementById('content').height > 0"
+            "parseInt(document.getElementById('content').style.width) > 0 " +
+                    "&& parseInt(document.getElementById('content').style.height) > 0"
         )
-        assertTrue("Canvas should have non-zero dimensions", result == "true")
+        assertTrue("Canvas should have non-zero CSS dimensions after rendering", result == "true")
     }
 
     fun assertBridgePage(scenario: ActivityScenario<PdfViewer>, expectedPage: Int) {
