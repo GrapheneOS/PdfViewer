@@ -3,6 +3,7 @@ package app.grapheneos.pdfviewer.test
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.grapheneos.pdfviewer.crashed
 import app.grapheneos.pdfviewer.currentPage
+import app.grapheneos.pdfviewer.documentName
 import app.grapheneos.pdfviewer.documentProperties
 import app.grapheneos.pdfviewer.outlineStatus
 import app.grapheneos.pdfviewer.refreshMenuSync
@@ -153,7 +154,8 @@ class PdfViewerMenuStateTest {
             PdfViewerTestUtils.waitForDocumentLoaded()
 
             scenario.onActivity {
-                it.documentProperties = listOf("File name:test.pdf", "Title:-Test Document")
+                it.documentProperties = listOf("File name:\ntest.pdf", "Title:\nTest Document")
+                it.documentName = "test.pdf"
                 it.refreshMenuSync()
             }
 

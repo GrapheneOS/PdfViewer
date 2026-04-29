@@ -36,6 +36,12 @@ var PdfViewer.documentProperties: List<CharSequence>?
         mDocumentProperties = value
     }
 
+var PdfViewer.documentName: String?
+    get() = mDocumentName
+    set(value) {
+        mDocumentName = value
+    }
+
 var PdfViewer.outlineStatus: PdfViewModel.OutlineStatus
     get() = viewModel.outline.value ?: PdfViewModel.OutlineStatus.NotLoaded
     set(value) {

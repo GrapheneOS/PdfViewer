@@ -10,6 +10,7 @@ import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.grapheneos.pdfviewer.PdfViewer
 import app.grapheneos.pdfviewer.currentPage
+import app.grapheneos.pdfviewer.documentName
 import app.grapheneos.pdfviewer.refreshMenuSync
 import app.grapheneos.pdfviewer.totalPages
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
@@ -193,6 +194,10 @@ class PdfViewerNavigationTest {
             scenario.onActivity {
                 assertEquals("Page should reset to 1", 1, it.currentPage)
                 assertEquals("New document should have 1 page", 1, it.totalPages)
+                assertEquals(
+                    "Document name should be fro new document",
+                    "test-simple.pdf", it.documentName
+                )
             }
 
             PdfViewerTestUtils.assertTextLayerContent(scenario, "Test Text")

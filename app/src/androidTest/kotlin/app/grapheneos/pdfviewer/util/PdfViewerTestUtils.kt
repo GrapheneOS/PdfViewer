@@ -146,8 +146,8 @@ object PdfViewerTestUtils {
         ) {
             try {
                 val result = evaluateJs(scenario,
-                    "document.getElementById('content').width > 0 " +
-                            "&& document.getElementById('content').height > 0"
+                    "parseInt(document.getElementById('content').style.width) > 0 " +
+                            "&& parseInt(document.getElementById('content').style.height) > 0"
                 )
                 Log.d("WAIT", "  canvas check result=$result, elapsed=${System.currentTimeMillis() - start}ms")
                 result == "true"
