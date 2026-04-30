@@ -19,3 +19,12 @@ if (!Map.prototype.getOrInsertComputed) {
         return this.get(key);
     };
 }
+
+// Math.sumPrecise
+// Shipped in Chromium v147 (https://chromestatus.com/feature/4790090146643968)
+// This is the pdf.js version previously included in their source
+if (typeof Math.sumPrecise !== "function") {
+    Math.sumPrecise = function (numbers) {
+        return numbers.reduce((a, b) => a + b, 0);
+    };
+}
