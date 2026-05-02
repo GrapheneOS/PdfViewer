@@ -132,6 +132,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private List<CharSequence> mDocumentProperties;
     private String mDocumentName;
     private InputStream mInputStream;
+    private boolean invertedMode = false;
 
     private PdfviewerBinding binding;
     private TextView mTextView;
@@ -419,7 +420,16 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 mDocumentState = STATE_LOADED;
                 invalidateOptionsMenu();
                 loadPdfWithPassword(mEncryptedDocumentPassword);
+
+                if (invertedMode) injectDarkThemeCss(view);
             }
+            private void injectDarkThemeCss(WebView view) {
+                String js = "javascript:(function() {" +
+                        "document.body.style.filter = 'invert(1) hue-rotate(180deg)';" +
+                        "})()";
+                view.evaluateJavascript(js, null);
+            }
+
 
             @Override
             public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
@@ -740,7 +750,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 R.id.action_next, R.id.action_previous, R.id.action_first, R.id.action_last,
                 R.id.action_rotate_clockwise, R.id.action_rotate_counterclockwise,
                 R.id.action_view_document_properties, R.id.action_share, R.id.action_save_as,
-                R.id.action_outline));
+                R.id.action_toggle_inverted_mode, R.id.action_outline));
         if (BuildConfig.DEBUG) {
             ids.add(R.id.debug_action_toggle_text_layer_visibility);
             ids.add(R.id.debug_action_crash_webview);
@@ -769,6 +779,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         enableDisableMenuItem(menu.findItem(R.id.action_next), mPage < mNumPages);
         enableDisableMenuItem(menu.findItem(R.id.action_previous), mPage > 1);
         enableDisableMenuItem(menu.findItem(R.id.action_save_as), mUri != null);
+        enableDisableMenuItem(menu.findItem(R.id.action_toggle_inverted_mode), mUri != null);
         enableDisableMenuItem(menu.findItem(R.id.action_view_document_properties),
                 mDocumentProperties != null);
 
@@ -831,6 +842,9 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             return true;
         } else if (itemId == R.id.action_save_as) {
             saveDocument();
+        }else if (itemId == R.id.action_toggle_inverted_mode) {
+            invertedMode = !invertedMode;
+            loadPdf();
         } else if (itemId == R.id.debug_action_toggle_text_layer_visibility) {
             binding.webview.evaluateJavascript("toggleTextLayerVisibility()", null);
             return true;
