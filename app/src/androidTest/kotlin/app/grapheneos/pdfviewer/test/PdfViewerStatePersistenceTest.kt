@@ -20,16 +20,16 @@ class PdfViewerStatePersistenceTest {
 
     @Test
     fun pageNumber_survivesRecreation() {
-        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
-            PdfViewerTestUtils.waitForDocumentLoaded()
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
 
             scenario.onActivity {
-                it.currentPage = 7
+                it.currentPage = 3
             }
 
             scenario.recreate()
             scenario.onActivity {
-                assertEquals(7, it.currentPage)
+                assertEquals(3, it.currentPage)
             }
         }
     }
@@ -48,15 +48,15 @@ class PdfViewerStatePersistenceTest {
 
     @Test
     fun documentReloads_afterRecreation() {
-        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
-            PdfViewerTestUtils.waitForDocumentLoaded()
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
 
             scenario.onActivity {
                 assertEquals(1, it.currentPage)
             }
 
             scenario.recreate()
-            PdfViewerTestUtils.waitForDocumentLoaded()
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
             scenario.onActivity {
                 assertEquals(1, it.currentPage)
             }

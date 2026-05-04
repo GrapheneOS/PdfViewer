@@ -74,9 +74,9 @@ class PdfViewerIntentTest {
      */
     @Test
     fun actionShare_firesChooserWithCorrectPayload() {
-        val uri = Uri.parse("content://app.grapheneos.pdfviewer.test/fake.pdf")
-        PdfViewerLauncher.launchWithPdf(uri).use {
-            PdfViewerTestUtils.waitForDocumentLoaded()
+        val uri = PdfViewerLauncher.testAssetUri("test-simple.pdf")
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
 
             Intents.init()
             try {
@@ -109,14 +109,10 @@ class PdfViewerIntentTest {
      */
     @Test
     fun actionSaveAs_firesCorrectIntent() {
-        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
-            PdfViewerTestUtils.waitForDocumentLoaded()
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
 
             scenario.onActivity {
-                it.documentProperties = listOf(
-                    "File name:\ntest_document.pdf",
-                    "Title:\nMy PDF Title"
-                )
                 it.documentName = "test_document.pdf"
                 it.refreshMenuSync()
             }
@@ -181,12 +177,14 @@ class PdfViewerIntentTest {
     }
 
     @Test
-    fun saveAs_showsErrorWhenSourceUnreadable() {
-        val appContext = ApplicationProvider.getApplicationContext<Context>()
-        val outputFile = File(appContext.cacheDir, "test_error_output.pdf")
+    fun saveAs_showsErrorWhenWriteFails() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
 
-        PdfViewerLauncher.launchWithFakeUri().use { _ ->
-            PdfViewerTestUtils.waitForDocumentLoaded()
+            scenario.onActivity {
+                it.refreshMenuSync()
+            }
+
 
             Intents.init()
             try {
@@ -194,7 +192,9 @@ class PdfViewerIntentTest {
                     .respondWith(
                         ActivityResult(
                             Activity.RESULT_OK,
-                            Intent().apply { data = Uri.fromFile(outputFile) }
+                            Intent().apply {
+                                data = Uri.parse("content://invalid/nonexistent.pdf")
+                            }
                         )
                     )
 
@@ -205,7 +205,5 @@ class PdfViewerIntentTest {
 
             PdfViewerTestUtils.waitForSnackbar(PdfViewerRobot.SnackbarMessage.SaveError)
         }
-
-        if (outputFile.exists()) outputFile.delete()
     }
 }

@@ -31,12 +31,10 @@ class PdfViewerNavigationTest {
 
     private fun setupNavigableState(
         scenario: ActivityScenario<PdfViewer>,
-        page: Int,
-        numPages: Int
+        page: Int
     ) {
         scenario.onActivity {
             it.currentPage = page
-            it.totalPages = numPages
             it.refreshMenuSync()
         }
     }
@@ -45,9 +43,9 @@ class PdfViewerNavigationTest {
 
     @Test
     fun tapNext_increasesPage() {
-        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
-            PdfViewerTestUtils.waitForDocumentLoaded()
-            setupNavigableState(scenario, page = 2, numPages = 5)
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            setupNavigableState(scenario, page = 2)
 
             robot.clickNext()
             scenario.onActivity {
@@ -58,9 +56,9 @@ class PdfViewerNavigationTest {
 
     @Test
     fun tapPrevious_decreasesPage() {
-        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
-            PdfViewerTestUtils.waitForDocumentLoaded()
-            setupNavigableState(scenario, page = 3, numPages = 5)
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            setupNavigableState(scenario, page = 3)
 
             robot.clickPrevious()
             scenario.onActivity {
@@ -71,9 +69,12 @@ class PdfViewerNavigationTest {
 
     @Test
     fun tapNext_updatesMenuState() {
-        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
-            PdfViewerTestUtils.waitForDocumentLoaded()
-            setupNavigableState(scenario, page = 1, numPages = 3)
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+
+            scenario.onActivity {
+                it.refreshMenuSync()
+            }
 
             robot.assertNavigationState(previousEnabled = false, nextEnabled = true)
             robot.clickNext()
@@ -86,9 +87,9 @@ class PdfViewerNavigationTest {
 
     @Test
     fun tapFirst_goesToFirstPage() {
-        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
-            PdfViewerTestUtils.waitForDocumentLoaded()
-            setupNavigableState(scenario, page = 4, numPages = 5)
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            setupNavigableState(scenario, page = 4)
 
             robot.click(PdfViewerRobot.AppMenuItem.First)
             scenario.onActivity {
@@ -99,13 +100,13 @@ class PdfViewerNavigationTest {
 
     @Test
     fun tapLast_goesToLastPage() {
-        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
-            PdfViewerTestUtils.waitForDocumentLoaded()
-            setupNavigableState(scenario, page = 2, numPages = 5)
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            setupNavigableState(scenario, page = 2)
 
             robot.click(PdfViewerRobot.AppMenuItem.Last)
             scenario.onActivity {
-                assertEquals(5, it.currentPage)
+                assertEquals(4, it.currentPage)
             }
         }
     }
@@ -114,39 +115,39 @@ class PdfViewerNavigationTest {
 
     @Test
     fun jumpToPageDialog_opensWithCorrectValues() {
-        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
-            PdfViewerTestUtils.waitForDocumentLoaded()
-            setupNavigableState(scenario, page = 3, numPages = 10)
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            setupNavigableState(scenario, page = 3)
 
             robot.click(PdfViewerRobot.AppMenuItem.JumpToPage)
-            robot.assertNumberPickerStateInDialog(minValue = 1, maxValue = 10, currentValue = 3)
+            robot.assertNumberPickerStateInDialog(minValue = 1, maxValue = 4, currentValue = 3)
         }
     }
 
     @Test
     fun jumpToPageDialog_okNavigatesToSelectedPage() {
-        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
-            PdfViewerTestUtils.waitForDocumentLoaded()
-            setupNavigableState(scenario, page = 1, numPages = 10)
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            setupNavigableState(scenario, page = 1)
 
             robot.click(PdfViewerRobot.AppMenuItem.JumpToPage)
-            robot.setNumberPickerValue(7)
+            robot.setNumberPickerValue(3)
             robot.clickDialogOk()
 
             scenario.onActivity {
-                assertEquals(7, it.currentPage)
+                assertEquals(3, it.currentPage)
             }
         }
     }
 
     @Test
     fun jumpToPageDialog_cancelDoesNotNavigate() {
-        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
-            PdfViewerTestUtils.waitForDocumentLoaded()
-            setupNavigableState(scenario, page = 3, numPages = 10)
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            setupNavigableState(scenario, page = 3)
 
             robot.click(PdfViewerRobot.AppMenuItem.JumpToPage)
-            robot.setNumberPickerValue(7)
+            robot.setNumberPickerValue(4)
             robot.clickDialogCancel()
 
             scenario.onActivity {
@@ -202,11 +203,10 @@ class PdfViewerNavigationTest {
 
             PdfViewerTestUtils.assertTextLayerContent(scenario, "Test Text")
 
-            // FIXME: currently rotation is not reset
-//            assertEquals(
-//                "Document rotation should reset on new document",
-//                0, robot.getDocumentRotationDegrees(scenario)
-//            )
+            assertEquals(
+                "Document rotation should reset on new document",
+                0, robot.getDocumentRotationDegrees(scenario)
+            )
 
             val newZoom = robot.getZoomRatio(scenario)
             assertTrue(
