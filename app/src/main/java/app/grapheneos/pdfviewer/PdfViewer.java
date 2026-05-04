@@ -147,11 +147,7 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 Intent resultData = result.getData();
                 if (resultData != null) {
                     mUri = result.getData().getData();
-                    mPage = 1;
-                    mDocumentProperties = null;
-                    mDocumentName = null;
-                    mEncryptedDocumentPassword = "";
-                    viewModel.clearOutline();
+                    resetDocumentState();
                     loadPdf();
                     invalidateOptionsMenu();
                 }
@@ -262,6 +258,16 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             if (getPasswordPromptFragment().isAdded()) {
                 getPasswordPromptFragment().dismiss();
             }
+        }
+
+        @JavascriptInterface
+        public void onLoadError() {
+            runOnUiThread(() -> {
+                maybeCloseInputStream();
+                resetDocumentState();
+                invalidateOptionsMenu();
+                snackbar.setText(R.string.error_while_opening).show();
+            });
         }
 
         @JavascriptInterface
@@ -873,5 +879,17 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                 SecurityException e) {
             snackbar.setText(R.string.error_while_saving).show();
         }
+    }
+
+    private void resetDocumentState() {
+        mPage = 1;
+        mNumPages = 0;
+        mZoomRatio = 1f;
+        mDocumentOrientationDegrees = 0;
+        mDocumentProperties = null;
+        mDocumentName = null;
+        mEncryptedDocumentPassword = "";
+        mDocumentState = 0;
+        viewModel.clearOutline();
     }
 }

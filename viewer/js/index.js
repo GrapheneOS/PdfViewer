@@ -434,6 +434,7 @@ globalThis.loadDocument = function () {
         renderPage(channel.getPage(), false, false);
     }, function (reason) {
         console.error(reason.name + ": " + reason.message);
+        channel.onLoadError();
     });
 };
 
