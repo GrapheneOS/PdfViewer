@@ -100,22 +100,21 @@ class PdfViewerLandscapeTest {
 
     @Test
     fun jumpToPageDialog_preservesPickerValueAcrossRotation() {
-        PdfViewerLauncher.launchWithFakeUri().use { scenario ->
-            PdfViewerTestUtils.waitForDocumentLoaded()
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
 
             scenario.onActivity {
                 it.currentPage = 3
-                it.totalPages = 10
                 it.refreshMenuSync()
             }
 
             robot.click(PdfViewerRobot.AppMenuItem.JumpToPage)
-            robot.setNumberPickerValue(7)
+            robot.setNumberPickerValue(4)
 
             PdfViewerTestUtils.setDeviceOrientation(scenario, landscape = true)
 
             robot.assertNumberPickerStateInDialog(
-                minValue = 1, maxValue = 10, currentValue = 7
+                minValue = 1, maxValue = 4, currentValue = 4
             )
         }
     }
