@@ -132,24 +132,24 @@ class PdfViewerRenderTest {
             PdfViewerTestUtils.waitForCanvasRendered(scenario)
             PdfViewerTestUtils.assertTextLayerContent(scenario, "Test Text")
 
-            val initialWidth = robot.getCanvasWidth(scenario)
-            val initialHeight = robot.getCanvasHeight(scenario)
+            val initialWidth = robot.getCanvasCssWidth(scenario)
+            val initialHeight = robot.getCanvasCssHeight(scenario)
 
-            robot.performPinchZoomIn()
+            robot.performPinchZoomIn(scenario)
 
-            PdfViewerTestUtils.waitForCanvasDimensionsChanged(
+            PdfViewerTestUtils.waitForCanvasCssDimensionsChanged(
                 scenario, initialWidth, initialHeight
             )
 
-            val zoomedWidth = robot.getCanvasWidth(scenario)
-            val zoomedHeight = robot.getCanvasHeight(scenario)
+            val zoomedWidth = robot.getCanvasCssWidth(scenario)
+            val zoomedHeight = robot.getCanvasCssHeight(scenario)
             assertTrue(
-                "Canvas width should increase after zoom in " +
+                "Canvas CSS width should increase after zoom in " +
                         "($initialWidth → $zoomedWidth)",
                 zoomedWidth > initialWidth
             )
             assertTrue(
-                "Canvas height should increase after zoom in " +
+                "Canvas CSS height should increase after zoom in " +
                         "($initialHeight → $zoomedHeight)",
                 zoomedHeight > initialHeight
             )
@@ -165,25 +165,44 @@ class PdfViewerRenderTest {
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
             PdfViewerTestUtils.waitForCanvasRendered(scenario)
 
-            robot.performPinchZoomIn()
-            val initialWidth = robot.getCanvasWidth(scenario)
-            val initialHeight = robot.getCanvasHeight(scenario)
+            val defaultWidth = robot.getCanvasCssWidth(scenario)
+            val defaultHeight = robot.getCanvasCssHeight(scenario)
 
-            robot.performPinchZoomOut()
+            robot.performPinchZoomIn(scenario)
+            PdfViewerTestUtils.waitForCanvasCssDimensionsChanged(
+                scenario, defaultWidth, defaultHeight
+            )
+            PdfViewerTestUtils.assertTextLayerContent(scenario, "Test Text")
+            robot.assertTextLayerAligned(scenario)
 
-            PdfViewerTestUtils.waitForCanvasDimensionsChanged(
+            val initialWidth = robot.getCanvasCssWidth(scenario)
+            val initialHeight = robot.getCanvasCssHeight(scenario)
+            val initialZoomRatio = robot.getZoomRatio(scenario)
+
+            robot.performPinchZoomOut(scenario)
+            PdfViewerTestUtils.pollUntil(
+                timeout = 5_000,
+                description = {
+                    "Zoom ratio should decrease after zoom out " +
+                            "(initial=$initialZoomRatio, current=${robot.getZoomRatio(scenario)})"
+                }
+            ) {
+                robot.getZoomRatio(scenario) < initialZoomRatio
+            }
+
+            PdfViewerTestUtils.waitForCanvasCssDimensionsChanged(
                 scenario, initialWidth, initialHeight
             )
 
-            val zoomedWidth = robot.getCanvasWidth(scenario)
-            val zoomedHeight = robot.getCanvasHeight(scenario)
+            val zoomedWidth = robot.getCanvasCssWidth(scenario)
+            val zoomedHeight = robot.getCanvasCssHeight(scenario)
             assertTrue(
-                "Canvas width should decrease after zoom out " +
+                "Canvas CSS width should decrease after zoom out " +
                         "($initialWidth → $zoomedWidth)",
                 zoomedWidth < initialWidth
             )
             assertTrue(
-                "Canvas height should decrease after zoom out " +
+                "Canvas CSS height should decrease after zoom out " +
                         "($initialHeight → $zoomedHeight)",
                 zoomedHeight < initialHeight
             )
@@ -199,7 +218,7 @@ class PdfViewerRenderTest {
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
             PdfViewerTestUtils.waitForCanvasRendered(scenario)
 
-            repeat(5) { robot.performPinchZoomOut() }
+            repeat(5) { robot.performPinchZoomOut(scenario, speed = 1500) }
 
             PdfViewerTestUtils.pollUntil(
                 timeout = 5_000,
@@ -210,6 +229,30 @@ class PdfViewerRenderTest {
             ) {
                 abs(robot.getZoomRatio(scenario) - MIN_ZOOM_RATIO) < 0.001f
             }
+        }
+    }
+
+    @Test
+    fun setZoomRatio_clampsToMinimumZoomRatio() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            val clampedZoom = PdfViewerTestUtils.evaluateJs(
+                scenario,
+                """
+                    (function() {
+                        channel.setZoomRatio(-1);
+                        return channel.getZoomRatio();
+                    })()
+                """.trimIndent()
+            ).toFloat()
+
+            assertTrue(
+                "Zoom ratio did not clamp to MIN_ZOOM_RATIO " +
+                        "(was $clampedZoom)",
+                abs(clampedZoom - MIN_ZOOM_RATIO) < 0.001f
+            )
         }
     }
 

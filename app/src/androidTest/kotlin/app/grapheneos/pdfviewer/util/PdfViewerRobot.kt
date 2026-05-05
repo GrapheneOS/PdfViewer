@@ -1,9 +1,12 @@
 package app.grapheneos.pdfviewer.util
 
+import android.graphics.Rect
 import android.view.View
 import android.widget.NumberPicker
 import androidx.annotation.IdRes
 import androidx.annotation.StringRes
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -30,6 +33,7 @@ import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
 import app.grapheneos.pdfviewer.PdfViewer
 import app.grapheneos.pdfviewer.R
@@ -49,11 +53,24 @@ import org.hamcrest.Matchers.not
 import org.hamcrest.TypeSafeMatcher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import kotlin.math.roundToInt
 
 /**
  * Encapsulates all Espresso view assertions and actions.
  */
 class PdfViewerRobot {
+
+    private data class GestureMargins(
+        val left: Int,
+        val top: Int,
+        val right: Int,
+        val bottom: Int
+    )
+
+    private companion object {
+        const val UIAUTOMATOR_DEFAULT_GESTURE_MARGIN_PERCENT = 0.1f
+        const val GESTURE_EDGE_MARGIN_DP = 32f
+    }
 
     enum class AppMenuItem(
         @IdRes internal val id: Int,
@@ -471,30 +488,126 @@ class PdfViewerRobot {
 
     // Zoom
 
-    fun performPinchZoomIn(percent: Float = 0.75f, speed: Int = 500) {
-        val device = UiDevice.getInstance(
-            InstrumentationRegistry.getInstrumentation()
-        )
-        // Using class name because UiAutomator cannot find WebView reliably because
-        // android:importantForAccessibility is "no"
-        val webView = device.wait(
-            Until.findObject(By.clazz("android.webkit.WebView")),
-            10_000
-        ) ?: throw AssertionError(
-            "Could not find WebView by class `android.webkit.WebView` within 10s"
-        )
+    fun performPinchZoomIn(
+        scenario: ActivityScenario<PdfViewer>,
+        percent: Float = 0.75f,
+        speed: Int = 500,
+    ) {
+        val webView = findWebViewObject()
+        applyContentGestureMargins(webView, scenario)
         webView.pinchOpen(percent, speed)
     }
 
-    fun performPinchZoomOut(percent: Float = 0.75f, speed: Int = 500) {
+    fun performPinchZoomOut(
+        scenario: ActivityScenario<PdfViewer>,
+        percent: Float = 0.75f,
+        speed: Int = 500,
+    ) {
+        val webView = findWebViewObject()
+        applyContentGestureMargins(webView, scenario)
+        webView.pinchClose(percent, speed)
+    }
+
+    private fun findWebViewObject(): UiObject2 {
         val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
-        val webView = device.wait(
+        // Using class name because UiAutomator cannot find WebView reliably because
+        // android:importantForAccessibility is "no"
+        return device.wait(
             Until.findObject(By.clazz("android.webkit.WebView")),
             10_000
         ) ?: throw AssertionError(
             "Could not find WebView by class `android.webkit.WebView` within 10s"
         )
-        webView.pinchClose(percent, speed)
+    }
+
+    private fun applyContentGestureMargins(
+        webViewObject: UiObject2,
+        scenario: ActivityScenario<PdfViewer>?
+    ) {
+        if (scenario == null) {
+            return
+        }
+
+        // UiObject2.pinchClose starts at the outer corners. Edge-to-edge keeps the
+        // WebView bounds behind the app bar, so constrain pinches to real content.
+        val margins = getContentGestureMargins(scenario)
+        webViewObject.setGestureMargins(
+            margins.left,
+            margins.top,
+            margins.right,
+            margins.bottom
+        )
+    }
+
+    private fun getContentGestureMargins(
+        scenario: ActivityScenario<PdfViewer>
+    ): GestureMargins {
+        var margins: GestureMargins? = null
+        scenario.onActivity { activity ->
+            val webView = activity.findViewById<View>(R.id.webview)
+            val webViewBounds = getBoundsInScreen(webView)
+            val appBarBounds = Rect()
+            val appBar = activity.findViewById<View>(R.id.app_bar_layout)
+            val appBarBottom = if (appBar.getGlobalVisibleRect(appBarBounds)) {
+                appBarBounds.bottom
+            } else {
+                webViewBounds.top
+            }
+            val insetTypes = WindowInsetsCompat.Type.systemBars() or
+                    WindowInsetsCompat.Type.displayCutout()
+            val insets = ViewCompat.getRootWindowInsets(webView)?.getInsets(insetTypes)
+
+            val density = webView.resources.displayMetrics.density
+            val edgeMargin = (GESTURE_EDGE_MARGIN_DP * density).roundToInt()
+            val defaultHorizontal =
+                (webViewBounds.width() * UIAUTOMATOR_DEFAULT_GESTURE_MARGIN_PERCENT).roundToInt()
+            val defaultVertical =
+                (webViewBounds.height() * UIAUTOMATOR_DEFAULT_GESTURE_MARGIN_PERCENT).roundToInt()
+            val topObstruction = maxOf(
+                insets?.top ?: 0,
+                appBarBottom - webViewBounds.top
+            ).coerceAtLeast(0)
+
+            val left = maxOf(defaultHorizontal, (insets?.left ?: 0) + edgeMargin)
+            val top = maxOf(defaultVertical, topObstruction + edgeMargin)
+            val right = maxOf(defaultHorizontal, (insets?.right ?: 0) + edgeMargin)
+            val bottom = maxOf(defaultVertical, (insets?.bottom ?: 0) + edgeMargin)
+            val fittedHorizontal = fitMargins(left, right, webViewBounds.width())
+            val fittedVertical = fitMargins(top, bottom, webViewBounds.height())
+
+            margins = GestureMargins(
+                fittedHorizontal.first,
+                fittedVertical.first,
+                fittedHorizontal.second,
+                fittedVertical.second
+            )
+        }
+        return margins ?: GestureMargins(0, 0, 0, 0)
+    }
+
+    private fun getBoundsInScreen(view: View): Rect {
+        val location = IntArray(2)
+        view.getLocationOnScreen(location)
+        return Rect(
+            location[0],
+            location[1],
+            location[0] + view.width,
+            location[1] + view.height
+        )
+    }
+
+    private fun fitMargins(start: Int, end: Int, size: Int): Pair<Int, Int> {
+        if (size <= 2) {
+            return 0 to 0
+        }
+        val maxTotal = size - 2
+        if (start + end <= maxTotal) {
+            return start to end
+        }
+
+        val scale = maxTotal.toFloat() / (start + end).toFloat()
+        val fittedStart = (start * scale).roundToInt().coerceIn(0, maxTotal)
+        return fittedStart to maxTotal - fittedStart
     }
 
     fun getZoomRatio(scenario: ActivityScenario<PdfViewer>): Float {
