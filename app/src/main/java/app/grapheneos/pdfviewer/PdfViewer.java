@@ -77,8 +77,16 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
         "img-src blob: 'self'; " +
         "script-src 'self'; " +
         "style-src 'self'; " +
+        "worker-src 'self'; " +
         "frame-ancestors 'none'; " +
         "base-uri 'none'";
+
+    // Workers need a separate set of CSP.
+    // MDN reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy#csp_in_workers
+    private static final String WORKER_CONTENT_SECURITY_POLICY =
+        "default-src 'none'; " +
+        "script-src 'self' 'wasm-unsafe-eval'; " +
+        "connect-src 'self'";
 
     private static final String PERMISSIONS_POLICY =
         "accelerometer=(), " +
@@ -341,7 +349,11 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
             private WebResourceResponse fromAsset(final String mime, final String path) {
                 try {
                     InputStream inputStream = getAssets().open(path.substring(1));
-                    return new WebResourceResponse(mime, null, inputStream);
+                    WebResourceResponse response = new WebResourceResponse(mime, null, inputStream);
+                    HashMap<String, String> headers = new HashMap<>();
+                    headers.put("X-Content-Type-Options", "nosniff");
+                    response.setResponseHeaders(headers);
+                    return response;
                 } catch (IOException e) {
                     return null;
                 }
@@ -378,11 +390,8 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
 
                 if ("/viewer/index.html".equals(path)) {
                     final WebResourceResponse response = fromAsset("text/html", path);
-                    HashMap<String, String> headers = new HashMap<>();
-                    headers.put("Content-Security-Policy", CONTENT_SECURITY_POLICY);
-                    headers.put("Permissions-Policy", PERMISSIONS_POLICY);
-                    headers.put("X-Content-Type-Options", "nosniff");
-                    response.setResponseHeaders(headers);
+                    response.getResponseHeaders().put("Content-Security-Policy", CONTENT_SECURITY_POLICY);
+                    response.getResponseHeaders().put("Permissions-Policy", PERMISSIONS_POLICY);
                     return response;
                 }
 
@@ -390,13 +399,22 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
                     return fromAsset("text/css", path);
                 }
 
-                if ("/viewer/js/index.js".equals(path) || "/viewer/js/worker.js".equals(path) ||
+                if ("/viewer/js/worker.js".equals(path)) {
+                    final WebResourceResponse response = fromAsset("application/javascript", path);
+                    response.getResponseHeaders().put("Content-Security-Policy", WORKER_CONTENT_SECURITY_POLICY);
+                    // Permissions-Policy does not apply to workers.
+                    // See: https://github.com/w3c/webappsec-permissions-policy/issues/207
+                    return response;
+                }
+
+                if ("/viewer/js/index.js".equals(path) ||
                         "/viewer/wasm/openjpeg_nowasm_fallback.js".equals(path)) {
                     return fromAsset("application/javascript", path);
                 }
 
                 if ("/viewer/wasm/openjpeg.wasm".equals(path) ||
-                        "/viewer/wasm/qcms_bg.wasm".equals(path)) {
+                        "/viewer/wasm/qcms_bg.wasm".equals(path) ||
+                        "/viewer/wasm/jbig2.wasm".equals(path)) {
                     return fromAsset("application/wasm", path);
                 }
 
