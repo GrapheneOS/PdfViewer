@@ -166,7 +166,7 @@ class PdfViewerNavigationTest {
             robot.clickRotateClockwise()
             PdfViewerTestUtils.waitForDocumentRotation(scenario, expected = 90)
 
-            robot.performPinchZoomIn()
+            robot.performPinchZoomIn(scenario)
             val zoomedRatio = robot.getZoomRatio(scenario)
             assertTrue(
                 "Zoom should have increased (was $zoomedRatio)",

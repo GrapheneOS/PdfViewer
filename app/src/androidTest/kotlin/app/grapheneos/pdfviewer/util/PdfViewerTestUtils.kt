@@ -269,6 +269,31 @@ object PdfViewerTestUtils {
         }
     }
 
+    fun waitForCanvasCssDimensionsChanged(
+        scenario: ActivityScenario<PdfViewer>,
+        previousWidth: Int,
+        previousHeight: Int,
+        timeout: Long = 15_000
+    ) {
+        pollUntil(
+            timeout = timeout,
+            description = {
+                "Canvas CSS dimensions did not change from ${previousWidth}x${previousHeight} " +
+                        "within ${timeout}ms"
+            }
+        ) {
+            val w = evaluateJs(
+                scenario,
+                "parseInt(document.getElementById('content').style.width) || 0"
+            ).toIntOrNull()
+            val h = evaluateJs(
+                scenario,
+                "parseInt(document.getElementById('content').style.height) || 0"
+            ).toIntOrNull()
+            w != null && h != null && (w != previousWidth || h != previousHeight)
+        }
+    }
+
     fun waitForDocumentChanged(
         scenario: ActivityScenario<PdfViewer>,
         expectedPages: Int,
