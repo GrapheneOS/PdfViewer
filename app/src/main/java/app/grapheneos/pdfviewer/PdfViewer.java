@@ -145,10 +145,10 @@ public class PdfViewer extends AppCompatActivity implements LoaderManager.Loader
     private float mZoomFocusY = 0f;
     private int mSwipeThreshold;
     private int mSwipeVelocityThreshold;
-    private float mInsetLeft = 0f;
-    private float mInsetTop = 0f;
-    private float mInsetRight = 0f;
-    private float mInsetBottom = 0f;
+    private volatile float mInsetLeft = 0f;
+    private volatile float mInsetTop = 0f;
+    private volatile float mInsetRight = 0f;
+    private volatile float mInsetBottom = 0f;
     private int mDocumentOrientationDegrees;
     private int mDocumentState;
     private String mEncryptedDocumentPassword;
