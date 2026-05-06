@@ -1,12 +1,12 @@
 package app.grapheneos.pdfviewer.outline
 
 import android.os.Bundle
-import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentContainerView
@@ -36,25 +36,24 @@ class OutlineFragment : Fragment() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-        view?.apply {
-            isFocusableInTouchMode = true
-            requestFocus()
-            setOnKeyListener { _, keyCode, keyEvent ->
-                // ACTION_UP and ACTION_DOWN will both be sent
-                if (keyEvent.action == KeyEvent.ACTION_UP) {
-                    if (keyCode == KeyEvent.KEYCODE_BACK && viewModel.hasPrevious()) {
-                        viewModel.submitAction(OutlineViewModel.Action.Back)
-                    } else {
-                        dismissOutlineFragment()
-                    }
+        requireActivity().onBackPressedDispatcher.addCallback(this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    handleBackNavigation()
                 }
-                true
             }
-        }
+        )
+    }
 
+    private fun handleBackNavigation() {
+        if (viewModel.hasPrevious()) {
+            viewModel.submitAction(OutlineViewModel.Action.Back)
+        } else {
+            dismissOutlineFragment()
+        }
     }
 
     override fun onCreateView(
