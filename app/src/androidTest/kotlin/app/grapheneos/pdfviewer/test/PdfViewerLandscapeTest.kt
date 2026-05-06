@@ -1,12 +1,15 @@
 package app.grapheneos.pdfviewer.test
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.UiDevice
 import app.grapheneos.pdfviewer.currentPage
 import app.grapheneos.pdfviewer.refreshMenuSync
 import app.grapheneos.pdfviewer.totalPages
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
 import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -16,6 +19,15 @@ import org.junit.runner.RunWith
 class PdfViewerLandscapeTest {
 
     private val robot = PdfViewerRobot()
+
+    @After
+    fun resetDeviceOrientation() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val device = UiDevice.getInstance(instrumentation)
+        device.setOrientationNatural()
+        instrumentation.waitForIdleSync()
+        device.unfreezeRotation()
+    }
 
     @Test
     fun rotationToLandscape_canvasRefitsNewViewport() {

@@ -11,6 +11,7 @@ import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.UiDevice
 import app.grapheneos.pdfviewer.PdfViewer
 import app.grapheneos.pdfviewer.R
 import app.grapheneos.pdfviewer.documentProperties
@@ -318,12 +319,21 @@ object PdfViewerTestUtils {
             Configuration.ORIENTATION_LANDSCAPE
         else
             Configuration.ORIENTATION_PORTRAIT
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val device = UiDevice.getInstance(instrumentation)
+
+        if (landscape) {
+            device.setOrientationLeft()
+        } else {
+            device.setOrientationNatural()
+        }
         scenario.onActivity {
             it.requestedOrientation = if (landscape)
                 ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             else
                 ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
+        instrumentation.waitForIdleSync()
         pollUntil(
             timeout = 10_000,
             description = { "Activity did not reach orientation=landscape($landscape) within 10s" }
@@ -334,7 +344,7 @@ object PdfViewerTestUtils {
             }
             matches
         }
-        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        instrumentation.waitForIdleSync()
     }
 
     fun selectAllText(scenario: ActivityScenario<PdfViewer>) {
