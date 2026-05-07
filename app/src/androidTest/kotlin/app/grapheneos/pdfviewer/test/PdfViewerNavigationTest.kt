@@ -45,6 +45,7 @@ class PdfViewerNavigationTest {
     fun tapNext_increasesPage() {
         PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
             setupNavigableState(scenario, page = 2)
 
             robot.clickNext()
@@ -58,6 +59,7 @@ class PdfViewerNavigationTest {
     fun tapPrevious_decreasesPage() {
         PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
             setupNavigableState(scenario, page = 3)
 
             robot.clickPrevious()
@@ -78,7 +80,20 @@ class PdfViewerNavigationTest {
 
             robot.assertNavigationState(previousEnabled = false, nextEnabled = true)
             robot.clickNext()
-            scenario.onActivity { it.refreshMenuSync() }
+
+            PdfViewerTestUtils.pollUntil(
+                description = { "Page did not change to 2" }
+            ) {
+                var page = 0
+                scenario.onActivity {
+                    page = it.currentPage
+                }
+                page == 2
+            }
+
+            scenario.onActivity {
+                it.refreshMenuSync()
+            }
             robot.assertNavigationState(previousEnabled = true, nextEnabled = true)
         }
     }

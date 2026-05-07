@@ -20,6 +20,7 @@ class PdfViewerPasswordDialogTest {
     fun passwordDialog_positiveButtonStartsDisabled() {
         PdfViewerLauncher.launchDefault().use { scenario ->
             robot.showPasswordDialog(scenario)
+            robot.waitForPasswordDialog()
             robot.assertPasswordPositiveButtonEnabled(enabled = false)
         }
     }
@@ -28,6 +29,7 @@ class PdfViewerPasswordDialogTest {
     fun passwordDialog_typingEnablesPositiveButton() {
         PdfViewerLauncher.launchDefault().use { scenario ->
             robot.showPasswordDialog(scenario)
+            robot.waitForPasswordDialog()
 
             robot.typePassword("password")
             robot.assertPasswordPositiveButtonEnabled(enabled = true)
@@ -38,6 +40,7 @@ class PdfViewerPasswordDialogTest {
     fun passwordDialog_clearingTextDisablesPositiveButton() {
         PdfViewerLauncher.launchDefault().use { scenario ->
             robot.showPasswordDialog(scenario)
+            robot.waitForPasswordDialog()
 
             robot.typePassword("password")
             robot.assertPasswordPositiveButtonEnabled(enabled = true)
@@ -51,6 +54,7 @@ class PdfViewerPasswordDialogTest {
     fun passwordDialog_invalidPasswordShowsError() {
         PdfViewerLauncher.launchDefault().use { scenario ->
             robot.showPasswordDialog(scenario)
+            robot.waitForPasswordDialog()
             robot.typePassword("wrongpassword")
 
             scenario.onActivity {
@@ -66,6 +70,7 @@ class PdfViewerPasswordDialogTest {
     fun passwordDialog_notDismissibleByBackPress() {
         PdfViewerLauncher.launchDefault().use { scenario ->
             robot.showPasswordDialog(scenario)
+            robot.waitForPasswordDialog()
 
             val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
             device.pressBack()

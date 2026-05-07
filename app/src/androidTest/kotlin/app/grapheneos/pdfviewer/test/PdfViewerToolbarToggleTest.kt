@@ -19,6 +19,7 @@ class PdfViewerToolbarToggleTest {
     fun tapWebView_hidesToolbar() {
         PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
 
             robot.assertToolbarVisible(scenario)
 
@@ -32,6 +33,7 @@ class PdfViewerToolbarToggleTest {
     fun tapWebView_whenHidden_showsToolbar() {
         PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
 
             robot.tapWebView()
             PdfViewerTestUtils.waitForToolbarState(scenario, visible = false)
