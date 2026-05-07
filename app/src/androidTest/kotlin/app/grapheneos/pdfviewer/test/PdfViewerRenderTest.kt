@@ -207,6 +207,7 @@ class PdfViewerRenderTest {
                 zoomedHeight < initialHeight
             )
 
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
             PdfViewerTestUtils.assertTextLayerContent(scenario, "Test Text")
             robot.assertTextLayerAligned(scenario)
         }

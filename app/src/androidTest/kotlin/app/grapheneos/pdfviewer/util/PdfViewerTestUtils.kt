@@ -148,7 +148,9 @@ object PdfViewerTestUtils {
             try {
                 val result = evaluateJs(scenario,
                     "parseInt(document.getElementById('content').style.width) > 0 " +
-                            "&& parseInt(document.getElementById('content').style.height) > 0"
+                            "&& parseInt(document.getElementById('content').style.height) > 0 " +
+                            "&& parseFloat(document.getElementById('container').style.getPropertyValue('--scale-factor')) > 0 " +
+                            "&& !document.getElementById('text').hidden"
                 )
                 Log.d("WAIT", "  canvas check result=$result, elapsed=${System.currentTimeMillis() - start}ms")
                 result == "true"
