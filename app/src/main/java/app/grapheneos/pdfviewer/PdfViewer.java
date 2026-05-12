@@ -337,10 +337,9 @@ public class PdfViewer extends AppCompatActivity {
             }
         });
 
-        viewModel.getDocumentProperties().observe(this, properties -> {
-            setToolbarTitleWithDocumentName();
-            invalidateOptionsMenu();
-        });
+        viewModel.getDocumentProperties().observe(this, properties -> invalidateOptionsMenu());
+
+        viewModel.getDocumentName().observe(this, name -> setToolbarTitleWithDocumentName());
 
         getSupportFragmentManager().setFragmentResultListener(OutlineFragment.RESULT_KEY, this,
                 (requestKey, result) -> {
@@ -695,6 +694,7 @@ public class PdfViewer extends AppCompatActivity {
     private void loadPdf() {
         documentPropertiesLoaded = false;
         documentLoaded = false;
+        viewModel.setZoomRatio(0f);
         showSystemUi();
         invalidateOptionsMenu();
         binding.webview.loadUrl("https://localhost/viewer/index.html");

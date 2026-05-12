@@ -3,15 +3,16 @@ package app.grapheneos.pdfviewer.viewModel
 import android.app.Application
 import android.content.ContentResolver
 import android.net.Uri
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import app.grapheneos.pdfviewer.loader.DEFAULT_VALUE
 import app.grapheneos.pdfviewer.properties.DocumentPropertiesRetriever
 import app.grapheneos.pdfviewer.properties.DocumentProperty
 import app.grapheneos.pdfviewer.outline.OutlineNode
+import app.grapheneos.pdfviewer.properties.DEFAULT_VALUE
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -42,7 +43,7 @@ class PdfViewModel(
         }
 
     @Volatile
-    var page: Int = savedStateHandle[STATE_PAGE] ?: 1
+    var page: Int = savedStateHandle[STATE_PAGE] ?: 0
         set(value) {
             field = value
             savedStateHandle[STATE_PAGE] = value
@@ -204,6 +205,16 @@ class PdfViewModel(
         _documentProperties.value = null
         _documentName.value = ""
         documentPropertiesLoading = false
+    }
+
+    @VisibleForTesting
+    fun setDocumentPropertiesForTest(value: Map<DocumentProperty, String>?) {
+        _documentProperties.value = value
+    }
+
+    @VisibleForTesting
+    fun setDocumentNameForTest(value: String) {
+        _documentName.value = value
     }
 
     private fun resolveDocumentName(properties: Map<DocumentProperty, String>): String {
