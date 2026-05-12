@@ -1,6 +1,7 @@
 package app.grapheneos.pdfviewer
 
 import androidx.annotation.IdRes
+import app.grapheneos.pdfviewer.properties.DocumentProperty
 import app.grapheneos.pdfviewer.viewModel.PdfViewModel
 import com.google.android.material.appbar.MaterialToolbar
 
@@ -13,33 +14,33 @@ import com.google.android.material.appbar.MaterialToolbar
 const val MIN_ZOOM_RATIO: Float = 0.2f
 
 var PdfViewer.currentPage: Int
-    get() = mPage
+    get() = viewModel.page
     set(value) {
-        mPage = value
+        viewModel.page = value
     }
 
 var PdfViewer.totalPages: Int
-    get() = mNumPages
+    get() = viewModel.numPages
     set(value) {
-        mNumPages = value
+        viewModel.numPages = value
     }
 
 var PdfViewer.crashed: Boolean
-    get() = webViewCrashed
+    get() = viewModel.webViewCrashed
     set(value) {
-        webViewCrashed = value
+        viewModel.webViewCrashed = value
     }
 
-var PdfViewer.documentProperties: List<CharSequence>?
-    get() = mDocumentProperties
+var PdfViewer.documentProperties: Map<DocumentProperty, String>?
+    get() = viewModel.documentProperties.value
     set(value) {
-        mDocumentProperties = value
+        viewModel.setDocumentPropertiesForTest(value)
     }
 
-var PdfViewer.documentName: String?
-    get() = mDocumentName
+var PdfViewer.documentName: String
+    get() = viewModel.documentName.value ?: ""
     set(value) {
-        mDocumentName = value
+        viewModel.setDocumentNameForTest(value)
     }
 
 var PdfViewer.outlineStatus: PdfViewModel.OutlineStatus
