@@ -5,9 +5,11 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@stylistic/eslint-plugin": "^5.10.0",
     "esbuild": "^0.28.0",
-    "eslint": "^9.39.2",
+    "eslint": "^10.3.0",
+    "globals": "^17.6.0",
     "pdfjs-dist": "^5.7.284",
     "vitest": "^4.1.6"
   }
