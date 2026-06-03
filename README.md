@@ -32,7 +32,7 @@ To run a single test:
 
 ### JavaScript unit tests
 
-Requires Node.js 20+. Make sure modules are installed:
+Requires Node.js 24+. Make sure modules are installed:
 
 ```sh
 npm install
