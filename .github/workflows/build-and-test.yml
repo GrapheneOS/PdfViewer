@@ -36,27 +36,5 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-  instrumented-tests-1:
-    uses: ./.github/workflows/instrumented-tests-run.yml
-  instrumented-tests-2:
-    needs: instrumented-tests-1
-    if: always() && needs.instrumented-tests-1.outputs.test-outcome == 'failure'
-    uses: ./.github/workflows/instrumented-tests-run.yml
-  instrumented-tests-3:
-    needs: instrumented-tests-2
-    if: always() && needs.instrumented-tests-2.outputs.test-outcome == 'failure'
-    uses: ./.github/workflows/instrumented-tests-run.yml
   instrumented-tests:
-    if: always()
-    needs: [instrumented-tests-1, instrumented-tests-2, instrumented-tests-3]
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          if [[ "${{ needs.instrumented-tests-1.outputs.test-outcome }}" == "success" || \
-                "${{ needs.instrumented-tests-2.outputs.test-outcome }}" == "success" || \
-                "${{ needs.instrumented-tests-3.outputs.test-outcome }}" == "success" ]]; then
-            echo "Instrumented tests passed"
-            exit 0
-          fi
-          echo "All 3 attempts failed"
-          exit 1
+    uses: ./.github/workflows/instrumented-tests-run.yml

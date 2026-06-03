@@ -9,6 +9,7 @@ import androidx.test.espresso.intent.Intents.intending
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.grapheneos.pdfviewer.PdfViewer
+import app.grapheneos.pdfviewer.RetryRules
 import app.grapheneos.pdfviewer.currentPage
 import app.grapheneos.pdfviewer.documentName
 import app.grapheneos.pdfviewer.refreshMenuSync
@@ -18,6 +19,7 @@ import app.grapheneos.pdfviewer.util.PdfViewerRobot
 import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -26,6 +28,9 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class PdfViewerNavigationTest {
+
+    @get:Rule
+    val retryRules = RetryRules()
 
     private val robot = PdfViewerRobot()
 

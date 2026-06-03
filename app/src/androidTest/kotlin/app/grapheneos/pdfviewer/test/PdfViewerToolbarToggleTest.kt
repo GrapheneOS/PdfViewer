@@ -1,9 +1,11 @@
 package app.grapheneos.pdfviewer.test
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.grapheneos.pdfviewer.RetryRules
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
 import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -12,6 +14,9 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class PdfViewerToolbarToggleTest {
+
+    @get:Rule
+    val retryRules = RetryRules()
 
     private val robot = PdfViewerRobot()
 

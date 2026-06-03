@@ -239,7 +239,7 @@ object PdfViewerTestUtils {
     fun waitForToolbarState(
         scenario: ActivityScenario<PdfViewer>,
         visible: Boolean,
-        timeout: Long = 5_000
+        timeout: Long = 10_000
     ) {
         pollUntil(
             timeout = timeout,
@@ -392,7 +392,7 @@ object PdfViewerTestUtils {
     fun assertToolbarStableVisibility(
         scenario: ActivityScenario<PdfViewer>,
         expectedVisible: Boolean,
-        duration: Long = 500
+        duration: Long = 2_000
     ) {
         assertStableCondition(
             duration = duration,

@@ -15,6 +15,7 @@ import androidx.test.espresso.intent.matcher.IntentMatchers.hasType
 import androidx.test.espresso.intent.matcher.IntentMatchers.isInternal
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.grapheneos.pdfviewer.RetryRules
 import app.grapheneos.pdfviewer.documentName
 import app.grapheneos.pdfviewer.documentProperties
 import app.grapheneos.pdfviewer.refreshMenuSync
@@ -27,6 +28,7 @@ import org.hamcrest.Matchers.`is`
 import org.hamcrest.Matchers.not
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -39,6 +41,9 @@ import java.io.File
  */
 @RunWith(AndroidJUnit4::class)
 class PdfViewerIntentTest {
+
+    @get:Rule
+    val retryRules = RetryRules()
 
     private val robot = PdfViewerRobot()
 

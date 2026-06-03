@@ -3,8 +3,10 @@ package app.grapheneos.pdfviewer.test
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
+import app.grapheneos.pdfviewer.RetryRules
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -13,6 +15,9 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class PdfViewerPasswordDialogTest {
+
+    @get:Rule
+    val retryRules = RetryRules()
 
     private val robot = PdfViewerRobot()
 

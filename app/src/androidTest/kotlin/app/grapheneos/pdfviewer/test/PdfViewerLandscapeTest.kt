@@ -3,6 +3,7 @@ package app.grapheneos.pdfviewer.test
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
+import app.grapheneos.pdfviewer.RetryRules
 import app.grapheneos.pdfviewer.currentPage
 import app.grapheneos.pdfviewer.refreshMenuSync
 import app.grapheneos.pdfviewer.totalPages
@@ -12,11 +13,15 @@ import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class PdfViewerLandscapeTest {
+
+    @get:Rule
+    val retryRules = RetryRules()
 
     private val robot = PdfViewerRobot()
 

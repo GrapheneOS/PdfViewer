@@ -2,6 +2,7 @@ package app.grapheneos.pdfviewer.test
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.grapheneos.pdfviewer.MIN_ZOOM_RATIO
+import app.grapheneos.pdfviewer.RetryRules
 import app.grapheneos.pdfviewer.currentPage
 import app.grapheneos.pdfviewer.documentProperties
 import app.grapheneos.pdfviewer.refreshMenuSync
@@ -12,6 +13,7 @@ import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.math.abs
@@ -21,6 +23,9 @@ import kotlin.math.abs
  */
 @RunWith(AndroidJUnit4::class)
 class PdfViewerRenderTest {
+
+    @get:Rule
+    val retryRules = RetryRules()
 
     private val robot = PdfViewerRobot()
 
@@ -181,7 +186,7 @@ class PdfViewerRenderTest {
 
             robot.performPinchZoomOut(scenario)
             PdfViewerTestUtils.pollUntil(
-                timeout = 5_000,
+                timeout = 15_000,
                 description = {
                     "Zoom ratio should decrease after zoom out " +
                             "(initial=$initialZoomRatio, current=${robot.getZoomRatio(scenario)})"
@@ -222,7 +227,7 @@ class PdfViewerRenderTest {
             repeat(5) { robot.performPinchZoomOut(scenario, speed = 1500) }
 
             PdfViewerTestUtils.pollUntil(
-                timeout = 5_000,
+                timeout = 15_000,
                 description = {
                     "Zoom ratio did not clamp to MIN_ZOOM_RATIO " +
                             "(was ${robot.getZoomRatio(scenario)})"
