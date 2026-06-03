@@ -7,6 +7,7 @@ import androidx.test.espresso.intent.Intents
 import androidx.test.espresso.intent.Intents.intending
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.grapheneos.pdfviewer.RetryRules
 import app.grapheneos.pdfviewer.documentProperties
 import app.grapheneos.pdfviewer.totalPages
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
@@ -15,6 +16,7 @@ import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -23,6 +25,9 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class PdfViewerEncryptedPdfTest {
+
+    @get:Rule
+    val retryRules = RetryRules()
 
     private val robot = PdfViewerRobot()
 

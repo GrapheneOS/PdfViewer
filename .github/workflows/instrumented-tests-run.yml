@@ -2,9 +2,6 @@ name: Instrumented tests run
 
 on:
   workflow_call:
-    outputs:
-      test-outcome:
-        value: ${{ jobs.test.outputs.test-outcome }}
 
 permissions:
   contents: read
@@ -13,8 +10,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    outputs:
-      test-outcome: ${{ steps.tests.outcome }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -35,18 +30,18 @@ jobs:
           java-version: 21
           cache: gradle
       - name: Run instrumented tests
-        id: tests
-        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@e89f39f1abbbd05b1113a29cf4db69e7540cae5a # v2.37.0
         with:
           api-level: 36
           target: google_apis
           arch: x86_64
-          ram-size: 2048M
+          ram-size: 4096M
           heap-size: 512M
           disk-size: 6000M
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           disable-animations: true
           script: |
             adb shell am wait-for-broadcast-idle
+            adb shell input keyevent 82
+            sleep 5
             ./gradlew connectedCheck --no-daemon
