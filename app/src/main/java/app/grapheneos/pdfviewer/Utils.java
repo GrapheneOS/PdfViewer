@@ -60,7 +60,7 @@ public class Utils {
                 throw new ParseException("Invalid month", position);
             }
             month = parseIntSafely(field) - 1;
-            if (month > 11) {
+            if (month > 11 || month == -1) {
                 throw new ParseException("Invalid month", position);
             }
             position += 2;
@@ -71,7 +71,7 @@ public class Utils {
                 throw new ParseException("Invalid day", position);
             }
             day = parseIntSafely(field);
-            if (day > 31) {
+            if (day > 31 || day == 0) {
                 throw new ParseException("Invalid day", position);
             }
             position += 2;
@@ -128,13 +128,6 @@ public class Utils {
                     throw new ParseException("Invalid UTC offset hours", position);
                 }
                 offsetHours = parseIntSafely(field);
-                final int offsetHoursMinutes = offsetHours * 100 + offsetMinutes;
-
-                // Validate UTC offset (UTC-12:00 to UTC+14:00)
-                if ((utRel == '\u002D' && offsetHoursMinutes > 1200) ||
-                        (utRel == '\u002B' && offsetHoursMinutes > 1400)) {
-                    throw new ParseException("Invalid UTC offset hours", position);
-                }
 
                 position += 2;
 
@@ -160,6 +153,14 @@ public class Utils {
                     if (date.charAt(position) != '\'') {
                         throw new ParseException("Expected apostrophe", position);
                     }
+                }
+
+                final int offsetHoursMinutes = offsetHours * 100 + offsetMinutes;
+
+                // Validate UTC offset (UTC-12:00 to UTC+14:00)
+                if ((utRel == '\u002D' && offsetHoursMinutes > 1200) ||
+                        (utRel == '\u002B' && offsetHoursMinutes > 1400)) {
+                    throw new ParseException("Invalid UTC offset hours", position);
                 }
             }
 
