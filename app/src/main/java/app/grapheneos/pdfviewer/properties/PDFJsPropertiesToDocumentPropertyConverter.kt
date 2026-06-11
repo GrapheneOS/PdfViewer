@@ -1,10 +1,9 @@
 package app.grapheneos.pdfviewer.properties
 
-import app.grapheneos.pdfviewer.Utils
+import app.grapheneos.pdfviewer.parseDate
 import org.json.JSONException
 import org.json.JSONObject
 import java.text.ParseException
-import kotlin.jvm.Throws
 
 class PDFJsPropertiesToDocumentPropertyConverter(
     private val properties: String,
@@ -36,7 +35,7 @@ class PDFJsPropertiesToDocumentPropertyConverter(
     private fun prettify(property: DocumentProperty, value: String): String {
         if (value != DEFAULT_VALUE && property.isDate) {
             return try {
-                Utils.parseDate(value)
+                parseDate(value)
             } catch (parseException: ParseException) {
                 parseExceptionListener.invoke(parseException, value)
                 propertyInvalidDate
