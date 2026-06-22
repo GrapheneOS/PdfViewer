@@ -29,6 +29,7 @@ const cache = [];
 const maxCached = 6;
 
 let isTextLayerVisible = false;
+let userZoomed = false;
 
 function maybeRenderNextPage() {
     if (renderPending) {
@@ -270,6 +271,10 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
 }
 
 globalThis.onRenderPage = function (zoom) {
+    if (zoom === 1 || zoom === 2) {
+        userZoomed = true;
+    }
+
     if (pageRendering) {
         if (newPageNumber === channel.getPage() && newZoomRatio === channel.getZoomRatio() &&
                 orientationDegrees === channel.getDocumentOrientationDegrees()) {
@@ -323,6 +328,7 @@ globalThis.toggleTextLayerVisibility = function () {
 };
 
 globalThis.loadDocument = function () {
+    userZoomed = false;
     const pdfPassword = channel.getPassword();
     const loadingTask = getDocument({
         url: "https://localhost/placeholder.pdf",
@@ -377,4 +383,15 @@ globalThis.loadDocument = function () {
 
 globalThis.onresize = () => {
     setLayerTransform(canvas.clientWidth, canvas.clientHeight, textLayerDiv);
+    if (pdfDoc !== null && !userZoomed) {
+        const pageNumber = channel.getPage();
+        pdfDoc.getPage(pageNumber).then(function(page) {
+            const degrees = channel.getDocumentOrientationDegrees();
+            const newDefaultZoom = getDefaultZoomRatio(page, degrees);
+            channel.setZoomRatio(newDefaultZoom);
+            globalThis.onRenderPage(0);
+        }).catch(function(err) {
+            console.log("onresize error: " + err);
+        });
+    }
 };

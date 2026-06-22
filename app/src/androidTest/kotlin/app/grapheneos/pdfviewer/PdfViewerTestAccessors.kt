@@ -1,9 +1,7 @@
 package app.grapheneos.pdfviewer
 
-import androidx.annotation.IdRes
 import app.grapheneos.pdfviewer.properties.DocumentProperty
 import app.grapheneos.pdfviewer.viewModel.PdfViewModel
-import com.google.android.material.appbar.MaterialToolbar
 
 /**
  * Test-only accessors for internal states.
@@ -11,24 +9,22 @@ import com.google.android.material.appbar.MaterialToolbar
  * All tests should read/write activity states through these extensions.
  */
 
-const val MIN_ZOOM_RATIO: Float = 0.2f
-
 var PdfViewer.currentPage: Int
-    get() = viewModel.page
+    get() = viewModel.page.value
     set(value) {
-        viewModel.page = value
+        viewModel.setPage(value)
     }
 
 var PdfViewer.totalPages: Int
-    get() = viewModel.numPages
+    get() = viewModel.numPages.value
     set(value) {
-        viewModel.numPages = value
+        viewModel.setNumPages(value)
     }
 
 var PdfViewer.crashed: Boolean
-    get() = viewModel.webViewCrashed
+    get() = viewModel.webViewCrashed.value
     set(value) {
-        viewModel.webViewCrashed = value
+        viewModel.setWebViewCrashed(value)
     }
 
 var PdfViewer.documentProperties: Map<DocumentProperty, String>?
@@ -38,33 +34,13 @@ var PdfViewer.documentProperties: Map<DocumentProperty, String>?
     }
 
 var PdfViewer.documentName: String
-    get() = viewModel.documentName.value ?: ""
+    get() = viewModel.documentName.value
     set(value) {
         viewModel.setDocumentNameForTest(value)
     }
 
 var PdfViewer.outlineStatus: PdfViewModel.OutlineStatus
-    get() = viewModel.outline.value ?: PdfViewModel.OutlineStatus.NotLoaded
+    get() = viewModel.outline.value
     set(value) {
-        viewModel.outline.value = value
+        viewModel.setOutlineForTest(value)
     }
-
-val PdfViewer.toolbar: MaterialToolbar
-    get() = findViewById(R.id.toolbar)
-
-/**
- * Synchronously refreshes menu item states by calling [onPrepareOptionsMenu]
- * with live [Menu]. [invalidateOptionsMenu] schedules update using Choreographer,
- * which Espresso does not wait for.
- */
-fun PdfViewer.refreshMenuSync() {
-    onPrepareOptionsMenu(toolbar.menu)
-}
-
-fun PdfViewer.isMenuItemEnabled(@IdRes id: Int): Boolean {
-    return toolbar.menu.findItem(id)?.isEnabled ?: false
-}
-
-fun PdfViewer.isMenuItemVisible(@IdRes id: Int): Boolean {
-    return toolbar.menu.findItem(id)?.isVisible ?: false
-}

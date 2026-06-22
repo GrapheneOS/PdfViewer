@@ -3,10 +3,11 @@ package app.grapheneos.pdfviewer.test
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
-import app.grapheneos.pdfviewer.RetryRules
+import app.grapheneos.pdfviewer.testrules.RetryRules
+import app.grapheneos.pdfviewer.RetryableComposeRule
 import app.grapheneos.pdfviewer.currentPage
 import app.grapheneos.pdfviewer.outlineStatus
-import app.grapheneos.pdfviewer.refreshMenuSync
+import app.grapheneos.pdfviewer.testrules.OrientationRules
 import app.grapheneos.pdfviewer.totalPages
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
@@ -15,20 +16,32 @@ import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
 import app.grapheneos.pdfviewer.viewModel.PdfViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 
 /**
- * Tests multi-page PDF with navigation rendering, page count, and outline.
+ * Tests multipage PDF with navigation rendering, page count, and outline.
  */
 @RunWith(AndroidJUnit4::class)
 class PdfViewerMultiPageRenderTest {
 
-    @get:Rule
-    val retryRules = RetryRules()
+    private val composeRule = RetryableComposeRule()
 
-    private val robot = PdfViewerRobot()
+    @get:Rule
+    val rules: RuleChain = RuleChain
+        .outerRule(RetryRules())
+        .around(OrientationRules())
+        .around(composeRule)
+
+    private val robot = PdfViewerRobot(composeRule)
+
+    @Before
+    fun setup() {
+        PdfViewerTestUtils.init(composeRule)
+    }
 
     // Activity state
 
@@ -82,11 +95,11 @@ class PdfViewerMultiPageRenderTest {
             PdfViewerTestUtils.waitForCanvasRendered(scenario)
             PdfViewerTestUtils.assertTextLayerContent(scenario, "Page One Content")
 
-            robot.click(PdfViewerRobot.AppMenuItem.Last)
+            robot.click(AppMenuItem.Last)
             PdfViewerTestUtils.assertTextLayerContent(scenario, "Page Four Content")
             robot.assertBridgePage(scenario, 4)
 
-            robot.click(PdfViewerRobot.AppMenuItem.First)
+            robot.click(AppMenuItem.First)
             PdfViewerTestUtils.assertTextLayerContent(scenario, "Page One Content")
             robot.assertBridgePage(scenario, 1)
         }
@@ -98,13 +111,11 @@ class PdfViewerMultiPageRenderTest {
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
             PdfViewerTestUtils.waitForCanvasRendered(scenario)
 
-            scenario.onActivity { it.refreshMenuSync() }
             robot.assertNavigationState(previousEnabled = false, nextEnabled = true)
 
-            robot.click(PdfViewerRobot.AppMenuItem.Last)
+            robot.click(AppMenuItem.Last)
             PdfViewerTestUtils.assertTextLayerContent(scenario, "Page Four Content")
 
-            scenario.onActivity { it.refreshMenuSync() }
             robot.assertNavigationState(previousEnabled = true, nextEnabled = false)
         }
     }
@@ -125,7 +136,7 @@ class PdfViewerMultiPageRenderTest {
                 )
             }
 
-            robot.assertMenuItemVisible(scenario, AppMenuItem.Outline, expected = true)
+            robot.assertMenuItemVisible(AppMenuItem.Outline, expected = true)
         }
     }
 
@@ -153,8 +164,6 @@ class PdfViewerMultiPageRenderTest {
             PdfViewerTestUtils.waitForCanvasRendered(scenario)
             PdfViewerTestUtils.waitForOutlineAvailable(scenario)
 
-            scenario.onActivity { it.refreshMenuSync() }
-
             robot.openOutlineFragment()
             robot.waitForOutlineEntries()
             robot.clickOutlineEntry(1)
@@ -173,7 +182,6 @@ class PdfViewerMultiPageRenderTest {
         PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
             PdfViewerTestUtils.waitForOutlineAvailable(scenario)
-            scenario.onActivity { it.refreshMenuSync() }
 
             robot.openOutlineFragment()
             robot.waitForOutlineEntries()

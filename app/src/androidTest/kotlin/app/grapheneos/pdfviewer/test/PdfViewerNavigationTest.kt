@@ -3,24 +3,30 @@ package app.grapheneos.pdfviewer.test
 import android.app.Activity
 import android.app.Instrumentation
 import android.content.Intent
+import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.intent.Intents
 import androidx.test.espresso.intent.Intents.intending
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.grapheneos.pdfviewer.PdfViewer
-import app.grapheneos.pdfviewer.RetryRules
+import app.grapheneos.pdfviewer.testrules.RetryRules
+import app.grapheneos.pdfviewer.RetryableComposeRule
+import app.grapheneos.pdfviewer.TestTags
 import app.grapheneos.pdfviewer.currentPage
 import app.grapheneos.pdfviewer.documentName
-import app.grapheneos.pdfviewer.refreshMenuSync
+import app.grapheneos.pdfviewer.testrules.OrientationRules
 import app.grapheneos.pdfviewer.totalPages
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
 import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 
 /**
@@ -29,10 +35,20 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PdfViewerNavigationTest {
 
-    @get:Rule
-    val retryRules = RetryRules()
+    private val composeRule = RetryableComposeRule()
 
-    private val robot = PdfViewerRobot()
+    @get:Rule
+    val rules: RuleChain = RuleChain
+        .outerRule(RetryRules())
+        .around(OrientationRules())
+        .around(composeRule)
+
+    private val robot = PdfViewerRobot(composeRule)
+
+    @Before
+    fun setup() {
+        PdfViewerTestUtils.init(composeRule)
+    }
 
     private fun setupNavigableState(
         scenario: ActivityScenario<PdfViewer>,
@@ -40,8 +56,8 @@ class PdfViewerNavigationTest {
     ) {
         scenario.onActivity {
             it.currentPage = page
-            it.refreshMenuSync()
         }
+        composeRule.waitForIdle()
     }
 
     // Next / Previous clicks
@@ -79,10 +95,6 @@ class PdfViewerNavigationTest {
         PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
 
-            scenario.onActivity {
-                it.refreshMenuSync()
-            }
-
             robot.assertNavigationState(previousEnabled = false, nextEnabled = true)
             robot.clickNext()
 
@@ -96,9 +108,6 @@ class PdfViewerNavigationTest {
                 page == 2
             }
 
-            scenario.onActivity {
-                it.refreshMenuSync()
-            }
             robot.assertNavigationState(previousEnabled = true, nextEnabled = true)
         }
     }
@@ -140,7 +149,7 @@ class PdfViewerNavigationTest {
             setupNavigableState(scenario, page = 3)
 
             robot.click(PdfViewerRobot.AppMenuItem.JumpToPage)
-            robot.assertNumberPickerStateInDialog(minValue = 1, maxValue = 4, currentValue = 3)
+            robot.assertJumpToPageDialogState(currentValue = 3, maxValue = 4)
         }
     }
 
@@ -151,7 +160,7 @@ class PdfViewerNavigationTest {
             setupNavigableState(scenario, page = 1)
 
             robot.click(PdfViewerRobot.AppMenuItem.JumpToPage)
-            robot.setNumberPickerValue(3)
+            robot.setJumpToPageValue(3)
             robot.clickDialogOk()
 
             scenario.onActivity {
@@ -167,11 +176,31 @@ class PdfViewerNavigationTest {
             setupNavigableState(scenario, page = 3)
 
             robot.click(PdfViewerRobot.AppMenuItem.JumpToPage)
-            robot.setNumberPickerValue(4)
+            robot.setJumpToPageValue(4)
             robot.clickDialogCancel()
 
             scenario.onActivity {
                 assertEquals(3, it.currentPage)
+            }
+        }
+    }
+
+    @Test
+    fun jumpToPageDialog_prefilledCurrentPageIsSelected_typingReplaces() {
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            setupNavigableState(scenario, page = 3)
+
+            robot.click(PdfViewerRobot.AppMenuItem.JumpToPage)
+
+            robot.typeJumpToPageWithoutClearing(2)
+
+            composeRule.onNodeWithTag(TestTags.JUMP_TO_PAGE_FIELD)
+                .assertTextEquals("2")
+
+            robot.clickDialogOk()
+            scenario.onActivity {
+                assertEquals(2, it.currentPage)
             }
         }
     }
@@ -241,8 +270,7 @@ class PdfViewerNavigationTest {
         PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
             PdfViewerTestUtils.waitForOutlineAvailable(scenario)
-            scenario.onActivity { it.refreshMenuSync() }
-            robot.assertMenuItemVisible(scenario, PdfViewerRobot.AppMenuItem.Outline, expected = true)
+            robot.assertMenuItemVisible(PdfViewerRobot.AppMenuItem.Outline, expected = true)
 
             Intents.init()
             try {
@@ -261,8 +289,7 @@ class PdfViewerNavigationTest {
             }
 
             PdfViewerTestUtils.waitForDocumentChanged(scenario, expectedPages = 1)
-            scenario.onActivity { it.refreshMenuSync() }
-            robot.assertMenuItemVisible(scenario, PdfViewerRobot.AppMenuItem.Outline, expected = false)
+            robot.assertMenuItemVisible(PdfViewerRobot.AppMenuItem.Outline, expected = false)
         }
     }
 
@@ -270,8 +297,7 @@ class PdfViewerNavigationTest {
     fun openDocumentWithOutline_afterDocumentWithoutOutline_showsOutlineMenuItem() {
         PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
-            scenario.onActivity { it.refreshMenuSync() }
-            robot.assertMenuItemVisible(scenario, PdfViewerRobot.AppMenuItem.Outline, expected = false)
+            robot.assertMenuItemVisible(PdfViewerRobot.AppMenuItem.Outline, expected = false)
 
             Intents.init()
             try {
@@ -291,8 +317,7 @@ class PdfViewerNavigationTest {
 
             PdfViewerTestUtils.waitForDocumentChanged(scenario, expectedPages = 4)
             PdfViewerTestUtils.waitForOutlineAvailable(scenario)
-            scenario.onActivity { it.refreshMenuSync() }
-            robot.assertMenuItemVisible(scenario, PdfViewerRobot.AppMenuItem.Outline, expected = true)
+            robot.assertMenuItemVisible(PdfViewerRobot.AppMenuItem.Outline, expected = true)
         }
     }
 }
