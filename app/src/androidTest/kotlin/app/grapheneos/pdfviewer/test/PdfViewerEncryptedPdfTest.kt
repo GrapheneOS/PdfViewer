@@ -7,8 +7,10 @@ import androidx.test.espresso.intent.Intents
 import androidx.test.espresso.intent.Intents.intending
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.grapheneos.pdfviewer.RetryRules
+import app.grapheneos.pdfviewer.testrules.RetryRules
+import app.grapheneos.pdfviewer.RetryableComposeRule
 import app.grapheneos.pdfviewer.documentProperties
+import app.grapheneos.pdfviewer.testrules.OrientationRules
 import app.grapheneos.pdfviewer.totalPages
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
@@ -16,8 +18,10 @@ import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 
 /**
@@ -26,10 +30,20 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PdfViewerEncryptedPdfTest {
 
-    @get:Rule
-    val retryRules = RetryRules()
+    private val composeRule = RetryableComposeRule()
 
-    private val robot = PdfViewerRobot()
+    @get:Rule
+    val rules: RuleChain = RuleChain
+        .outerRule(RetryRules())
+        .around(OrientationRules())
+        .around(composeRule)
+
+    private val robot = PdfViewerRobot(composeRule)
+
+    @Before
+    fun setup() {
+        PdfViewerTestUtils.init(composeRule)
+    }
 
     @Test
     fun encryptedPdf_wrongThenCorrectPassword() {
@@ -40,7 +54,7 @@ class PdfViewerEncryptedPdfTest {
             robot.assertPasswordPositiveButtonEnabled(enabled = true)
             robot.clickPasswordPositiveButton()
 
-            robot.waitForPasswordError("invalid password")
+            robot.waitForPasswordError()
             robot.assertPasswordPositiveButtonEnabled(enabled = false)
 
             robot.typePassword("testpass")
@@ -65,6 +79,34 @@ class PdfViewerEncryptedPdfTest {
             }
 
             robot.assertBridgePage(scenario, 1)
+        }
+    }
+
+    @Test
+    fun encryptedPdf_multipleWrongPasswords_eachAttemptShowsErrorAndClearsField() {
+        PdfViewerLauncher.launchWithTestAsset("test-encrypted.pdf").use { scenario ->
+            robot.waitForPasswordDialog()
+
+            robot.typePassword("wrongpass1")
+            robot.clickPasswordPositiveButton()
+            robot.waitForPasswordError()
+            robot.assertPasswordPositiveButtonEnabled(enabled = false)
+
+            robot.typePassword("wrongpass2")
+            robot.clickPasswordPositiveButton()
+            robot.waitForPasswordError()
+            robot.assertPasswordPositiveButtonEnabled(enabled = false)
+
+            robot.typePassword("wrongpass3")
+            robot.clickPasswordPositiveButton()
+            robot.waitForPasswordError()
+            robot.assertPasswordPositiveButtonEnabled(enabled = false)
+
+            robot.typePassword("testpass")
+            robot.clickPasswordPositiveButton()
+            robot.waitForPasswordDialogDismissed()
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.assertTextLayerContent(scenario, "Password-Protected Content")
         }
     }
 

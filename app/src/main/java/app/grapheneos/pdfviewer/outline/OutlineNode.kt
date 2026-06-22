@@ -36,12 +36,12 @@ data class OutlineNode(
 
         private fun CoroutineScope.parseOutlineArray(
             reader: JsonReader,
-            id: IdTracker
+            idTracker: IdTracker
         ): List<OutlineNode> = with(reader) {
             val topLevelNodes = arrayListOf<OutlineNode>()
             beginArray()
             while (hasNext() && isActive) {
-                topLevelNodes.add(parseOutlineObject(this, id))
+                topLevelNodes.add(parseOutlineObject(this, idTracker))
             }
             endArray()
             topLevelNodes

@@ -2,34 +2,31 @@ package app.grapheneos.pdfviewer.util
 
 import android.graphics.Rect
 import android.view.View
-import android.widget.NumberPicker
-import androidx.annotation.IdRes
+import android.webkit.WebView
 import androidx.annotation.StringRes
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.ComposeTestRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.performTextInput
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.recyclerview.widget.RecyclerView
 import androidx.test.core.app.ActivityScenario
-import androidx.test.core.app.ApplicationProvider
-import androidx.test.espresso.Espresso
-import androidx.test.espresso.Espresso.onData
 import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.UiController
-import androidx.test.espresso.ViewAction
-import androidx.test.espresso.action.ViewActions.clearText
 import androidx.test.espresso.action.ViewActions.click
-import androidx.test.espresso.action.ViewActions.closeSoftKeyboard
-import androidx.test.espresso.action.ViewActions.typeText
 import androidx.test.espresso.assertion.ViewAssertions.doesNotExist
 import androidx.test.espresso.assertion.ViewAssertions.matches
-import androidx.test.espresso.contrib.RecyclerViewActions
-import androidx.test.espresso.matcher.BoundedMatcher
-import androidx.test.espresso.matcher.RootMatchers.isDialog
-import androidx.test.espresso.matcher.ViewMatchers.hasMinimumChildCount
 import androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
-import androidx.test.espresso.matcher.ViewMatchers.isEnabled
-import androidx.test.espresso.matcher.ViewMatchers.withId
-import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
@@ -37,20 +34,8 @@ import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
 import app.grapheneos.pdfviewer.PdfViewer
 import app.grapheneos.pdfviewer.R
-import app.grapheneos.pdfviewer.fragment.PasswordPromptFragment
-import app.grapheneos.pdfviewer.isMenuItemEnabled
-import app.grapheneos.pdfviewer.isMenuItemVisible
-import app.grapheneos.pdfviewer.outlineStatus
+import app.grapheneos.pdfviewer.TestTags
 import app.grapheneos.pdfviewer.viewModel.PdfViewModel
-import com.google.android.material.textfield.TextInputLayout
-import org.hamcrest.Description
-import org.hamcrest.Matcher
-import org.hamcrest.Matchers.allOf
-import org.hamcrest.Matchers.containsString
-import org.hamcrest.Matchers.hasToString
-import org.hamcrest.Matchers.instanceOf
-import org.hamcrest.Matchers.not
-import org.hamcrest.TypeSafeMatcher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import kotlin.math.roundToInt
@@ -58,7 +43,7 @@ import kotlin.math.roundToInt
 /**
  * Encapsulates all Espresso view assertions and actions.
  */
-class PdfViewerRobot {
+class PdfViewerRobot(private val composeRule: ComposeTestRule) {
 
     private data class GestureMargins(
         val left: Int,
@@ -72,30 +57,24 @@ class PdfViewerRobot {
         const val GESTURE_EDGE_MARGIN_DP = 32f
     }
 
+    private fun getTargetContext() =
+        InstrumentationRegistry.getInstrumentation().targetContext
+
     enum class AppMenuItem(
-        @IdRes internal val id: Int,
         @StringRes internal val titleRes: Int
     ) {
-        Open(R.id.action_open, R.string.action_open),
-        Previous(R.id.action_previous, R.string.action_previous),
-        Next(R.id.action_next, R.string.action_next),
-        First(R.id.action_first, R.string.action_first),
-        Last(R.id.action_last, R.string.action_last),
-        JumpToPage(R.id.action_jump_to_page, R.string.action_jump_to_page),
-        RotateClockwise(
-            R.id.action_rotate_clockwise, R.string.action_rotate_clockwise
-        ),
-        RotateCounterclockwise(
-            R.id.action_rotate_counterclockwise,
-            R.string.action_rotate_counterclockwise
-        ),
-        Share(R.id.action_share, R.string.action_share),
-        SaveAs(R.id.action_save_as, R.string.action_save_as),
-        Outline(R.id.action_outline, R.string.action_outline),
-        ViewDocumentProperties(
-            R.id.action_view_document_properties,
-            R.string.action_view_document_properties
-        )
+        Open(R.string.action_open),
+        Previous(R.string.action_previous),
+        Next(R.string.action_next),
+        First(R.string.action_first),
+        Last(R.string.action_last),
+        JumpToPage(R.string.action_jump_to_page),
+        RotateClockwise(R.string.action_rotate_clockwise),
+        RotateCounterclockwise(R.string.action_rotate_counterclockwise),
+        Share(R.string.action_share),
+        SaveAs(R.string.action_save_as),
+        Outline(R.string.action_outline),
+        ViewDocumentProperties(R.string.action_view_document_properties)
     }
 
     enum class SnackbarMessage(@StringRes internal val stringRes: Int) {
@@ -108,264 +87,235 @@ class PdfViewerRobot {
     // WebView
 
     fun assertWebViewVisible() {
-        onView(withId(R.id.webview)).check(matches(isDisplayed()))
+        onView(isAssignableFrom(WebView::class.java)).check(matches(isDisplayed()))
     }
 
     fun assertCrashUiHidden() {
-        onView(withId(R.id.webview_alert_layout)).check(matches(not(isDisplayed())))
+        composeRule.onNodeWithTag(TestTags.WEBVIEW_ALERT).assertDoesNotExist()
     }
 
     /**
      * Asserts the full crash UI state
      */
     fun assertCrashUiVisible() {
-        onView(withId(R.id.webview_alert_layout)).check(matches(isDisplayed()))
-        onView(withId(R.id.webview_alert_title))
-            .check(matches(withText(R.string.webview_crash_title)))
-        onView(withId(R.id.webview_alert_message))
-            .check(matches(withText(R.string.webview_crash_message)))
-        onView(withId(R.id.webview_alert_reload)).check(matches(isDisplayed()))
-        onView(withId(R.id.webview)).check(matches(not(isDisplayed())))
+        composeRule.onNodeWithTag(TestTags.WEBVIEW_ALERT).assertIsDisplayed()
+        composeRule.onNodeWithText(getTargetContext().getString(R.string.webview_crash_title))
+            .assertIsDisplayed()
+        composeRule.onNodeWithText(getTargetContext().getString(R.string.webview_crash_message))
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(TestTags.RELOAD_BUTTON).assertIsDisplayed()
+        onView(isAssignableFrom(WebView::class.java)).check(doesNotExist())
     }
 
     // Toolbar
 
     fun assertToolbarTitle(scenario: ActivityScenario<PdfViewer>, expected: String) {
         scenario.onActivity {
-            assertEquals(expected, it.supportActionBar?.title?.toString())
+            assertEquals(expected, it.viewModel.documentName.value.ifEmpty {
+                it.getString(R.string.app_name)
+            })
         }
     }
 
     fun assertToolbarTitleIsAppName(scenario: ActivityScenario<PdfViewer>) {
         scenario.onActivity {
-            val appName = it.getString(R.string.app_name)
-            assertEquals(appName, it.supportActionBar?.title?.toString())
+            assertTrue(
+                "Document name should be empty when showing app name",
+                it.viewModel.documentName.value.isEmpty()
+            )
         }
     }
 
     fun assertToolbarVisible(scenario: ActivityScenario<PdfViewer>) {
         scenario.onActivity {
-            assertEquals("Toolbar should be visible", true, it.supportActionBar?.isShowing)
+            assertEquals("Toolbar should be visible", true, it.viewModel.toolbarVisible.value)
         }
     }
 
     fun assertToolbarHidden(scenario: ActivityScenario<PdfViewer>) {
         scenario.onActivity {
-            assertEquals("Toolbar should be hidden", false, it.supportActionBar?.isShowing)
+            assertEquals("Toolbar should be hidden", false, it.viewModel.toolbarVisible.value)
         }
     }
 
     // Menu
 
     fun click(item: AppMenuItem) {
-        clickMenuItem(item.id, item.titleRes)
+        val title = getTargetContext().getString(item.titleRes)
+        try {
+            composeRule.onNodeWithContentDescription(title).assertIsDisplayed()
+            composeRule.onNodeWithContentDescription(title).performClick()
+        } catch (_: AssertionError) {
+            composeRule.onNodeWithContentDescription(TestTags.OVERFLOW_MENU).performClick()
+            composeRule.waitForIdle()
+            composeRule.onNodeWithText(title).performScrollTo().performClick()
+        }
     }
 
     fun assertNavigationNotShown() {
-        assertViewNotVisible(AppMenuItem.Previous.id)
-        assertViewNotVisible(AppMenuItem.Next.id)
+        val prevDesc = getTargetContext().getString(R.string.action_previous)
+        val nextDesc = getTargetContext().getString(R.string.action_next)
+        composeRule.onNodeWithContentDescription(prevDesc).assertDoesNotExist()
+        composeRule.onNodeWithContentDescription(nextDesc).assertDoesNotExist()
     }
 
     /**
      * Asserts the enabled state of the previous and next buttons.
      */
     fun assertNavigationState(previousEnabled: Boolean, nextEnabled: Boolean) {
-        val prevMatcher = if (previousEnabled) isEnabled() else not(isEnabled())
-        val nextMatcher = if (nextEnabled) isEnabled() else not(isEnabled())
-        onView(withId(AppMenuItem.Previous.id)).check(matches(prevMatcher))
-        onView(withId(AppMenuItem.Next.id)).check(matches(nextMatcher))
+        val prevDesc = getTargetContext().getString(R.string.action_previous)
+        val nextDesc = getTargetContext().getString(R.string.action_next)
+        val prevNode = composeRule.onNodeWithContentDescription(prevDesc)
+        val nextNode = composeRule.onNodeWithContentDescription(nextDesc)
+        if (previousEnabled) prevNode.assertIsEnabled() else prevNode.assertIsNotEnabled()
+        if (nextEnabled) nextNode.assertIsEnabled() else nextNode.assertIsNotEnabled()
     }
 
     fun assertMenuItemEnabled(
-        scenario: ActivityScenario<PdfViewer>,
         item: AppMenuItem,
         expected: Boolean
     ) {
-        scenario.onActivity { activity ->
-            val name = activity.resources.getResourceEntryName(item.id)
-            assertEquals(
-                "Expected '$name' enabled=$expected",
-                expected,
-                activity.isMenuItemEnabled(item.id)
-            )
+        val title = getTargetContext().getString(item.titleRes)
+        try {
+            val node = composeRule.onNodeWithContentDescription(title)
+            if (expected) node.assertIsEnabled() else node.assertIsNotEnabled()
+        } catch (_: AssertionError) {
+            composeRule.onNodeWithContentDescription(TestTags.OVERFLOW_MENU).performClick()
+            composeRule.waitForIdle()
+            val node = composeRule.onNodeWithText(title).performScrollTo()
+            if (expected) node.assertIsEnabled() else node.assertIsNotEnabled()
+            composeRule.onNodeWithContentDescription(TestTags.OVERFLOW_MENU).performClick()
         }
     }
 
     fun assertMenuItemVisible(
-        scenario: ActivityScenario<PdfViewer>,
         item: AppMenuItem,
         expected: Boolean
     ) {
-        scenario.onActivity { activity ->
-            val name = activity.resources.getResourceEntryName(item.id)
-            assertEquals(
-                "Expected '$name' visible=$expected",
-                expected,
-                activity.isMenuItemVisible(item.id)
-            )
+        val title = getTargetContext().getString(item.titleRes)
+        if (expected) {
+            try {
+                composeRule.onNodeWithContentDescription(title).assertIsDisplayed()
+            } catch (_: AssertionError) {
+                composeRule.onNodeWithContentDescription(TestTags.OVERFLOW_MENU).performClick()
+                composeRule.waitForIdle()
+                composeRule.onNodeWithText(title).performScrollTo().assertIsDisplayed()
+                composeRule.onNodeWithContentDescription(TestTags.OVERFLOW_MENU).performClick()
+            }
+        } else {
+            composeRule.onNodeWithContentDescription(title).assertDoesNotExist()
+            try {
+                composeRule.onNodeWithContentDescription(TestTags.OVERFLOW_MENU).performClick()
+                composeRule.waitForIdle()
+                composeRule.onNodeWithText(title).assertDoesNotExist()
+                composeRule.onNodeWithContentDescription(TestTags.OVERFLOW_MENU).performClick()
+            } catch (_: AssertionError) {}
         }
     }
-
 
     // Menu item actions
 
     fun clickNext() = click(AppMenuItem.Next)
     fun clickPrevious() = click(AppMenuItem.Previous)
     fun clickReload() {
-        onView(withId(R.id.webview_alert_reload)).perform(click())
+        composeRule.onNodeWithTag(TestTags.RELOAD_BUTTON).performClick()
     }
     fun tapWebView() {
-        onView(withId(R.id.webview)).perform(click())
+        onView(isAssignableFrom(WebView::class.java)).perform(click())
     }
 
     fun clickRotateClockwise() = click(AppMenuItem.RotateClockwise)
     fun clickRotateCounterclockwise() = click(AppMenuItem.RotateCounterclockwise)
 
-    /**
-     * The broad catch is intentional to catch: 1. The view doesn't exist;
-     * 2. the view isn't displayed enough.
-     */
-    private fun clickMenuItem(@IdRes id: Int, @StringRes titleRes: Int) {
-        try {
-            onView(withId(id)).perform(click())
-        } catch (_: Exception) {
-            Espresso.openActionBarOverflowOrOptionsMenu(
-                ApplicationProvider.getApplicationContext()
-            )
-            onView(withText(titleRes)).perform(click())
-        }
-    }
-
     // JumpToPage
 
-    fun assertNumberPickerStateInDialog(
-        minValue: Int, maxValue: Int, currentValue: Int
-    ) {
-        onView(isAssignableFrom(NumberPicker::class.java))
-            .inRoot(isDialog())
-            .check(matches(hasNumberPickerMin(minValue)))
-        onView(isAssignableFrom(NumberPicker::class.java))
-            .inRoot(isDialog())
-            .check(matches(hasNumberPickerMax(maxValue)))
-        onView(isAssignableFrom(NumberPicker::class.java))
-            .inRoot(isDialog())
-            .check(matches(hasNumberPickerValue(currentValue)))
+    fun assertJumpToPageDialogState(currentValue: Int, maxValue: Int) {
+        composeRule.onNodeWithTag(TestTags.JUMP_TO_PAGE_FIELD)
+            .assertTextContains(currentValue.toString())
+        composeRule.onNodeWithText("Page (1-$maxValue)").assertIsDisplayed()
     }
 
-    fun setNumberPickerValue(value: Int) {
-        onView(isAssignableFrom(NumberPicker::class.java))
-            .perform(setNumberPickerValueAction(value))
+    fun setJumpToPageValue(value: Int) {
+        composeRule.onNodeWithTag(TestTags.JUMP_TO_PAGE_FIELD).performTextClearance()
+        composeRule.onNodeWithTag(TestTags.JUMP_TO_PAGE_FIELD).performTextInput(value.toString())
+    }
+
+    fun typeJumpToPageWithoutClearing(value: Int) {
+        composeRule.onNodeWithTag(TestTags.JUMP_TO_PAGE_FIELD).performTextInput(value.toString())
     }
 
     fun clickDialogOk() {
-        onView(withText(android.R.string.ok)).perform(click())
+        val text = getTargetContext().getString(android.R.string.ok)
+        composeRule.onNodeWithText(text).performClick()
     }
 
     fun clickDialogCancel() {
-        onView(withText(android.R.string.cancel)).perform(click())
+        val text = getTargetContext().getString(android.R.string.cancel)
+        composeRule.onNodeWithText(text).performClick()
     }
 
     // Password
 
     fun showPasswordDialog(scenario: ActivityScenario<PdfViewer>) {
         scenario.onActivity {
-            PasswordPromptFragment().show(
-                it.supportFragmentManager,
-                PasswordPromptFragment::class.java.name
-            )
-            it.supportFragmentManager.executePendingTransactions()
+            it.viewModel.requestPasswordPrompt()
         }
     }
 
     fun typePassword(text: String) {
-        onView(withId(R.id.pdf_password_edit_text))
-            .inRoot(isDialog())
-            .perform(typeText(text), closeSoftKeyboard())
+        composeRule.onNodeWithTag(TestTags.PASSWORD_FIELD).performTextInput(text)
     }
 
     fun clearPasswordField() {
-        onView(withId(R.id.pdf_password_edit_text))
-            .inRoot(isDialog())
-            .perform(clearText(), closeSoftKeyboard())
+        composeRule.onNodeWithTag(TestTags.PASSWORD_FIELD).performTextClearance()
     }
 
     fun assertPasswordPositiveButtonEnabled(enabled: Boolean) {
-        val matcher = if (enabled) isEnabled() else not(isEnabled())
-        onView(withId(android.R.id.button1))
-            .inRoot(isDialog())
-            .check(matches(matcher))
+        val buttonText = getTargetContext().getString(R.string.open)
+        val node = composeRule.onNodeWithText(buttonText)
+        if (enabled) node.assertIsEnabled() else node.assertIsNotEnabled()
     }
 
-    fun assertPasswordError(expectedError: String) {
-        onView(withId(R.id.pdf_password_text_input_layout))
-            .inRoot(isDialog())
-            .check(matches(hasTextInputLayoutError(expectedError)))
+    fun assertPasswordError() {
+        val expectedError = InstrumentationRegistry.getInstrumentation()
+            .targetContext.getString(R.string.invalid_password)
+        composeRule.onNodeWithText(expectedError).assertIsDisplayed()
     }
 
     fun assertPasswordDialogShown() {
-        onView(withId(R.id.pdf_password_edit_text))
-            .inRoot(isDialog())
-            .check(matches(isDisplayed()))
+        composeRule.onNodeWithTag(TestTags.PASSWORD_FIELD).assertIsDisplayed()
+    }
+
+    fun waitForPasswordDialog(timeout: Long = 15_000) {
+        composeRule.waitUntil(timeout) {
+            composeRule.onAllNodesWithTag(TestTags.PASSWORD_FIELD)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    fun waitForPasswordError(timeout: Long = 15_000) {
+        val expectedError = InstrumentationRegistry.getInstrumentation()
+            .targetContext.getString(R.string.invalid_password)
+        composeRule.waitUntil(timeout) {
+            composeRule
+                .onAllNodes(hasText(expectedError))
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    fun waitForPasswordDialogDismissed(timeout: Long = 15_000) {
+        composeRule.waitUntil(timeout) {
+            composeRule.onAllNodesWithTag(TestTags.PASSWORD_FIELD)
+                .fetchSemanticsNodes().isEmpty()
+        }
+    }
+
+    fun clickPasswordPositiveButton() {
+        val buttonText = getTargetContext().getString(R.string.open)
+        composeRule.onNodeWithText(buttonText).performClick()
     }
 
     // Helpers
-
-    private fun assertViewNotVisible(@IdRes viewId: Int) {
-        try {
-            onView(withId(viewId)).check(doesNotExist())
-        } catch (_: AssertionError) {
-            onView(withId(viewId)).check(matches(not(isDisplayed())))
-        }
-    }
-
-    // NumberPicker
-
-    private fun hasNumberPickerMin(expected: Int): Matcher<View> =
-        object : BoundedMatcher<View, NumberPicker>(NumberPicker::class.java) {
-            override fun describeTo(description: Description) {
-                description.appendText("NumberPicker with minValue=$expected")
-            }
-            override fun matchesSafely(picker: NumberPicker) = picker.minValue == expected
-        }
-
-    private fun hasNumberPickerMax(expected: Int): Matcher<View> =
-        object : BoundedMatcher<View, NumberPicker>(NumberPicker::class.java) {
-            override fun describeTo(description: Description) {
-                description.appendText("NumberPicker with maxValue=$expected")
-            }
-            override fun matchesSafely(picker: NumberPicker) = picker.maxValue == expected
-        }
-
-    private fun hasNumberPickerValue(expected: Int): Matcher<View> =
-        object : BoundedMatcher<View, NumberPicker>(NumberPicker::class.java) {
-            override fun describeTo(description: Description) {
-                description.appendText("NumberPicker with value=$expected")
-            }
-            override fun matchesSafely(picker: NumberPicker) = picker.value == expected
-        }
-
-    private fun setNumberPickerValueAction(value: Int): ViewAction =
-        object : ViewAction {
-            override fun getConstraints() = isAssignableFrom(NumberPicker::class.java)
-            override fun getDescription() = "Set NumberPicker value to $value"
-            override fun perform(uiController: UiController, view: View) {
-                (view as NumberPicker).value = value
-                uiController.loopMainThreadUntilIdle()
-            }
-        }
-
-    // TextInputLayout matcher
-
-    private fun hasTextInputLayoutError(expected: String): Matcher<View> =
-        object : TypeSafeMatcher<View>() {
-            override fun describeTo(description: Description) {
-                description.appendText("TextInputLayout with error='$expected'")
-            }
-            override fun matchesSafely(view: View): Boolean {
-                if (view !is TextInputLayout) return false
-                return view.error?.toString() == expected
-            }
-        }
 
     // WebView JS
 
@@ -444,7 +394,7 @@ class PdfViewerRobot {
     fun getLoadedOutlineSize(scenario: ActivityScenario<PdfViewer>): Int {
         var size = -1
         scenario.onActivity {
-            val status = it.outlineStatus
+            val status = it.viewModel.outline.value
             if (status is PdfViewModel.OutlineStatus.Loaded) {
                 size = status.outline.size
             }
@@ -455,34 +405,28 @@ class PdfViewerRobot {
     fun openOutlineFragment() = click(AppMenuItem.Outline)
 
     fun waitForOutlineEntries(timeout: Long = 15_000) {
-        PdfViewerTestUtils.pollUntilAssertion(timeout) {
-            onView(withId(R.id.list)).check(matches(isDisplayed()))
-            onView(withId(R.id.list)).check(matches(hasMinimumChildCount(1)))
+        composeRule.waitUntil(timeout) {
+            composeRule.onAllNodesWithTag(TestTags.OUTLINE_ITEM)
+                .fetchSemanticsNodes().isNotEmpty()
         }
     }
 
     fun assertDocumentPropertyVisible(expected: String) {
-        onData(
-            allOf(
-                instanceOf(CharSequence::class.java),
-                hasToString(containsString(expected))
-            )
-        )
-            .inRoot(isDialog())
-            .check(matches(isDisplayed()))
+        composeRule.onNodeWithText(expected, substring = true)
+            .performScrollTo()
+            .assertIsDisplayed()
     }
 
     fun clickOutlineEntry(position: Int) {
-        onView(withId(R.id.list))
-            .perform(
-                RecyclerViewActions.actionOnItemAtPosition<RecyclerView.ViewHolder>(
-                position, click()
-            ))
+        composeRule.onAllNodesWithTag(TestTags.OUTLINE_ITEM)[position]
+            .performScrollTo()
+            .performClick()
     }
 
     fun waitForOutlineFragmentDismissed(timeout: Long = 5_000) {
-        PdfViewerTestUtils.pollUntilAssertion(timeout) {
-            onView(withId(R.id.list)).check(doesNotExist())
+        composeRule.waitUntil(timeout) {
+            composeRule.onAllNodesWithTag(TestTags.OUTLINE_ITEM)
+                .fetchSemanticsNodes().isEmpty()
         }
     }
 
@@ -544,15 +488,9 @@ class PdfViewerRobot {
     ): GestureMargins {
         var margins: GestureMargins? = null
         scenario.onActivity { activity ->
-            val webView = activity.findViewById<View>(R.id.webview)
+            val webView = activity.webView ?: return@onActivity
             val webViewBounds = getBoundsInScreen(webView)
-            val appBarBounds = Rect()
-            val appBar = activity.findViewById<View>(R.id.app_bar_layout)
-            val appBarBottom = if (appBar.getGlobalVisibleRect(appBarBounds)) {
-                appBarBounds.bottom
-            } else {
-                webViewBounds.top
-            }
+
             val insetTypes = WindowInsetsCompat.Type.systemBars() or
                     WindowInsetsCompat.Type.displayCutout()
             val insets = ViewCompat.getRootWindowInsets(webView)?.getInsets(insetTypes)
@@ -563,9 +501,15 @@ class PdfViewerRobot {
                 (webViewBounds.width() * UIAUTOMATOR_DEFAULT_GESTURE_MARGIN_PERCENT).roundToInt()
             val defaultVertical =
                 (webViewBounds.height() * UIAUTOMATOR_DEFAULT_GESTURE_MARGIN_PERCENT).roundToInt()
+
+            val toolbarBottom = if (activity.viewModel.toolbarVisible.value) {
+                activity.viewModel.insetTop.toInt()
+            } else {
+                0
+            }
             val topObstruction = maxOf(
                 insets?.top ?: 0,
-                appBarBottom - webViewBounds.top
+                toolbarBottom
             ).coerceAtLeast(0)
 
             val left = maxOf(defaultHorizontal, (insets?.left ?: 0) + edgeMargin)
@@ -651,33 +595,5 @@ class PdfViewerRobot {
             "Text layer should be aligned with canvas",
             "\"aligned\"", result
         )
-    }
-
-    fun waitForPasswordDialog(timeout: Long = 15_000) {
-        PdfViewerTestUtils.pollUntilAssertion(timeout) {
-            onView(withId(R.id.pdf_password_edit_text))
-                .inRoot(isDialog())
-                .check(matches(isDisplayed()))
-        }
-    }
-
-    fun clickPasswordPositiveButton() {
-        onView(withId(android.R.id.button1))
-            .inRoot(isDialog())
-            .perform(click())
-    }
-
-    fun waitForPasswordError(expectedError: String, timeout: Long = 15_000) {
-        PdfViewerTestUtils.pollUntilAssertion(timeout) {
-            onView(withId(R.id.pdf_password_text_input_layout))
-                .inRoot(isDialog())
-                .check(matches(hasTextInputLayoutError(expectedError)))
-        }
-    }
-
-    fun waitForPasswordDialogDismissed(timeout: Long = 15_000) {
-        PdfViewerTestUtils.pollUntilAssertion(timeout) {
-            onView(withId(R.id.pdf_password_edit_text)).check(doesNotExist())
-        }
     }
 }

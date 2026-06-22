@@ -1,11 +1,12 @@
 package app.grapheneos.pdfviewer.test
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.grapheneos.pdfviewer.MIN_ZOOM_RATIO
-import app.grapheneos.pdfviewer.RetryRules
+import app.grapheneos.pdfviewer.PdfJsChannel.Companion.MIN_ZOOM_RATIO
+import app.grapheneos.pdfviewer.testrules.RetryRules
+import app.grapheneos.pdfviewer.RetryableComposeRule
 import app.grapheneos.pdfviewer.currentPage
 import app.grapheneos.pdfviewer.documentProperties
-import app.grapheneos.pdfviewer.refreshMenuSync
+import app.grapheneos.pdfviewer.testrules.OrientationRules
 import app.grapheneos.pdfviewer.totalPages
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
@@ -13,8 +14,10 @@ import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 import kotlin.math.abs
 
@@ -24,10 +27,20 @@ import kotlin.math.abs
 @RunWith(AndroidJUnit4::class)
 class PdfViewerRenderTest {
 
-    @get:Rule
-    val retryRules = RetryRules()
+    private val composeRule = RetryableComposeRule()
 
-    private val robot = PdfViewerRobot()
+    @get:Rule
+    val rules: RuleChain = RuleChain
+        .outerRule(RetryRules())
+        .around(OrientationRules())
+        .around(composeRule)
+
+    private val robot = PdfViewerRobot(composeRule)
+
+    @Before
+    fun setup() {
+        PdfViewerTestUtils.init(composeRule)
+    }
 
     @Test
     fun documentLoad_setsCorrectActivityStates() {
@@ -266,9 +279,9 @@ class PdfViewerRenderTest {
     fun documentPropertiesDialog_showsExpectedRows() {
         PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
-            scenario.onActivity { it.refreshMenuSync() }
 
             robot.click(PdfViewerRobot.AppMenuItem.ViewDocumentProperties)
+            composeRule.waitForIdle()
 
             robot.assertDocumentPropertyVisible("Test Document")
             robot.assertDocumentPropertyVisible("Test Author")

@@ -24,7 +24,7 @@ class PDFJsPropertiesToDocumentPropertyConverter(
         json: JSONObject,
         collections: MutableMap<DocumentProperty, String>
     ) {
-        for (documentProperty in DocumentProperty.values()) {
+        for (documentProperty in DocumentProperty.entries) {
             val key = documentProperty.key
             if (key.isEmpty()) continue
             val value = json.optString(key, DEFAULT_VALUE)

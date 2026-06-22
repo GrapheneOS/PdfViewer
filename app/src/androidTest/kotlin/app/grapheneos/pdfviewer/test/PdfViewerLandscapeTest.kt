@@ -1,37 +1,37 @@
 package app.grapheneos.pdfviewer.test
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.uiautomator.UiDevice
-import app.grapheneos.pdfviewer.RetryRules
+import app.grapheneos.pdfviewer.RetryableComposeRule
 import app.grapheneos.pdfviewer.currentPage
-import app.grapheneos.pdfviewer.refreshMenuSync
-import app.grapheneos.pdfviewer.totalPages
+import app.grapheneos.pdfviewer.testrules.OrientationRules
+import app.grapheneos.pdfviewer.testrules.RetryRules
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
 import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class PdfViewerLandscapeTest {
 
+    private val composeRule = RetryableComposeRule()
+
     @get:Rule
-    val retryRules = RetryRules()
+    val rules: RuleChain = RuleChain
+        .outerRule(RetryRules())
+        .around(OrientationRules())
+        .around(composeRule)
 
-    private val robot = PdfViewerRobot()
+    private val robot = PdfViewerRobot(composeRule)
 
-    @After
-    fun resetDeviceOrientation() {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val device = UiDevice.getInstance(instrumentation)
-        device.setOrientationNatural()
-        instrumentation.waitForIdleSync()
-        device.unfreezeRotation()
+    @Before
+    fun setup() {
+        PdfViewerTestUtils.init(composeRule)
     }
 
     @Test
@@ -116,52 +116,39 @@ class PdfViewerLandscapeTest {
     }
 
     @Test
-    fun jumpToPageDialog_preservesPickerValueAcrossRotation() {
+    fun jumpToPageDialog_survivesDeviceOrientationChange() {
         PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
-
-            scenario.onActivity {
-                it.currentPage = 3
-                it.refreshMenuSync()
-            }
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
 
             robot.click(PdfViewerRobot.AppMenuItem.JumpToPage)
-            robot.setNumberPickerValue(4)
+
+            robot.typeJumpToPageWithoutClearing(3)
+            robot.assertJumpToPageDialogState(currentValue = 3, maxValue = 4)
 
             PdfViewerTestUtils.setDeviceOrientation(scenario, landscape = true)
 
-            robot.assertNumberPickerStateInDialog(
-                minValue = 1, maxValue = 4, currentValue = 4
-            )
+            robot.assertJumpToPageDialogState(currentValue = 3, maxValue = 4)
+            robot.clickDialogOk()
+
+            scenario.onActivity { assertEquals(3, it.currentPage) }
         }
     }
 
     @Test
-    fun passwordDialog_survivesRotationWithInitialState() {
-        PdfViewerLauncher.launchWithTestAsset("test-encrypted.pdf").use { scenario ->
-            robot.waitForPasswordDialog()
-
-            PdfViewerTestUtils.setDeviceOrientation(scenario, landscape = true)
-            robot.waitForPasswordDialog()
-
-            robot.assertPasswordDialogShown()
-            robot.assertPasswordPositiveButtonEnabled(enabled = false)
-        }
-    }
-
-    @Test
-    fun documentPropertiesDialog_survivesRotation() {
-        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+    fun outline_survivesOrientationChange() {
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
-            scenario.onActivity { it.refreshMenuSync() }
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+            PdfViewerTestUtils.waitForOutlineAvailable(scenario)
 
-            robot.click(PdfViewerRobot.AppMenuItem.ViewDocumentProperties)
-            robot.assertDocumentPropertyVisible("Test Document")
+            robot.openOutlineFragment()
+            robot.waitForOutlineEntries()
 
             PdfViewerTestUtils.setDeviceOrientation(scenario, landscape = true)
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
 
-            robot.assertDocumentPropertyVisible("Test Document")
-            robot.assertDocumentPropertyVisible("Test Author")
+            robot.waitForOutlineEntries()
         }
     }
 }

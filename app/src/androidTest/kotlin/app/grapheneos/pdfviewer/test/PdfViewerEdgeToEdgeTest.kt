@@ -1,19 +1,21 @@
 package app.grapheneos.pdfviewer.test
 
-import android.view.View
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.grapheneos.pdfviewer.PdfViewer
-import app.grapheneos.pdfviewer.R
-import app.grapheneos.pdfviewer.RetryRules
+import app.grapheneos.pdfviewer.testrules.RetryRules
+import app.grapheneos.pdfviewer.RetryableComposeRule
+import app.grapheneos.pdfviewer.testrules.OrientationRules
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
 import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 import kotlin.math.abs
 
@@ -23,10 +25,20 @@ import kotlin.math.abs
 @RunWith(AndroidJUnit4::class)
 class PdfViewerEdgeToEdgeTest {
 
-    @get:Rule
-    val retryRules = RetryRules()
+    private val composeRule = RetryableComposeRule()
 
-    private val robot = PdfViewerRobot()
+    @get:Rule
+    val rules: RuleChain = RuleChain
+        .outerRule(RetryRules())
+        .around(OrientationRules())
+        .around(composeRule)
+
+    private val robot = PdfViewerRobot(composeRule)
+
+    @Before
+    fun setup() {
+        PdfViewerTestUtils.init(composeRule)
+    }
 
     private data class EdgeInsets(
         val left: Float,
@@ -112,15 +124,14 @@ class PdfViewerEdgeToEdgeTest {
     ): EdgeInsets {
         var result: EdgeInsets? = null
         scenario.onActivity { activity ->
-            val webView = activity.findViewById<View>(R.id.webview)
-            val appBar = activity.findViewById<View>(R.id.app_bar_layout)
+            val webView = activity.webView ?: return@onActivity
             val insetTypes = WindowInsetsCompat.Type.systemBars() or
                     WindowInsetsCompat.Type.displayCutout()
             val insets = ViewCompat.getRootWindowInsets(webView)?.getInsets(insetTypes)
 
             result = EdgeInsets(
                 left = (insets?.left ?: 0).toFloat(),
-                top = appBar.height.toFloat(),
+                top = activity.viewModel.insetTop,
                 right = (insets?.right ?: 0).toFloat(),
                 bottom = (insets?.bottom ?: 0).toFloat()
             )

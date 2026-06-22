@@ -1,20 +1,19 @@
 package app.grapheneos.pdfviewer.test
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.grapheneos.pdfviewer.RetryRules
+import app.grapheneos.pdfviewer.testrules.RetryRules
+import app.grapheneos.pdfviewer.RetryableComposeRule
 import app.grapheneos.pdfviewer.crashed
 import app.grapheneos.pdfviewer.currentPage
-import app.grapheneos.pdfviewer.documentName
 import app.grapheneos.pdfviewer.documentProperties
-import app.grapheneos.pdfviewer.outlineStatus
-import app.grapheneos.pdfviewer.refreshMenuSync
-import app.grapheneos.pdfviewer.totalPages
+import app.grapheneos.pdfviewer.testrules.OrientationRules
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
 import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
-import app.grapheneos.pdfviewer.viewModel.PdfViewModel
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 
 /**
@@ -23,10 +22,20 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PdfViewerMenuStateTest {
 
-    @get:Rule
-    val retryRules = RetryRules()
+    private val composeRule = RetryableComposeRule()
 
-    private val robot = PdfViewerRobot()
+    @get:Rule
+    val rules: RuleChain = RuleChain
+        .outerRule(RetryRules())
+        .around(OrientationRules())
+        .around(composeRule)
+
+    private val robot = PdfViewerRobot(composeRule)
+
+    @Before
+    fun setup() {
+        PdfViewerTestUtils.init(composeRule)
+    }
 
     @Test
     fun preLoadState_navigationItemsNotShown() {
@@ -40,10 +49,6 @@ class PdfViewerMenuStateTest {
         PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
 
-            scenario.onActivity {
-                it.refreshMenuSync()
-            }
-
             robot.assertNavigationState(previousEnabled = false, nextEnabled = true)
         }
     }
@@ -55,8 +60,8 @@ class PdfViewerMenuStateTest {
 
             scenario.onActivity {
                 it.currentPage = 4
-                it.refreshMenuSync()
             }
+            composeRule.waitForIdle()
 
             robot.assertNavigationState(previousEnabled = true, nextEnabled = false)
         }
@@ -69,8 +74,8 @@ class PdfViewerMenuStateTest {
 
             scenario.onActivity {
                 it.currentPage = 2
-                it.refreshMenuSync()
             }
+            composeRule.waitForIdle()
 
             robot.assertNavigationState(previousEnabled = true, nextEnabled = true)
         }
@@ -80,10 +85,6 @@ class PdfViewerMenuStateTest {
     fun postLoadState_singlePage_bothNavigationDisabled() {
         PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
-
-            scenario.onActivity {
-                it.refreshMenuSync()
-            }
 
             robot.assertNavigationState(previousEnabled = false, nextEnabled = false)
         }
@@ -98,15 +99,15 @@ class PdfViewerMenuStateTest {
 
             scenario.onActivity {
                 it.crashed = true
-                it.refreshMenuSync()
             }
+            composeRule.waitForIdle()
 
-            robot.assertMenuItemEnabled(scenario, PdfViewerRobot.AppMenuItem.Open, expected = false)
-            robot.assertMenuItemEnabled(scenario, PdfViewerRobot.AppMenuItem.Next, expected = false)
-            robot.assertMenuItemEnabled(scenario, PdfViewerRobot.AppMenuItem.Previous, expected = false)
-            robot.assertMenuItemEnabled(scenario, PdfViewerRobot.AppMenuItem.Share, expected = false)
-            robot.assertMenuItemEnabled(scenario, PdfViewerRobot.AppMenuItem.SaveAs, expected = false)
-            robot.assertMenuItemEnabled(scenario, PdfViewerRobot.AppMenuItem.JumpToPage, expected = false)
+            robot.assertMenuItemEnabled(PdfViewerRobot.AppMenuItem.Open, expected = false)
+            robot.assertMenuItemEnabled(PdfViewerRobot.AppMenuItem.Next, expected = false)
+            robot.assertMenuItemEnabled(PdfViewerRobot.AppMenuItem.Previous, expected = false)
+            robot.assertMenuItemEnabled(PdfViewerRobot.AppMenuItem.Share, expected = false)
+            robot.assertMenuItemEnabled(PdfViewerRobot.AppMenuItem.SaveAs, expected = false)
+            robot.assertMenuItemEnabled(PdfViewerRobot.AppMenuItem.JumpToPage, expected = false)
         }
     }
 
@@ -117,11 +118,7 @@ class PdfViewerMenuStateTest {
         PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
 
-            scenario.onActivity {
-                it.refreshMenuSync()
-            }
-
-            robot.assertMenuItemVisible(scenario, PdfViewerRobot.AppMenuItem.Outline, expected = false)
+            robot.assertMenuItemVisible(PdfViewerRobot.AppMenuItem.Outline, expected = false)
         }
     }
 
@@ -131,11 +128,7 @@ class PdfViewerMenuStateTest {
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
             PdfViewerTestUtils.waitForOutlineAvailable(scenario)
 
-            scenario.onActivity {
-                it.refreshMenuSync()
-            }
-
-            robot.assertMenuItemVisible(scenario, PdfViewerRobot.AppMenuItem.Outline, expected = true)
+            robot.assertMenuItemVisible(PdfViewerRobot.AppMenuItem.Outline, expected = true)
         }
     }
 
@@ -148,11 +141,11 @@ class PdfViewerMenuStateTest {
 
             scenario.onActivity {
                 it.documentProperties = null
-                it.refreshMenuSync()
             }
+            composeRule.waitForIdle()
 
             robot.assertMenuItemEnabled(
-                scenario, PdfViewerRobot.AppMenuItem.ViewDocumentProperties, expected = false
+                PdfViewerRobot.AppMenuItem.ViewDocumentProperties, expected = false
             )
         }
     }
@@ -162,12 +155,8 @@ class PdfViewerMenuStateTest {
         PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
 
-            scenario.onActivity {
-                it.refreshMenuSync()
-            }
-
             robot.assertMenuItemEnabled(
-                scenario, PdfViewerRobot.AppMenuItem.ViewDocumentProperties, expected = true
+                PdfViewerRobot.AppMenuItem.ViewDocumentProperties, expected = true
             )
         }
     }

@@ -1,4 +1,4 @@
-package app.grapheneos.pdfviewer
+package app.grapheneos.pdfviewer.testrules
 
 import android.util.Log
 import org.junit.rules.TestRule
