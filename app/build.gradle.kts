@@ -50,7 +50,7 @@ android {
         applicationId = "app.grapheneos.pdfviewer"
         minSdk = 26
         targetSdk = 37
-        versionCode = 32
+        versionCode = 33
         versionName = versionCode.toString()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
