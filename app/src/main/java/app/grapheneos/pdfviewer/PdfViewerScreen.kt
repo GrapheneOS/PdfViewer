@@ -136,6 +136,9 @@ import kotlin.math.roundToInt
 private const val TAG = "PdfViewerScreen"
 private const val MIN_WEBVIEW_RELEASE = 133
 private val ZOOM_PRESETS = intArrayOf(25, 50, 75, 100, 125, 150, 200, 300, 500, 750, 1000)
+private const val MOUSE_WHEEL_ZOOM_IN_FACTOR = 1.25f
+private const val MOUSE_WHEEL_ZOOM_OUT_FACTOR = 0.8f
+private const val MOUSE_WHEEL_ZOOM_END_DELAY_MS = 120L
 private const val RENDER_DEFAULT_SCRIPT = "renderDefault()"
 private const val RENDER_FINAL_ZOOM_SCRIPT = "renderFinalZoom()"
 private const val RENDER_TRANSIENT_ZOOM_SCRIPT = "renderTransientZoom()"
@@ -342,6 +345,23 @@ fun PdfViewerScreen(
 
     DisposableEffect(webView) {
         val wv = webView ?: return@DisposableEffect onDispose {}
+        val renderMouseWheelZoomEnd = Runnable {
+            wv.evaluateJavascript(RENDER_FINAL_ZOOM_SCRIPT, null)
+        }
+
+        fun renderTransientZoom(scaleFactor: Float, focusX: Float, focusY: Float): Boolean {
+            val currentZoomRatio = viewModel.zoomRatio.value
+            if (currentZoomRatio == 0f) return false
+
+            viewModel.setZoomRatio(
+                (currentZoomRatio * scaleFactor).coerceIn(MIN_ZOOM_RATIO, MAX_ZOOM_RATIO)
+            )
+            viewModel.zoomFocusX = focusX
+            viewModel.zoomFocusY = focusY
+            wv.evaluateJavascript(RENDER_TRANSIENT_ZOOM_SCRIPT, null)
+            return true
+        }
+
         GestureHelper.attach(context, wv, object : GestureHelper.GestureListener {
             override fun onTapUp(): Boolean {
                 if (viewModel.uri.value == null) return false
@@ -378,13 +398,21 @@ fun PdfViewerScreen(
             }
 
             override fun onZoom(scaleFactor: Float, focusX: Float, focusY: Float) {
-                viewModel.setZoomRatio(
-                    (viewModel.zoomRatio.value * scaleFactor)
-                        .coerceIn(MIN_ZOOM_RATIO, MAX_ZOOM_RATIO)
-                )
-                viewModel.zoomFocusX = focusX
-                viewModel.zoomFocusY = focusY
-                wv.evaluateJavascript(RENDER_TRANSIENT_ZOOM_SCRIPT, null)
+                wv.removeCallbacks(renderMouseWheelZoomEnd)
+                renderTransientZoom(scaleFactor, focusX, focusY)
+            }
+
+            override fun onCtrlMouseWheelZoom(zoomIn: Boolean, focusX: Float, focusY: Float) {
+                val scaleFactor = if (zoomIn) {
+                    MOUSE_WHEEL_ZOOM_IN_FACTOR
+                } else {
+                    MOUSE_WHEEL_ZOOM_OUT_FACTOR
+                }
+
+                if (!renderTransientZoom(scaleFactor, focusX, focusY)) return
+
+                wv.removeCallbacks(renderMouseWheelZoomEnd)
+                wv.postDelayed(renderMouseWheelZoomEnd, MOUSE_WHEEL_ZOOM_END_DELAY_MS)
             }
 
             override fun onZoomEnd() {
@@ -392,7 +420,9 @@ fun PdfViewerScreen(
             }
         })
         onDispose {
+            wv.removeCallbacks(renderMouseWheelZoomEnd)
             wv.setOnTouchListener(null)
+            wv.setOnGenericMotionListener(null)
         }
     }
 

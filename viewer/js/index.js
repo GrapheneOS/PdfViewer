@@ -18,6 +18,8 @@ let outlineAbort = new AbortController();
 let pageRendering = false;
 let renderPending = false;
 let renderPendingMode = RENDER_MODE_DEFAULT;
+let activeRenderMode = RENDER_MODE_DEFAULT;
+let finalZoomPending = false;
 const canvas = document.getElementById("content");
 const container = document.getElementById("container");
 let orientationDegrees = 0;
@@ -37,7 +39,6 @@ let userZoomed = false;
 
 function maybeRenderNextPage() {
     if (renderPending) {
-        pageRendering = false;
         renderPending = false;
         renderPage(channel.getPage(), renderPendingMode, false);
         return true;
@@ -47,9 +48,7 @@ function maybeRenderNextPage() {
 
 function handleRenderingError(error) {
     console.log("rendering error: " + error);
-
-    pageRendering = false;
-    maybeRenderNextPage();
+    finishRenderingAndContinueQueue();
 }
 
 function doPrerender(pageNumber, prerenderTrigger) {
@@ -115,9 +114,34 @@ function isTransientZoomRender(renderMode) {
     return renderMode === RENDER_MODE_TRANSIENT_ZOOM;
 }
 
+function isTransientZoomQueuedOrRendering() {
+    return isTransientZoomRender(activeRenderMode) ||
+            (renderPending && isTransientZoomRender(renderPendingMode));
+}
+
+function renderFinalZoomIfPending() {
+    if (!finalZoomPending) {
+        return;
+    }
+
+    finalZoomPending = false;
+    renderPage(channel.getPage(), RENDER_MODE_FINAL_ZOOM, false);
+}
+
+function finishRenderingAndContinueQueue() {
+    pageRendering = false;
+    if (!maybeRenderNextPage()) {
+        renderFinalZoomIfPending();
+    }
+}
+
 function renderPage(pageNumber, renderMode, prerender, prerenderTrigger = 0) {
     pageRendering = true;
     useRender = !prerender;
+    activeRenderMode = renderMode;
+    if (!isTransientZoomRender(renderMode)) {
+        finalZoomPending = false;
+    }
 
     newPageNumber = pageNumber;
     newZoomRatio = channel.getZoomRatio();
@@ -193,7 +217,7 @@ function renderPage(pageNumber, renderMode, prerender, prerenderTrigger = 0) {
 
             if (isTransientZoomRender(renderMode)) {
                 textLayerDiv.hidden = true;
-                pageRendering = false;
+                finishRenderingAndContinueQueue();
                 return;
             }
         }
@@ -296,6 +320,11 @@ function requestRender(renderMode) {
     }
 
     if (pageRendering) {
+        if (isFinalZoomRender(renderMode) && isTransientZoomQueuedOrRendering()) {
+            finalZoomPending = true;
+            return;
+        }
+
         if (newPageNumber === channel.getPage() && newZoomRatio === channel.getZoomRatio() &&
                 orientationDegrees === channel.getDocumentOrientationDegrees()) {
             useRender = true;

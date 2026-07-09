@@ -1,6 +1,10 @@
 package app.grapheneos.pdfviewer.util
 
 import android.graphics.Rect
+import android.os.SystemClock
+import android.view.InputDevice
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.webkit.WebView
 import androidx.annotation.StringRes
@@ -451,6 +455,50 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
         val webView = findWebViewObject()
         applyContentGestureMargins(webView, scenario)
         webView.pinchClose(percent, speed)
+    }
+
+    fun performCtrlMouseWheelZoom(
+        scenario: ActivityScenario<PdfViewer>,
+        zoomIn: Boolean
+    ) {
+        scenario.onActivity { activity ->
+            val webView = activity.webView ?: throw AssertionError("WebView is null")
+            val eventTime = SystemClock.uptimeMillis()
+            val coords = MotionEvent.PointerCoords().apply {
+                x = webView.width / 2f
+                y = webView.height / 2f
+                setAxisValue(
+                    MotionEvent.AXIS_VSCROLL,
+                    if (zoomIn) 1f else -1f
+                )
+            }
+            val properties = MotionEvent.PointerProperties().apply {
+                id = 0
+                toolType = MotionEvent.TOOL_TYPE_MOUSE
+            }
+            val event = MotionEvent.obtain(
+                eventTime,
+                eventTime,
+                MotionEvent.ACTION_SCROLL,
+                1,
+                arrayOf(properties),
+                arrayOf(coords),
+                KeyEvent.META_CTRL_ON,
+                0,
+                0f,
+                0f,
+                0,
+                0,
+                InputDevice.SOURCE_MOUSE,
+                0
+            )
+
+            try {
+                webView.dispatchGenericMotionEvent(event)
+            } finally {
+                event.recycle()
+            }
+        }
     }
 
     private fun findWebViewObject(): UiObject2 {
