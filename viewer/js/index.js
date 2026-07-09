@@ -9,11 +9,15 @@ import { getSimplifiedOutline } from "./outline.js";
 
 GlobalWorkerOptions.workerSrc = "/viewer/js/worker.js";
 
+const RENDER_MODE_DEFAULT = 0;
+const RENDER_MODE_FINAL_ZOOM = 1;
+const RENDER_MODE_TRANSIENT_ZOOM = 2;
+
 let pdfDoc = null;
 let outlineAbort = new AbortController();
 let pageRendering = false;
 let renderPending = false;
-let renderPendingZoom = 0;
+let renderPendingMode = RENDER_MODE_DEFAULT;
 const canvas = document.getElementById("content");
 const container = document.getElementById("container");
 let orientationDegrees = 0;
@@ -35,7 +39,7 @@ function maybeRenderNextPage() {
     if (renderPending) {
         pageRendering = false;
         renderPending = false;
-        renderPage(channel.getPage(), renderPendingZoom, false);
+        renderPage(channel.getPage(), renderPendingMode, false);
         return true;
     }
     return false;
@@ -51,24 +55,24 @@ function handleRenderingError(error) {
 function doPrerender(pageNumber, prerenderTrigger) {
     if (useRender) {
         if (pageNumber + 1 <= pdfDoc.numPages) {
-            renderPage(pageNumber + 1, false, true, pageNumber);
+            renderPage(pageNumber + 1, RENDER_MODE_DEFAULT, true, pageNumber);
         } else if (pageNumber - 1 > 0) {
-            renderPage(pageNumber - 1, false, true, pageNumber);
+            renderPage(pageNumber - 1, RENDER_MODE_DEFAULT, true, pageNumber);
         }
     } else if (pageNumber === prerenderTrigger + 1) {
         if (prerenderTrigger - 1 > 0) {
-            renderPage(prerenderTrigger - 1, false, true, prerenderTrigger);
+            renderPage(prerenderTrigger - 1, RENDER_MODE_DEFAULT, true, prerenderTrigger);
         }
     }
 }
 
-function display(newCanvas, zoom) {
+function display(newCanvas, renderMode) {
     canvas.height = newCanvas.height;
     canvas.width = newCanvas.width;
     canvas.style.height = newCanvas.style.height;
     canvas.style.width = newCanvas.style.width;
     canvas.getContext("2d", { alpha: false }).drawImage(newCanvas, 0, 0);
-    if (!zoom) {
+    if (renderMode === RENDER_MODE_DEFAULT) {
         scrollTo(0, 0);
     }
 }
@@ -103,7 +107,15 @@ function getDefaultZoomRatio(page, degrees) {
     return Math.max(Math.min(widthZoomRatio, heightZoomRatio, channel.getMaxZoomRatio()), channel.getMinZoomRatio());
 }
 
-function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
+function isFinalZoomRender(renderMode) {
+    return renderMode === RENDER_MODE_FINAL_ZOOM;
+}
+
+function isTransientZoomRender(renderMode) {
+    return renderMode === RENDER_MODE_TRANSIENT_ZOOM;
+}
+
+function renderPage(pageNumber, renderMode, prerender, prerenderTrigger = 0) {
     pageRendering = true;
     useRender = !prerender;
 
@@ -112,7 +124,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
     orientationDegrees = channel.getDocumentOrientationDegrees();
     console.log("page: " + pageNumber + ", zoom: " + newZoomRatio +
                 ", orientationDegrees: " + orientationDegrees + ", prerender: " + prerender);
-    for (let i = 0; !zoom && i < cache.length; i++) {
+    for (let i = 0; renderMode === RENDER_MODE_DEFAULT && i < cache.length; i++) {
         const cached = cache[i];
         if (cached.pageNumber === pageNumber && cached.zoomRatio === newZoomRatio &&
                 cached.orientationDegrees === orientationDegrees) {
@@ -120,7 +132,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
                 cache.splice(i, 1);
                 cache.push(cached);
 
-                display(cached.canvas, zoom);
+                display(cached.canvas, renderMode);
                 zoomRatio = newZoomRatio;
 
                 textLayerDiv.replaceWith(cached.textLayerDiv);
@@ -163,12 +175,12 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
             zoomRatio = newZoomRatio;
         }
 
-        if (zoom === 1 || zoom === 2) {
+        if (isFinalZoomRender(renderMode) || isTransientZoomRender(renderMode)) {
             // Focus point in CSS px, in viewport coordinates.
-            const focusX = zoom === 2
+            const focusX = isTransientZoomRender(renderMode)
                 ? channel.getZoomFocusX() / ratio
                 : globalThis.innerWidth / 2;
-            const focusY = zoom === 2
+            const focusY = isTransientZoomRender(renderMode)
                 ? channel.getZoomFocusY() / ratio
                 : globalThis.innerHeight / 2;
 
@@ -179,7 +191,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
             const translationFactor = scaleFactor - 1;
             scrollBy(globalFocusX * translationFactor, globalFocusY * translationFactor);
 
-            if (zoom === 2) {
+            if (isTransientZoomRender(renderMode)) {
                 textLayerDiv.hidden = true;
                 pageRendering = false;
                 return;
@@ -230,7 +242,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
                 if (!useRender || rendered) {
                     return;
                 }
-                display(newCanvas, zoom);
+                display(newCanvas, renderMode);
                 rendered = true;
             }
             render();
@@ -278,8 +290,8 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
     });
 }
 
-globalThis.onRenderPage = function (zoom) {
-    if (zoom === 1 || zoom === 2) {
+function requestRender(renderMode) {
+    if (isFinalZoomRender(renderMode) || isTransientZoomRender(renderMode)) {
         userZoomed = true;
     }
 
@@ -291,14 +303,26 @@ globalThis.onRenderPage = function (zoom) {
         }
 
         renderPending = true;
-        renderPendingZoom = zoom;
+        renderPendingMode = renderMode;
         if (task !== null) {
             task.cancel();
             task = null;
         }
     } else {
-        renderPage(channel.getPage(), zoom, false);
+        renderPage(channel.getPage(), renderMode, false);
     }
+}
+
+globalThis.renderDefault = function () {
+    requestRender(RENDER_MODE_DEFAULT);
+};
+
+globalThis.renderFinalZoom = function () {
+    requestRender(RENDER_MODE_FINAL_ZOOM);
+};
+
+globalThis.renderTransientZoom = function () {
+    requestRender(RENDER_MODE_TRANSIENT_ZOOM);
 };
 
 globalThis.isTextSelected = function () {
@@ -382,7 +406,7 @@ globalThis.loadDocument = function () {
         }).catch(function(error) {
             console.log("getOutline error: " + error);
         });
-        renderPage(channel.getPage(), false, false);
+        renderPage(channel.getPage(), RENDER_MODE_DEFAULT, false);
     }, function (reason) {
         console.error(reason.name + ": " + reason.message);
         channel.onLoadError();
@@ -397,7 +421,7 @@ globalThis.onresize = () => {
             const degrees = channel.getDocumentOrientationDegrees();
             const newDefaultZoom = getDefaultZoomRatio(page, degrees);
             channel.setZoomRatio(newDefaultZoom);
-            globalThis.onRenderPage(0);
+            requestRender(RENDER_MODE_DEFAULT);
         }).catch(function(err) {
             console.log("onresize error: " + err);
         });

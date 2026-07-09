@@ -136,6 +136,9 @@ import kotlin.math.roundToInt
 private const val TAG = "PdfViewerScreen"
 private const val MIN_WEBVIEW_RELEASE = 133
 private val ZOOM_PRESETS = intArrayOf(25, 50, 75, 100, 125, 150, 200, 300, 500, 750, 1000)
+private const val RENDER_DEFAULT_SCRIPT = "renderDefault()"
+private const val RENDER_FINAL_ZOOM_SCRIPT = "renderFinalZoom()"
+private const val RENDER_TRANSIENT_ZOOM_SCRIPT = "renderTransientZoom()"
 
 private fun nextZoomPreset(ratio: Float): Float? {
     val currentPercent = (ratio * 100).roundToInt()
@@ -381,11 +384,11 @@ fun PdfViewerScreen(
                 )
                 viewModel.zoomFocusX = focusX
                 viewModel.zoomFocusY = focusY
-                wv.evaluateJavascript("onRenderPage(2)", null)
+                wv.evaluateJavascript(RENDER_TRANSIENT_ZOOM_SCRIPT, null)
             }
 
             override fun onZoomEnd() {
-                wv.evaluateJavascript("onRenderPage(1)", null)
+                wv.evaluateJavascript(RENDER_FINAL_ZOOM_SCRIPT, null)
             }
         })
         onDispose {
@@ -764,7 +767,7 @@ internal fun jumpToPage(viewModel: PdfViewModel, webView: WebView?, selectedPage
     val num = viewModel.numPages.value
     if (selectedPage in 1..num && viewModel.page.value != selectedPage) {
         viewModel.setPage(selectedPage)
-        webView.evaluateJavascript("onRenderPage(0)", null)
+        webView.evaluateJavascript(RENDER_DEFAULT_SCRIPT, null)
         viewModel.showPageIndicator()
     }
 }
@@ -774,13 +777,13 @@ private fun rotateDocument(viewModel: PdfViewModel, webView: WebView?, offset: I
     var degrees = (viewModel.documentOrientationDegrees.value + offset) % 360
     if (degrees < 0) degrees += 360
     viewModel.setDocumentOrientationDegrees(degrees)
-    webView.evaluateJavascript("onRenderPage(0)", null)
+    webView.evaluateJavascript(RENDER_DEFAULT_SCRIPT, null)
 }
 
 private fun zoomDocument(viewModel: PdfViewModel, webView: WebView?, ratio: Float) {
     webView ?: return
     viewModel.setZoomRatio(ratio.coerceIn(MIN_ZOOM_RATIO, MAX_ZOOM_RATIO))
-    webView.evaluateJavascript("onRenderPage(1)", null)
+    webView.evaluateJavascript(RENDER_FINAL_ZOOM_SCRIPT, null)
 }
 
 private fun shareDocument(context: Context, viewModel: PdfViewModel) {
