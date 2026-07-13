@@ -25,11 +25,11 @@ class PdfJsChannel(private val viewModel: PdfViewModel) {
     fun getPage(): Int = viewModel.page.value
 
     @JavascriptInterface
-    fun getZoomRatio(): Float = viewModel.zoomRatio
+    fun getZoomRatio(): Float = viewModel.zoomRatio.value
 
     @JavascriptInterface
     fun setZoomRatio(ratio: Float) {
-        viewModel.zoomRatio = ratio.coerceIn(MIN_ZOOM_RATIO, MAX_ZOOM_RATIO)
+        viewModel.setZoomRatio(ratio.coerceIn(MIN_ZOOM_RATIO, MAX_ZOOM_RATIO))
     }
 
     @JavascriptInterface

@@ -8,4 +8,6 @@ object TestTags {
     const val OUTLINE_ITEM = "outline_item"
     const val OVERFLOW_MENU = "overflow_menu"
     const val JUMP_TO_PAGE_FIELD = "jump_to_page_field"
+    const val CUSTOM_ZOOM_FIELD = "custom_zoom_field"
+    const val ZOOM_PERCENTAGE = "zoom_percentage"
 }
