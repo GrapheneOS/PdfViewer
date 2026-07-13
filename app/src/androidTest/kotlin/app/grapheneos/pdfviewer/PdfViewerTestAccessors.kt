@@ -44,3 +44,9 @@ var PdfViewer.outlineStatus: PdfViewModel.OutlineStatus
     set(value) {
         viewModel.setOutlineForTest(value)
     }
+
+var PdfViewer.zoomRatio: Float
+    get() = viewModel.zoomRatio.value
+    set(value) {
+        viewModel.setZoomRatio(value)
+    }

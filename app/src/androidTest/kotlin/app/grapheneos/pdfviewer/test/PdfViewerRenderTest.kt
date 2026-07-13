@@ -2,11 +2,11 @@ package app.grapheneos.pdfviewer.test
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.grapheneos.pdfviewer.PdfJsChannel.Companion.MIN_ZOOM_RATIO
-import app.grapheneos.pdfviewer.testrules.RetryRules
 import app.grapheneos.pdfviewer.RetryableComposeRule
 import app.grapheneos.pdfviewer.currentPage
 import app.grapheneos.pdfviewer.documentProperties
 import app.grapheneos.pdfviewer.testrules.OrientationRules
+import app.grapheneos.pdfviewer.testrules.RetryRules
 import app.grapheneos.pdfviewer.totalPages
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
@@ -272,6 +272,79 @@ class PdfViewerRenderTest {
                         "(was $clampedZoom)",
                 abs(clampedZoom - MIN_ZOOM_RATIO) < 0.001f
             )
+        }
+    }
+
+    @Test
+    fun buttonZoomIn_increasesDimensionsAndPreservesTextLayer() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            val initialWidth = robot.getCanvasCssWidth(scenario)
+            val initialHeight = robot.getCanvasCssHeight(scenario)
+
+            robot.clickMenuZoomIn()
+
+            PdfViewerTestUtils.waitForCanvasCssDimensionsChanged(
+                scenario, initialWidth, initialHeight
+            )
+
+            val zoomedWidth = robot.getCanvasCssWidth(scenario)
+            val zoomedHeight = robot.getCanvasCssHeight(scenario)
+            assertTrue(
+                "Canvas CSS width should increase after menu button zoom in " +
+                        "($initialWidth → $zoomedWidth)",
+                zoomedWidth > initialWidth
+            )
+            assertTrue(
+                "Canvas CSS height should increase after menu button zoom in " +
+                        "($initialHeight → $zoomedHeight)",
+                zoomedHeight > initialHeight
+            )
+
+            PdfViewerTestUtils.assertTextLayerContent(scenario, "Test Text")
+            robot.assertTextLayerAligned(scenario)
+        }
+    }
+
+    @Test
+    fun buttonZoomOut_decreasesDimensionsAndPreservesTextLayer() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            val defaultWidth = robot.getCanvasCssWidth(scenario)
+            val defaultHeight = robot.getCanvasCssHeight(scenario)
+
+            robot.clickMenuZoomIn()
+            PdfViewerTestUtils.waitForCanvasCssDimensionsChanged(
+                scenario, defaultWidth, defaultHeight
+            )
+
+            val zoomedInWidth = robot.getCanvasCssWidth(scenario)
+            val zoomedInHeight = robot.getCanvasCssHeight(scenario)
+
+            robot.clickMenuZoomOut()
+            PdfViewerTestUtils.waitForCanvasCssDimensionsChanged(
+                scenario, zoomedInWidth, zoomedInHeight
+            )
+
+            val zoomedOutWidth = robot.getCanvasCssWidth(scenario)
+            val zoomedOutHeight = robot.getCanvasCssHeight(scenario)
+            assertTrue(
+                "Canvas CSS width should decrease after menu button zoom out " +
+                        "($zoomedInWidth → $zoomedOutWidth)",
+                zoomedOutWidth < zoomedInWidth
+            )
+            assertTrue(
+                "Canvas CSS height should decrease after menu button zoom out " +
+                        "($zoomedInHeight → $zoomedOutHeight)",
+                zoomedOutHeight < zoomedInHeight
+            )
+
+            PdfViewerTestUtils.assertTextLayerContent(scenario, "Test Text")
+            robot.assertTextLayerAligned(scenario)
         }
     }
 
