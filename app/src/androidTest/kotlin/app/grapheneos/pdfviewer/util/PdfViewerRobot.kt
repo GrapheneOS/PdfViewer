@@ -321,8 +321,8 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
 
     fun assertCanvasRendered(scenario: ActivityScenario<PdfViewer>) {
         val result = PdfViewerTestUtils.evaluateJs(scenario,
-            "parseInt(document.getElementById('content').style.width) > 0 " +
-                    "&& parseInt(document.getElementById('content').style.height) > 0"
+            "parseInt(globalThis.currentPageCanvas().style.width) > 0 " +
+                    "&& parseInt(globalThis.currentPageCanvas().style.height) > 0"
         )
         assertTrue("Canvas should have non-zero CSS dimensions after rendering", result == "true")
     }
@@ -338,28 +338,28 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
 
     fun getCanvasWidth(scenario: ActivityScenario<PdfViewer>): Int {
         val result = PdfViewerTestUtils.evaluateJs(scenario,
-            "document.getElementById('content').width"
+            "globalThis.currentPageCanvas().width"
         )
         return result.toInt()
     }
 
     fun getCanvasHeight(scenario: ActivityScenario<PdfViewer>): Int {
         val result = PdfViewerTestUtils.evaluateJs(scenario,
-            "document.getElementById('content').height"
+            "globalThis.currentPageCanvas().height"
         )
         return result.toInt()
     }
 
     fun getCanvasCssWidth(scenario: ActivityScenario<PdfViewer>): Int {
         val result = PdfViewerTestUtils.evaluateJs(scenario,
-            "parseInt(document.getElementById('content').style.width) || 0"
+            "parseInt(globalThis.currentPageCanvas().style.width) || 0"
         )
         return result.toInt()
     }
 
     fun getCanvasCssHeight(scenario: ActivityScenario<PdfViewer>): Int {
         val result = PdfViewerTestUtils.evaluateJs(scenario,
-            "parseInt(document.getElementById('content').style.height) || 0"
+            "parseInt(globalThis.currentPageCanvas().style.height) || 0"
         )
         return result.toInt()
     }
@@ -564,9 +564,9 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
     fun assertTextLayerAligned(scenario: ActivityScenario<PdfViewer>) {
         val result = PdfViewerTestUtils.evaluateJs(scenario, """
             (function() {
-                var text = document.getElementById('text');
+                var text = globalThis.currentPageTextLayer();
                 var container = document.getElementById('container');
-                var canvas = document.getElementById('content');
+                var canvas = globalThis.currentPageCanvas();
                 if (!text || !container || !canvas) return 'missing_elements';
                 if (text.hidden) return 'text_hidden';
                 var scaleFactor = container.style.getPropertyValue('--scale-factor');
