@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.icu.text.DecimalFormatSymbols
+import android.icu.text.NumberFormat
 import android.util.Log
 import android.view.MotionEvent
 import android.view.ViewConfiguration
@@ -66,6 +68,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -80,6 +83,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -87,6 +91,9 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.buildAnnotatedString
@@ -100,6 +107,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.os.ConfigurationCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -116,10 +124,12 @@ import app.grapheneos.pdfviewer.viewModel.PdfViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -235,7 +245,6 @@ fun PdfViewerScreen(
     val documentProperties by viewModel.documentProperties.collectAsStateWithLifecycle()
     val outlineStatus by viewModel.outline.collectAsStateWithLifecycle()
     val showPasswordDialog by viewModel.showPasswordDialog.collectAsStateWithLifecycle()
-    val zoomRatio by viewModel.zoomRatio.collectAsStateWithLifecycle()
     val pageIndicator by viewModel.pageIndicator.collectAsStateWithLifecycle()
     var showPageIndicator by remember { mutableStateOf(false) }
 
@@ -516,7 +525,7 @@ fun PdfViewerScreen(
                 onJumpToPage = { showJumpToPage = true },
                 onRotateClockwise = { rotateDocument(viewModel, webView, 90) },
                 onRotateCounterClockwise = { rotateDocument(viewModel, webView, -90) },
-                zoomRatio = zoomRatio,
+                zoomRatioFlow = viewModel.zoomRatio,
                 onZoomIn = {
                     nextZoomPreset(viewModel.zoomRatio.value)?.let { preset ->
                         zoomDocument(viewModel, webView, preset)
@@ -600,8 +609,9 @@ fun PdfViewerScreen(
     }
 
     if (showCustomZoom) {
+        val currentZoom = remember { viewModel.zoomRatio.value }
         CustomZoomDialog(
-            currentZoomRatio = zoomRatio,
+            currentZoomRatio = currentZoom,
             onZoom = { newRatio ->
                 showCustomZoom = false
                 zoomDocument(viewModel, webView, newRatio)
@@ -820,7 +830,7 @@ private fun PdfTopAppBar(
     onJumpToPage: () -> Unit,
     onRotateClockwise: () -> Unit,
     onRotateCounterClockwise: () -> Unit,
-    zoomRatio: Float,
+    zoomRatioFlow: StateFlow<Float>,
     onZoomIn: () -> Unit,
     onZoomOut: () -> Unit,
     onCustomZoom: () -> Unit,
@@ -927,15 +937,13 @@ private fun PdfTopAppBar(
                             )
                         }
                     )
-                    if (zoomRatio > 0f) {
-                        ZoomRow(
-                            zoomRatio = zoomRatio,
-                            onZoomIn = onZoomIn,
-                            onZoomOut = onZoomOut,
-                            onCustomZoom = { onMenuToggle(false); onCustomZoom() },
-                            enabled = enabled
-                        )
-                    }
+                    ZoomRow(
+                        zoomRatioFlow = zoomRatioFlow,
+                        onZoomIn = onZoomIn,
+                        onZoomOut = onZoomOut,
+                        onCustomZoom = { onMenuToggle(false); onCustomZoom() },
+                        enabled = enabled
+                    )
                     if (hasOutline) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_outline)) },
@@ -1046,12 +1054,17 @@ private fun WebViewAlertScreen(
 
 @Composable
 private fun ZoomRow(
-    zoomRatio: Float,
+    zoomRatioFlow: StateFlow<Float>,
     onZoomIn: () -> Unit,
     onZoomOut: () -> Unit,
     onCustomZoom: () -> Unit,
     enabled: Boolean
 ) {
+    val zoomRatio by zoomRatioFlow.collectAsStateWithLifecycle()
+    if (zoomRatio <= 0f) return
+
+    val locale = currentLocale()
+    val zoomFormat = remember(locale) { NumberFormat.getPercentInstance(locale) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
@@ -1071,8 +1084,9 @@ private fun ZoomRow(
             onClick = onCustomZoom,
             enabled = enabled,
             modifier = Modifier.testTag(TestTags.ZOOM_PERCENTAGE)
+            .semantics { liveRegion = LiveRegionMode.Polite }
         ) {
-            Text("${(zoomRatio * 100).roundToInt()}%")
+            Text(zoomFormat.format(zoomRatio))
         }
 
         IconButton(
@@ -1096,6 +1110,17 @@ private fun CustomZoomDialog(
     val minPercent = (MIN_ZOOM_RATIO * 100).roundToInt()
     val maxPercent = (MAX_ZOOM_RATIO * 100).roundToInt()
     val maxLength = maxPercent.toString().length
+
+    val locale = currentLocale()
+    val percentSymbol = remember(locale) {
+        DecimalFormatSymbols.getInstance(locale).percent.toString()
+    }
+    val percentIsPrefix = remember(locale) {
+        val formatted = NumberFormat.getPercentInstance(locale).format(1)
+        val digitIndex = formatted.indexOfFirst { it.isDigit() }
+        val symbolIndex = formatted.indexOfFirst { !it.isDigit() && !it.isWhitespace() }
+        symbolIndex in 0 until digitIndex
+    }
 
     var textFieldValue by rememberSaveable(stateSaver = TextFieldValue.Saver) {
         val initial = (currentZoomRatio * 100).roundToInt().toString()
@@ -1150,7 +1175,8 @@ private fun CustomZoomDialog(
                     },
                     singleLine = true,
                     isError = textFieldValue.text.isNotEmpty() && !isValid,
-                    suffix = { Text("%") },
+                    prefix = if (percentIsPrefix) ({ Text(percentSymbol) }) else null,
+                    suffix = if (percentIsPrefix) null else ({ Text(percentSymbol) }),
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Number,
                         imeAction = ImeAction.Done
@@ -1399,3 +1425,10 @@ private fun PasswordPromptDialog(
         }
     )
 }
+
+@Composable
+@ReadOnlyComposable
+@SuppressLint("NonObservableLocale")
+private fun currentLocale(): Locale =
+    ConfigurationCompat.getLocales(LocalConfiguration.current)[0]
+        ?: Locale.getDefault()

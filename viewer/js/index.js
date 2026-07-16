@@ -112,7 +112,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
     orientationDegrees = channel.getDocumentOrientationDegrees();
     console.log("page: " + pageNumber + ", zoom: " + newZoomRatio +
                 ", orientationDegrees: " + orientationDegrees + ", prerender: " + prerender);
-    for (let i = 0; i < cache.length; i++) {
+    for (let i = 0; zoom !== 2 && i < cache.length; i++) {
         const cached = cache[i];
         if (cached.pageNumber === pageNumber && cached.zoomRatio === newZoomRatio &&
                 cached.orientationDegrees === orientationDegrees) {
@@ -121,6 +121,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
                 cache.push(cached);
 
                 display(cached.canvas, zoom);
+                zoomRatio = newZoomRatio;
 
                 textLayerDiv.replaceWith(cached.textLayerDiv);
                 textLayerDiv = cached.textLayerDiv;
