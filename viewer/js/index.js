@@ -112,7 +112,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
     orientationDegrees = channel.getDocumentOrientationDegrees();
     console.log("page: " + pageNumber + ", zoom: " + newZoomRatio +
                 ", orientationDegrees: " + orientationDegrees + ", prerender: " + prerender);
-    for (let i = 0; zoom !== 2 && i < cache.length; i++) {
+    for (let i = 0; !zoom && i < cache.length; i++) {
         const cached = cache[i];
         if (cached.pageNumber === pageNumber && cached.zoomRatio === newZoomRatio &&
                 cached.orientationDegrees === orientationDegrees) {
@@ -163,20 +163,27 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
             zoomRatio = newZoomRatio;
         }
 
-        if (zoom === 2) {
-            textLayerDiv.hidden = true;
-            pageRendering = false;
+        if (zoom === 1 || zoom === 2) {
+            // Focus point in CSS px, in viewport coordinates.
+            const focusX = zoom === 2
+                ? channel.getZoomFocusX() / ratio
+                : globalThis.innerWidth / 2;
+            const focusY = zoom === 2
+                ? channel.getZoomFocusY() / ratio
+                : globalThis.innerHeight / 2;
 
-            // zoom focus relative to page origin, rather than screen origin
-            const globalFocusX = channel.getZoomFocusX() / ratio + globalThis.scrollX;
-            const globalFocusY = channel.getZoomFocusY() / ratio + globalThis.scrollY;
+            // focus relative to page origin, rather than screen origin
+            const globalFocusX = focusX + globalThis.scrollX;
+            const globalFocusY = focusY + globalThis.scrollY;
 
             const translationFactor = scaleFactor - 1;
-            const scrollX = globalFocusX * translationFactor;
-            const scrollY = globalFocusY * translationFactor;
-            scrollBy(scrollX, scrollY);
+            scrollBy(globalFocusX * translationFactor, globalFocusY * translationFactor);
 
-            return;
+            if (zoom === 2) {
+                textLayerDiv.hidden = true;
+                pageRendering = false;
+                return;
+            }
         }
 
         const resolutionY = viewport.height * ratio;
