@@ -45,6 +45,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -241,6 +242,8 @@ fun PdfViewerScreen(
     val webViewCrashed by viewModel.webViewCrashed.collectAsStateWithLifecycle()
     val numPages by viewModel.numPages.collectAsStateWithLifecycle()
     val page by viewModel.page.collectAsStateWithLifecycle()
+    val pageFitMode by viewModel.pageFitMode.collectAsStateWithLifecycle()
+    val continuousMode by viewModel.continuousMode.collectAsStateWithLifecycle()
     val documentName by viewModel.documentName.collectAsStateWithLifecycle()
     val documentProperties by viewModel.documentProperties.collectAsStateWithLifecycle()
     val outlineStatus by viewModel.outline.collectAsStateWithLifecycle()
@@ -339,6 +342,29 @@ fun PdfViewerScreen(
 
     DisposableEffect(webView) {
         val wv = webView ?: return@DisposableEffect onDispose {}
+        var zoomRenderInFlight = false
+        var zoomRenderPending = false
+        var zoomRenderEndPending = false
+
+        fun dispatchPendingZoomRender() {
+            if (zoomRenderInFlight || !zoomRenderPending) return
+
+            val zoom = if (zoomRenderEndPending) 1 else 2
+            zoomRenderPending = false
+            zoomRenderEndPending = false
+            zoomRenderInFlight = true
+            wv.evaluateJavascript("onRenderPage($zoom)") {
+                zoomRenderInFlight = false
+                dispatchPendingZoomRender()
+            }
+        }
+
+        fun requestZoomRender(end: Boolean) {
+            zoomRenderPending = true
+            zoomRenderEndPending = zoomRenderEndPending || end
+            dispatchPendingZoomRender()
+        }
+
         GestureHelper.attach(context, wv, object : GestureHelper.GestureListener {
             override fun onTapUp(): Boolean {
                 if (viewModel.uri.value == null) return false
@@ -375,17 +401,18 @@ fun PdfViewerScreen(
             }
 
             override fun onZoom(scaleFactor: Float, focusX: Float, focusY: Float) {
+                viewModel.setPageFitMode(0)
                 viewModel.setZoomRatio(
                     (viewModel.zoomRatio.value * scaleFactor)
                         .coerceIn(MIN_ZOOM_RATIO, MAX_ZOOM_RATIO)
                 )
                 viewModel.zoomFocusX = focusX
                 viewModel.zoomFocusY = focusY
-                wv.evaluateJavascript("onRenderPage(2)", null)
+                requestZoomRender(end = false)
             }
 
             override fun onZoomEnd() {
-                wv.evaluateJavascript("onRenderPage(1)", null)
+                requestZoomRender(end = true)
             }
         })
         onDispose {
@@ -506,6 +533,8 @@ fun PdfViewerScreen(
                 enabled = enabled,
                 page = page,
                 numPages = numPages,
+                pageFitMode = pageFitMode,
+                continuousMode = continuousMode,
                 hasOutline = viewModel.hasOutline(),
                 hasDocumentProperties = documentProperties != null,
                 hasUri = uri != null,
@@ -523,6 +552,12 @@ fun PdfViewerScreen(
                 onFirst = { jumpToPage(viewModel, webView, 1) },
                 onLast = { jumpToPage(viewModel, webView, numPages) },
                 onJumpToPage = { showJumpToPage = true },
+                onFitFree = { setPageFitMode(viewModel, webView, 0) },
+                onFitPage = { setPageFitMode(viewModel, webView, 1) },
+                onFitWidth = { setPageFitMode(viewModel, webView, 2) },
+                onContinuousModeChange = {
+                    setContinuousMode(viewModel, webView, !continuousMode)
+                },
                 onRotateClockwise = { rotateDocument(viewModel, webView, 90) },
                 onRotateCounterClockwise = { rotateDocument(viewModel, webView, -90) },
                 zoomRatioFlow = viewModel.zoomRatio,
@@ -774,6 +809,19 @@ internal fun jumpToPage(viewModel: PdfViewModel, webView: WebView?, selectedPage
     }
 }
 
+private fun setPageFitMode(viewModel: PdfViewModel, webView: WebView?, mode: Int) {
+    webView ?: return
+    viewModel.setPageFitMode(mode)
+    viewModel.setZoomRatio(0f)
+    webView.evaluateJavascript("onRenderPage(0)", null)
+}
+
+private fun setContinuousMode(viewModel: PdfViewModel, webView: WebView?, enabled: Boolean) {
+    webView ?: return
+    viewModel.setContinuousMode(enabled)
+    webView.evaluateJavascript("setContinuousMode($enabled)", null)
+}
+
 private fun rotateDocument(viewModel: PdfViewModel, webView: WebView?, offset: Int) {
     webView ?: return
     var degrees = (viewModel.documentOrientationDegrees.value + offset) % 360
@@ -784,8 +832,9 @@ private fun rotateDocument(viewModel: PdfViewModel, webView: WebView?, offset: I
 
 private fun zoomDocument(viewModel: PdfViewModel, webView: WebView?, ratio: Float) {
     webView ?: return
+    viewModel.setPageFitMode(0)
     viewModel.setZoomRatio(ratio.coerceIn(MIN_ZOOM_RATIO, MAX_ZOOM_RATIO))
-    webView.evaluateJavascript("onRenderPage(1)", null)
+    webView.evaluateJavascript("onRenderPage(3)", null)
 }
 
 private fun shareDocument(context: Context, viewModel: PdfViewModel) {
@@ -817,6 +866,8 @@ private fun PdfTopAppBar(
     enabled: Boolean,
     page: Int,
     numPages: Int,
+    pageFitMode: Int,
+    continuousMode: Boolean,
     hasOutline: Boolean,
     hasDocumentProperties: Boolean,
     hasUri: Boolean,
@@ -828,6 +879,10 @@ private fun PdfTopAppBar(
     onFirst: () -> Unit,
     onLast: () -> Unit,
     onJumpToPage: () -> Unit,
+    onFitFree: () -> Unit,
+    onFitPage: () -> Unit,
+    onFitWidth: () -> Unit,
+    onContinuousModeChange: () -> Unit,
     onRotateClockwise: () -> Unit,
     onRotateCounterClockwise: () -> Unit,
     zoomRatioFlow: StateFlow<Float>,
@@ -912,6 +967,46 @@ private fun PdfTopAppBar(
                                     painterResource(R.drawable.ic_pageview_24dp),
                                     contentDescription = null
                                 )
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_fit_free)) },
+                            onClick = { onMenuToggle(false); onFitFree() },
+                            enabled = enabled,
+                            leadingIcon = {
+                                if (pageFitMode == 0) {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_fit_page)) },
+                            onClick = { onMenuToggle(false); onFitPage() },
+                            enabled = enabled,
+                            leadingIcon = {
+                                if (pageFitMode == 1) {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_fit_width)) },
+                            onClick = { onMenuToggle(false); onFitWidth() },
+                            enabled = enabled,
+                            leadingIcon = {
+                                if (pageFitMode == 2) {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_continuous_scroll)) },
+                            onClick = { onMenuToggle(false); onContinuousModeChange() },
+                            enabled = enabled,
+                            leadingIcon = {
+                                if (continuousMode) {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                }
                             }
                         )
                     }

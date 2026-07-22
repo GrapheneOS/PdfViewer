@@ -41,6 +41,8 @@ class PdfViewModel(
         private const val STATE_URI: String = "uri"
         private const val STATE_PAGE: String = "page"
         private const val STATE_DOCUMENT_ORIENTATION_DEGREES: String = "documentOrientationDegrees"
+        private const val STATE_PAGE_FIT_MODE: String = "pageFitMode"
+        private const val STATE_CONTINUOUS_MODE: String = "continuousMode"
         private const val STATE_DOCUMENT_PROPERTIES = "documentProperties"
         private const val STATE_DOCUMENT_NAME = "documentName"
     }
@@ -56,6 +58,13 @@ class PdfViewModel(
     fun setDocumentOrientationDegrees(value: Int) {
         savedStateHandle[STATE_DOCUMENT_ORIENTATION_DEGREES] = value
     }
+
+    val pageFitMode: StateFlow<Int> = savedStateHandle.getStateFlow(STATE_PAGE_FIT_MODE, 1)
+    fun setPageFitMode(value: Int) { savedStateHandle[STATE_PAGE_FIT_MODE] = value }
+
+    val continuousMode: StateFlow<Boolean> =
+        savedStateHandle.getStateFlow(STATE_CONTINUOUS_MODE, true)
+    fun setContinuousMode(value: Boolean) { savedStateHandle[STATE_CONTINUOUS_MODE] = value }
 
     val documentProperties: StateFlow<Map<DocumentProperty, String>?> =
         savedStateHandle.getStateFlow(STATE_DOCUMENT_PROPERTIES, null)
@@ -288,6 +297,8 @@ class PdfViewModel(
         _numPages.value = 0
         _zoomRatio.value = 0f
         setDocumentOrientationDegrees(0)
+        setPageFitMode(1)
+        setContinuousMode(true)
         encryptedDocumentPassword = ""
         clearOutline()
         clearDocumentProperties()

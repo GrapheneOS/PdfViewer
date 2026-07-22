@@ -124,10 +124,10 @@ object PdfViewerTestUtils {
         ) {
             try {
                 val result = evaluateJs(scenario,
-                    "parseInt(document.getElementById('content').style.width) > 0 " +
-                            "&& parseInt(document.getElementById('content').style.height) > 0 " +
+                    "parseInt(globalThis.currentPageCanvas().style.width) > 0 " +
+                            "&& parseInt(globalThis.currentPageCanvas().style.height) > 0 " +
                             "&& parseFloat(document.getElementById('container').style.getPropertyValue('--scale-factor')) > 0 " +
-                            "&& !document.getElementById('text').hidden"
+                            "&& !globalThis.currentPageTextLayer().hidden"
                 )
                 Log.d("WAIT", "  canvas check result=$result, elapsed=${System.currentTimeMillis() - start}ms")
                 result == "true"
@@ -153,7 +153,7 @@ object PdfViewerTestUtils {
             ) {
                 try {
                     val result = evaluateJs(scenario,
-                        "document.getElementById('text').textContent"
+                        "globalThis.currentPageTextLayer().textContent"
                     )
                     Log.d("WAIT", "  text layer result=${result.take(80)}, elapsed=${System.currentTimeMillis() - start}ms")
                     result.contains(expected)
@@ -165,7 +165,7 @@ object PdfViewerTestUtils {
             Log.d("WAIT", "assertTextLayerContent: done in ${System.currentTimeMillis() - start}ms")
         } catch (_: AssertionError) {
             val actual = try {
-                evaluateJs(scenario, "document.getElementById('text').textContent")
+                evaluateJs(scenario, "globalThis.currentPageTextLayer().textContent")
             } catch (e: Throwable) {
                 "JS evaluation failed: ${e.message}"
             }
@@ -251,8 +251,8 @@ object PdfViewerTestUtils {
                         "within ${timeout}ms"
             }
         ) {
-            val w = evaluateJs(scenario, "document.getElementById('content').width").toIntOrNull()
-            val h = evaluateJs(scenario, "document.getElementById('content').height").toIntOrNull()
+            val w = evaluateJs(scenario, "globalThis.currentPageCanvas().width").toIntOrNull()
+            val h = evaluateJs(scenario, "globalThis.currentPageCanvas().height").toIntOrNull()
             w != null && h != null && (w != previousWidth || h != previousHeight)
         }
     }
@@ -272,11 +272,11 @@ object PdfViewerTestUtils {
         ) {
             val w = evaluateJs(
                 scenario,
-                "parseInt(document.getElementById('content').style.width) || 0"
+                "parseInt(globalThis.currentPageCanvas().style.width) || 0"
             ).toIntOrNull()
             val h = evaluateJs(
                 scenario,
-                "parseInt(document.getElementById('content').style.height) || 0"
+                "parseInt(globalThis.currentPageCanvas().style.height) || 0"
             ).toIntOrNull()
             w != null && h != null && (w != previousWidth || h != previousHeight)
         }
@@ -366,7 +366,7 @@ object PdfViewerTestUtils {
             scenario, """
         (function() {
                 var range = document.createRange();
-                range.selectNodeContents(document.getElementById('text'));
+                range.selectNodeContents(globalThis.currentPageTextLayer());
                 var sel = window.getSelection();
                 sel.removeAllRanges();
                 sel.addRange(range);
