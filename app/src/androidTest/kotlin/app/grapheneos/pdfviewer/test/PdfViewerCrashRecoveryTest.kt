@@ -1,13 +1,17 @@
 package app.grapheneos.pdfviewer.test
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.grapheneos.pdfviewer.RetryRules
+import app.grapheneos.pdfviewer.testrules.RetryRules
+import app.grapheneos.pdfviewer.RetryableComposeRule
 import app.grapheneos.pdfviewer.crashed
+import app.grapheneos.pdfviewer.testrules.OrientationRules
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
 import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 
 /**
@@ -16,10 +20,20 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PdfViewerCrashRecoveryTest {
 
-    @get:Rule
-    val retryRules = RetryRules()
+    private val composeRule = RetryableComposeRule()
 
-    private val robot = PdfViewerRobot()
+    @get:Rule
+    val rules: RuleChain = RuleChain
+        .outerRule(RetryRules())
+        .around(OrientationRules())
+        .around(composeRule)
+
+    private val robot = PdfViewerRobot(composeRule)
+
+    @Before
+    fun setup() {
+        PdfViewerTestUtils.init(composeRule)
+    }
 
     @Test
     fun reloadButton_dismissesCrashUiAndRecovers() {
@@ -30,7 +44,7 @@ class PdfViewerCrashRecoveryTest {
             robot.assertCrashUiVisible()
             robot.clickReload()
 
-            PdfViewerTestUtils.waitForCrashUiDismissed()
+            PdfViewerTestUtils.waitForCrashUiDismissed(scenario)
 
             robot.assertCrashUiHidden()
             robot.assertWebViewVisible()

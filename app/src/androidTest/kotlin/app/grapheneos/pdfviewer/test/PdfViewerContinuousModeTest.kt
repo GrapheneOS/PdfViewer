@@ -3,17 +3,20 @@ package app.grapheneos.pdfviewer.test
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.grapheneos.pdfviewer.PdfViewer
-import app.grapheneos.pdfviewer.RetryRules
+import app.grapheneos.pdfviewer.RetryableComposeRule
 import app.grapheneos.pdfviewer.continuousMode
 import app.grapheneos.pdfviewer.currentPage
-import app.grapheneos.pdfviewer.refreshMenuSync
+import app.grapheneos.pdfviewer.testrules.OrientationRules
+import app.grapheneos.pdfviewer.testrules.RetryRules
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
 import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 
 /**
@@ -22,10 +25,20 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PdfViewerContinuousModeTest {
 
-    @get:Rule
-    val retryRules = RetryRules()
+    private val composeRule = RetryableComposeRule()
 
-    private val robot = PdfViewerRobot()
+    @get:Rule
+    val rules: RuleChain = RuleChain
+        .outerRule(RetryRules())
+        .around(OrientationRules())
+        .around(composeRule)
+
+    private val robot = PdfViewerRobot(composeRule)
+
+    @Before
+    fun setup() {
+        PdfViewerTestUtils.init(composeRule)
+    }
 
     @Test
     fun toggle_hidesOtherPagesAndRestoresOnReEnable() {
@@ -41,7 +54,6 @@ class PdfViewerContinuousModeTest {
             ) { displayedCount(scenario) == 4 }
 
             // Switch to single-page mode via the menu.
-            scenario.onActivity { it.refreshMenuSync() }
             robot.clickContinuousScroll()
 
             PdfViewerTestUtils.pollUntil(
@@ -65,7 +77,6 @@ class PdfViewerContinuousModeTest {
             }
 
             // Re-enable continuous mode: all pages come back.
-            scenario.onActivity { it.refreshMenuSync() }
             robot.clickContinuousScroll()
             PdfViewerTestUtils.pollUntil(
                 timeout = 5_000,

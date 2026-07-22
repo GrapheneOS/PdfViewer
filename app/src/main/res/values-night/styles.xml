@@ -9,6 +9,4 @@
         <item name="android:windowLightNavigationBar" tools:ignore="NewApi">false</item>
     </style>
 
-    <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.Material3.DynamicColors.Dark" />
-
 </resources>

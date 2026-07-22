@@ -3,18 +3,20 @@ package app.grapheneos.pdfviewer.test
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.grapheneos.pdfviewer.PdfViewer
-import app.grapheneos.pdfviewer.RetryRules
-import app.grapheneos.pdfviewer.continuousMode
+import app.grapheneos.pdfviewer.RetryableComposeRule
 import app.grapheneos.pdfviewer.currentPage
-import app.grapheneos.pdfviewer.refreshMenuSync
 import app.grapheneos.pdfviewer.totalPages
+import app.grapheneos.pdfviewer.testrules.OrientationRules
+import app.grapheneos.pdfviewer.testrules.RetryRules
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
 import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 
 /**
@@ -25,10 +27,20 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PdfViewerBigDocTest {
 
-    @get:Rule
-    val retryRules = RetryRules()
+    private val composeRule = RetryableComposeRule()
 
-    private val robot = PdfViewerRobot()
+    @get:Rule
+    val rules: RuleChain = RuleChain
+        .outerRule(RetryRules())
+        .around(OrientationRules())
+        .around(composeRule)
+
+    private val robot = PdfViewerRobot(composeRule)
+
+    @Before
+    fun setup() {
+        PdfViewerTestUtils.init(composeRule)
+    }
 
     @Test
     fun loadsAndLaysOutAllPagesInOrder() {
@@ -162,14 +174,12 @@ class PdfViewerBigDocTest {
                 description = { "all pages visible initially" }
             ) { displayedCount(scenario) == total }
 
-            scenario.onActivity { it.refreshMenuSync() }
             robot.clickContinuousScroll()
             PdfViewerTestUtils.pollUntil(
                 timeout = 5_000,
                 description = { "single-page mode should show one page" }
             ) { displayedCount(scenario) == 1 }
 
-            scenario.onActivity { it.refreshMenuSync() }
             robot.clickContinuousScroll()
             PdfViewerTestUtils.pollUntil(
                 timeout = 5_000,
@@ -191,12 +201,10 @@ class PdfViewerBigDocTest {
             }
 
             // fit width -> free again (review P2: must not reuse stale ratio / jump to MIN)
-            scenario.onActivity { it.refreshMenuSync() }
             robot.clickFitWidth()
             PdfViewerTestUtils.pollUntil(timeout = 8_000, description = { "not fit-width" }) {
                 robot.getPageFitMode(scenario) == 2
             }
-            scenario.onActivity { it.refreshMenuSync() }
             robot.clickFitFree()
             PdfViewerTestUtils.pollUntil(timeout = 8_000, description = { "not free again" }) {
                 robot.getPageFitMode(scenario) == 0
@@ -229,7 +237,7 @@ class PdfViewerBigDocTest {
             "containerChildren:document.getElementById('container').children.length})")
 
     private fun eval(scenario: ActivityScenario<PdfViewer>, js: String): String =
-        PdfViewerTestUtils.evaluateJs(scenario, js) ?: ""
+        PdfViewerTestUtils.evaluateJs(scenario, js)
 
     private fun <T> ActivityScenario<PdfViewer>.onActivityAndReturn(block: (PdfViewer) -> T): T {
         var v: T? = null

@@ -1,16 +1,19 @@
 package app.grapheneos.pdfviewer.test
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.grapheneos.pdfviewer.RetryRules
+import app.grapheneos.pdfviewer.RetryableComposeRule
 import app.grapheneos.pdfviewer.pageFitMode
-import app.grapheneos.pdfviewer.refreshMenuSync
+import app.grapheneos.pdfviewer.testrules.OrientationRules
+import app.grapheneos.pdfviewer.testrules.RetryRules
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
 import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 
 /**
@@ -19,10 +22,20 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PdfViewerPageFitModeTest {
 
-    @get:Rule
-    val retryRules = RetryRules()
+    private val composeRule = RetryableComposeRule()
 
-    private val robot = PdfViewerRobot()
+    @get:Rule
+    val rules: RuleChain = RuleChain
+        .outerRule(RetryRules())
+        .around(OrientationRules())
+        .around(composeRule)
+
+    private val robot = PdfViewerRobot(composeRule)
+
+    @Before
+    fun setup() {
+        PdfViewerTestUtils.init(composeRule)
+    }
 
     @Test
     fun fitWidthMode_isDefaultForNewDocument() {
@@ -41,7 +54,6 @@ class PdfViewerPageFitModeTest {
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
             PdfViewerTestUtils.waitForCanvasRendered(scenario)
 
-            scenario.onActivity { it.refreshMenuSync() }
             robot.clickFitPage()
 
             PdfViewerTestUtils.pollUntil(
@@ -93,16 +105,14 @@ class PdfViewerPageFitModeTest {
         PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
 
-            scenario.onActivity { it.refreshMenuSync() }
-
             robot.assertMenuItemVisible(
-                scenario, PdfViewerRobot.AppMenuItem.FitFree, expected = true
+                PdfViewerRobot.AppMenuItem.FitFree, expected = true
             )
             robot.assertMenuItemVisible(
-                scenario, PdfViewerRobot.AppMenuItem.FitPage, expected = true
+                PdfViewerRobot.AppMenuItem.FitPage, expected = true
             )
             robot.assertMenuItemVisible(
-                scenario, PdfViewerRobot.AppMenuItem.FitWidth, expected = true
+                PdfViewerRobot.AppMenuItem.FitWidth, expected = true
             )
         }
     }

@@ -15,9 +15,10 @@ import androidx.test.espresso.intent.matcher.IntentMatchers.hasType
 import androidx.test.espresso.intent.matcher.IntentMatchers.isInternal
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import app.grapheneos.pdfviewer.RetryRules
+import app.grapheneos.pdfviewer.testrules.RetryRules
+import app.grapheneos.pdfviewer.RetryableComposeRule
 import app.grapheneos.pdfviewer.documentName
-import app.grapheneos.pdfviewer.refreshMenuSync
+import app.grapheneos.pdfviewer.testrules.OrientationRules
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
 import app.grapheneos.pdfviewer.util.PdfViewerRobot.AppMenuItem
@@ -27,8 +28,10 @@ import org.hamcrest.Matchers.`is`
 import org.hamcrest.Matchers.not
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 import java.io.File
 
@@ -41,10 +44,20 @@ import java.io.File
 @RunWith(AndroidJUnit4::class)
 class PdfViewerIntentTest {
 
-    @get:Rule
-    val retryRules = RetryRules()
+    private val composeRule = RetryableComposeRule()
 
-    private val robot = PdfViewerRobot()
+    @get:Rule
+    val rules: RuleChain = RuleChain
+        .outerRule(RetryRules())
+        .around(OrientationRules())
+        .around(composeRule)
+
+    private val robot = PdfViewerRobot(composeRule)
+
+    @Before
+    fun setup() {
+        PdfViewerTestUtils.init(composeRule)
+    }
 
     private fun stubAllExternalIntents() {
         intending(not(isInternal()))
@@ -118,8 +131,8 @@ class PdfViewerIntentTest {
 
             scenario.onActivity {
                 it.documentName = "test_document.pdf"
-                it.refreshMenuSync()
             }
+            composeRule.waitForIdle()
 
             Intents.init()
             try {
@@ -147,8 +160,6 @@ class PdfViewerIntentTest {
         PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
 
-            scenario.onActivity { it.refreshMenuSync() }
-
             Intents.init()
             try {
                 intending(hasAction(Intent.ACTION_CREATE_DOCUMENT))
@@ -162,6 +173,13 @@ class PdfViewerIntentTest {
                 robot.click(AppMenuItem.SaveAs)
             } finally {
                 Intents.release()
+            }
+
+            PdfViewerTestUtils.pollUntil(
+                timeout = 10_000,
+                description = { "Save IO did not complete in 10s" }
+            ) {
+                outputFile.exists() && outputFile.length() > 0
             }
 
             assertTrue("Output file should exist", outputFile.exists())
@@ -184,11 +202,6 @@ class PdfViewerIntentTest {
     fun saveAs_showsErrorWhenWriteFails() {
         PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
-
-            scenario.onActivity {
-                it.refreshMenuSync()
-            }
-
 
             Intents.init()
             try {

@@ -4,27 +4,27 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.util.Log
 import android.webkit.WebView
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.test.core.app.ActivityScenario
-import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.assertion.ViewAssertions.matches
-import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
-import androidx.test.espresso.matcher.ViewMatchers.withId
-import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import app.grapheneos.pdfviewer.PdfViewer
-import app.grapheneos.pdfviewer.R
 import app.grapheneos.pdfviewer.currentPage
 import app.grapheneos.pdfviewer.documentProperties
 import app.grapheneos.pdfviewer.outlineStatus
 import app.grapheneos.pdfviewer.totalPages
 import app.grapheneos.pdfviewer.viewModel.PdfViewModel
-import org.hamcrest.Matchers.not
-import org.junit.Assert.assertEquals
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 object PdfViewerTestUtils {
+
+    private lateinit var composeRule: ComposeTestRule
+
+    fun init(rule: ComposeTestRule) {
+        composeRule = rule
+    }
 
     /**
      * Evaluates JavaScript in the WebView by calling
@@ -38,7 +38,8 @@ object PdfViewerTestUtils {
         var result = "null"
 
         scenario.onActivity { activity ->
-            val webView = activity.findViewById<WebView>(R.id.webview)
+            val webView = activity.webView
+                ?: throw AssertionError("WebView is null")
             webView.evaluateJavascript(script) { value ->
                 result = value ?: "null"
                 latch.countDown()
@@ -59,27 +60,13 @@ object PdfViewerTestUtils {
     ) {
         val start = System.currentTimeMillis()
         while (System.currentTimeMillis() - start < timeout) {
+            composeRule.waitForIdle()
             try {
                 if (condition()) return
-            } catch (_: Throwable) { /* retry */ }
+            } catch (_: Throwable) {}
             Thread.sleep(interval)
         }
         throw AssertionError("${description()} not met within ${timeout}ms")
-    }
-
-    fun pollUntilAssertion(
-        timeout: Long = 10_000,
-        interval: Long = 200,
-        assertion: () -> Unit
-    ) {
-        val start = System.currentTimeMillis()
-        while (System.currentTimeMillis() - start < timeout) {
-            try {
-                assertion()
-                return
-            } catch (_: Throwable) { Thread.sleep(interval) }
-        }
-        assertion()
     }
 
     fun assertStableCondition(
@@ -96,16 +83,6 @@ object PdfViewerTestUtils {
                 )
             }
             Thread.sleep(interval)
-        }
-    }
-
-    /**
-     * Blocks until the WebView's viewer page has finished loading and the
-     * document state has become STATE_LOADED.
-     */
-    fun waitForDocumentLoaded(timeout: Long = 10_000) {
-        pollUntilAssertion(timeout) {
-            onView(withId(R.id.action_previous)).check(matches(isDisplayed()))
         }
     }
 
@@ -230,10 +207,19 @@ object PdfViewerTestUtils {
         }
     }
 
-    fun waitForCrashUiDismissed(timeout: Long = 10_000) {
-        pollUntilAssertion(timeout) {
-            onView(withId(R.id.webview_alert_layout))
-                .check(matches(not(isDisplayed())))
+    fun waitForCrashUiDismissed(
+        scenario: ActivityScenario<PdfViewer>,
+        timeout: Long = 10_000
+    ) {
+        pollUntil(
+            timeout = timeout,
+            description = { "Crash UI not dismissed within ${timeout}ms" }
+        ) {
+            var dismissed = false
+            scenario.onActivity { activity ->
+                dismissed = !activity.viewModel.webViewCrashed.value
+            }
+            dismissed
         }
     }
 
@@ -248,7 +234,7 @@ object PdfViewerTestUtils {
             description = { "Toolbar visibility should be visible=$visible" }
         ) {
             var matches = false
-            scenario.onActivity { matches = (it.supportActionBar?.isShowing == visible) }
+            scenario.onActivity { matches = (it.viewModel.toolbarVisible.value == visible) }
             matches
         }
     }
@@ -323,22 +309,23 @@ object PdfViewerTestUtils {
         expected: Int,
         timeout: Long = 10_000
     ) {
-        val robot = PdfViewerRobot()
         pollUntil(
             timeout = timeout,
             description = {
-                "Document orientation did not reach ${expected}° " +
-                        "(was ${robot.getDocumentRotationDegrees(scenario)}°)"
+                "Document orientation did not reach ${expected}°"
             }
         ) {
-            robot.getDocumentRotationDegrees(scenario) == expected
+            val result = evaluateJs(scenario, "channel.getDocumentOrientationDegrees()")
+            result.toIntOrNull() == expected
         }
     }
 
     fun waitForSnackbar(message: PdfViewerRobot.SnackbarMessage, timeout: Long = 10_000) {
-        pollUntilAssertion(timeout) {
-            onView(withId(com.google.android.material.R.id.snackbar_text))
-                .check(matches(withText(message.stringRes)))
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val expectedText = context.getString(message.stringRes)
+        composeRule.waitUntil(timeout) {
+            composeRule.onAllNodes(hasText(expectedText))
+                .fetchSemanticsNodes().isNotEmpty()
         }
     }
 
@@ -401,7 +388,7 @@ object PdfViewerTestUtils {
             description = { "Toolbar visibility should stay visible=$expectedVisible" }
         ) {
             var actual = false
-            scenario.onActivity { actual = it.supportActionBar?.isShowing == true }
+            scenario.onActivity { actual = it.viewModel.toolbarVisible.value }
             actual == expectedVisible
         }
     }
@@ -430,8 +417,10 @@ object PdfViewerTestUtils {
             timeout = timeout,
             description = { "Page wrappers not created (expected $expectedCount)" }
         ) {
-            val robot = PdfViewerRobot()
-            robot.getNumberOfRenderedPages(scenario) == expectedCount
+            evaluateJs(
+                scenario,
+                "document.querySelectorAll('.page-wrapper').length"
+            ).toIntOrNull() == expectedCount
         }
     }
 }

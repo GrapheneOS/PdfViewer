@@ -7,10 +7,10 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@stylistic/eslint-plugin": "^5.10.0",
-    "esbuild": "^0.28.0",
-    "eslint": "^10.4.1",
-    "globals": "^17.6.0",
-    "pdfjs-dist": "^5.7.284",
-    "vitest": "^4.1.8"
+    "esbuild": "^0.28.1",
+    "eslint": "^10.6.0",
+    "globals": "^17.7.0",
+    "pdfjs-dist": "^6.1.200",
+    "vitest": "^4.1.10"
   }
 }

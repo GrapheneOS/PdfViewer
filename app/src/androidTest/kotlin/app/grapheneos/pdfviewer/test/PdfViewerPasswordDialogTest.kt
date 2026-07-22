@@ -3,11 +3,16 @@ package app.grapheneos.pdfviewer.test
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
-import app.grapheneos.pdfviewer.RetryRules
+import app.grapheneos.pdfviewer.testrules.RetryRules
+import app.grapheneos.pdfviewer.RetryableComposeRule
+import app.grapheneos.pdfviewer.testrules.OrientationRules
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
+import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 
 /**
@@ -16,10 +21,20 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PdfViewerPasswordDialogTest {
 
-    @get:Rule
-    val retryRules = RetryRules()
+    private val composeRule = RetryableComposeRule()
 
-    private val robot = PdfViewerRobot()
+    @get:Rule
+    val rules: RuleChain = RuleChain
+        .outerRule(RetryRules())
+        .around(OrientationRules())
+        .around(composeRule)
+
+    private val robot = PdfViewerRobot(composeRule)
+
+    @Before
+    fun setup() {
+        PdfViewerTestUtils.init(composeRule)
+    }
 
     @Test
     fun passwordDialog_positiveButtonStartsDisabled() {
@@ -63,10 +78,11 @@ class PdfViewerPasswordDialogTest {
             robot.typePassword("wrongpassword")
 
             scenario.onActivity {
-                it.viewModel.invalid()
+                it.viewModel.invalidPassword()
             }
 
-            robot.assertPasswordError("invalid password")
+            robot.waitForPasswordError()
+            robot.assertPasswordError()
             robot.assertPasswordPositiveButtonEnabled(enabled = false)
         }
     }
