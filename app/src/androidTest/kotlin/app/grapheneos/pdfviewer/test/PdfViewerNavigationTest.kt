@@ -75,6 +75,24 @@ class PdfViewerNavigationTest {
     }
 
     @Test
+    fun horizontalFlingAtPageEdge_navigatesToNextPage() {
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            robot.flingToNextPage()
+
+            PdfViewerTestUtils.pollUntil(
+                description = { "Horizontal fling did not navigate to page 2" }
+            ) {
+                var page = 0
+                scenario.onActivity { page = it.currentPage }
+                page == 2
+            }
+        }
+    }
+
+    @Test
     fun tapNext_updatesMenuState() {
         PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)

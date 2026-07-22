@@ -1,12 +1,6 @@
 <menu xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:android="http://schemas.android.com/apk/res/android" >
 
-    <!--<item-->
-        <!--android:id="@+id/action_settings"-->
-        <!--android:orderInCategory="100"-->
-        <!--android:showAsAction="never"-->
-        <!--android:title="@string/action_settings"/>-->
-
     <item
         android:id="@+id/action_previous"
         android:icon="@drawable/ic_navigate_before_24dp"
@@ -42,6 +36,35 @@
         android:icon="@drawable/ic_pageview_24dp"
         android:title="@string/action_jump_to_page"
         app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_page_fit_group"
+        android:title="@string/action_page_fit"
+        app:showAsAction="never" >
+        <menu>
+            <group android:id="@+id/page_fit_group"
+                android:checkableBehavior="single">
+                <item
+                    android:id="@+id/action_fit_free"
+                    android:title="@string/action_fit_free"
+                    android:checked="false" />
+                <item
+                    android:id="@+id/action_fit_page"
+                    android:title="@string/action_fit_page"
+                    android:checked="false" />
+                <item
+                    android:id="@+id/action_fit_width"
+                    android:title="@string/action_fit_width"
+                    android:checked="true" />
+            </group>
+        </menu>
+    </item>
+
+    <item
+        android:id="@+id/action_continuous_scroll"
+        android:title="@string/action_continuous_scroll"
+        android:checkable="true"
+        app:showAsAction="never" />
 
     <item
         android:id="@+id/action_rotate_clockwise"

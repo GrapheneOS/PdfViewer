@@ -69,8 +69,6 @@ public class PdfViewer extends AppCompatActivity {
         "frame-ancestors 'none'; " +
         "base-uri 'none'";
 
-    // Workers need a separate set of CSP.
-    // MDN reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy#csp_in_workers
     private static final String WORKER_CONTENT_SECURITY_POLICY =
         "default-src 'none'; " +
         "script-src 'self' 'wasm-unsafe-eval'; " +
@@ -117,6 +115,9 @@ public class PdfViewer extends AppCompatActivity {
 
     private volatile float zoomFocusX = 0f;
     private volatile float zoomFocusY = 0f;
+    private boolean zoomRenderInFlight;
+    private boolean zoomRenderPending;
+    private boolean zoomRenderEndPending;
     private int swipeThreshold;
     private int swipeVelocityThreshold;
     private volatile float insetLeft = 0f;
@@ -182,6 +183,15 @@ public class PdfViewer extends AppCompatActivity {
         }
 
         @JavascriptInterface
+        public void setCurrentPage(final int page) {
+            viewModel.setPage(page);
+            runOnUiThread(() -> {
+                showPageNumber();
+                invalidateOptionsMenu();
+            });
+        }
+
+        @JavascriptInterface
         public float getZoomRatio() {
             return viewModel.getZoomRatio();
         }
@@ -239,6 +249,16 @@ public class PdfViewer extends AppCompatActivity {
         @JavascriptInterface
         public int getDocumentOrientationDegrees() {
             return viewModel.getDocumentOrientationDegrees();
+        }
+
+        @JavascriptInterface
+        public int getPageFitMode() {
+            return viewModel.getPageFitMode();
+        }
+
+        @JavascriptInterface
+        public boolean getContinuousMode() {
+            return viewModel.getContinuousMode();
         }
 
         @JavascriptInterface
@@ -349,8 +369,6 @@ public class PdfViewer extends AppCompatActivity {
             }
         });
 
-        // Margins for the toolbar are needed, so that content of the toolbar
-        // is not covered by a system button navigation bar when in landscape.
         KtUtilsKt.applySystemBarMargins(binding.toolbar, false);
         ViewCompat.setOnApplyWindowInsetsListener(
                 binding.webview, new OnApplyWindowInsetsListener() {
@@ -361,8 +379,6 @@ public class PdfViewer extends AppCompatActivity {
                          | WindowInsetsCompat.Type.displayCutout());
                  insetLeft = allInsets.left;
                  insetRight = allInsets.right;
-                 // Only set the bottom inset. The top will use the height of the app bar layout
-                 // which includes the status bar/display cutout.
                  insetBottom = allInsets.bottom;
                 return insets;
             }
@@ -444,8 +460,6 @@ public class PdfViewer extends AppCompatActivity {
                 if ("/viewer/js/worker.js".equals(path)) {
                     final WebResourceResponse response = fromAsset("application/javascript", path);
                     response.getResponseHeaders().put("Content-Security-Policy", WORKER_CONTENT_SECURITY_POLICY);
-                    // Permissions-Policy does not apply to workers.
-                    // See: https://github.com/w3c/webappsec-permissions-policy/issues/207
                     return response;
                 }
 
@@ -461,6 +475,10 @@ public class PdfViewer extends AppCompatActivity {
                         "/viewer/wasm/jbig2.wasm".equals(path) ||
                         "/viewer/wasm/quickjs-eval.wasm".equals(path)) {
                     return fromAsset("application/wasm", path);
+                }
+
+                if (path != null && path.matches("^/viewer/iccs/.*\\.ICC$")) {
+                    return fromAsset("application/vnd.iccprofile", path);
                 }
 
                 if (path != null && path.matches("^/viewer/iccs/.*\\.icc$")) {
@@ -537,15 +555,11 @@ public class PdfViewer extends AppCompatActivity {
                         float absDeltaX = Math.abs(deltaX);
                         float absDeltaY = Math.abs(deltaY);
 
-                        // Check primarily horizontal
                         if (absDeltaX > absDeltaY &&
                                 absDeltaX > swipeThreshold &&
                                 Math.abs(velocityX) > swipeVelocityThreshold) {
-
                             boolean swipeLeft = deltaX < 0;
                             boolean swipeRight = deltaX > 0;
-
-                            // Edge detection
                             boolean atLeftEdge = !binding.webview.canScrollHorizontally(-1);
                             boolean atRightEdge = !binding.webview.canScrollHorizontally(1);
 
@@ -666,7 +680,6 @@ public class PdfViewer extends AppCompatActivity {
         super.onResume();
 
         if (!viewModel.getWebViewCrashed()) {
-            // The user could have left the activity to update the WebView
             invalidateOptionsMenu();
             if (getWebViewRelease() >= MIN_WEBVIEW_RELEASE) {
                 binding.webviewAlertLayout.setVisibility(View.GONE);
@@ -704,6 +717,20 @@ public class PdfViewer extends AppCompatActivity {
         binding.webview.evaluateJavascript("onRenderPage(" + zoom + ")", null);
     }
 
+    private void setPageFitMode(final int mode) {
+        viewModel.setPageFitMode(mode);
+        // Reset zoom ratio so JS computes the new fit ratio
+        viewModel.setZoomRatio(0f);
+        renderPage(0);
+        invalidateOptionsMenu();
+    }
+
+    private void setContinuousMode(final boolean enabled) {
+        viewModel.setContinuousMode(enabled);
+        binding.webview.evaluateJavascript("setContinuousMode(" + enabled + ")", null);
+        invalidateOptionsMenu();
+    }
+
     private void documentOrientationChanged(final int orientationDegreesOffset) {
         int degrees = (viewModel.getDocumentOrientationDegrees() + orientationDegreesOffset) % 360;
         if (degrees < 0) {
@@ -733,15 +760,45 @@ public class PdfViewer extends AppCompatActivity {
     }
 
     private void zoom(float scaleFactor, float focusX, float focusY, boolean end) {
+        // Switch to free zoom mode when user pinches
+        viewModel.setPageFitMode(0);
         viewModel.setZoomRatio(Math.min(Math.max(viewModel.getZoomRatio() * scaleFactor, MIN_ZOOM_RATIO), MAX_ZOOM_RATIO));
         zoomFocusX = focusX;
         zoomFocusY = focusY;
-        renderPage(end ? 1 : 2);
+        requestZoomRender(end);
         invalidateOptionsMenu();
     }
 
     private void zoomEnd() {
-        renderPage(1);
+        requestZoomRender(true);
+    }
+
+    /**
+     * Keep at most one pinch render queued in the WebView. ScaleGestureDetector
+     * can produce events faster than the JavaScript viewer can relayout a large
+     * document; queueing every event makes later JavaScript calls wait behind
+     * stale zoom work. The ViewModel and focus fields always hold the newest
+     * values, so intermediate renders can be safely coalesced.
+     */
+    private void requestZoomRender(final boolean end) {
+        zoomRenderPending = true;
+        zoomRenderEndPending |= end;
+        dispatchPendingZoomRender();
+    }
+
+    private void dispatchPendingZoomRender() {
+        if (zoomRenderInFlight || !zoomRenderPending) {
+            return;
+        }
+
+        final int zoom = zoomRenderEndPending ? 1 : 2;
+        zoomRenderPending = false;
+        zoomRenderEndPending = false;
+        zoomRenderInFlight = true;
+        binding.webview.evaluateJavascript("onRenderPage(" + zoom + ")", unused -> {
+            zoomRenderInFlight = false;
+            dispatchPendingZoomRender();
+        });
     }
 
     private static void setMenuItemState(MenuItem item, boolean visible, boolean enabled) {
@@ -750,6 +807,10 @@ public class PdfViewer extends AppCompatActivity {
         if (item.getIcon() != null) {
             item.getIcon().setAlpha(enabled ? ALPHA_HIGH : ALPHA_LOW);
         }
+    }
+
+    private static void setMenuItemChecked(MenuItem item, boolean checked) {
+        item.setChecked(checked);
     }
 
     public void onJumpToPageInDocument(final int selected_page) {
@@ -816,6 +877,31 @@ public class PdfViewer extends AppCompatActivity {
         setMenuItemState(menu.findItem(R.id.action_outline),
                 loaded && viewModel.hasOutline(), enabled);
 
+        // Page fit mode checkable items
+        setMenuItemState(menu.findItem(R.id.action_page_fit_group), loaded, enabled);
+        final int fitMode = viewModel.getPageFitMode();
+        MenuItem fitPage = menu.findItem(R.id.action_fit_page);
+        MenuItem fitWidth = menu.findItem(R.id.action_fit_width);
+        MenuItem fitFree = menu.findItem(R.id.action_fit_free);
+        if (fitPage != null) {
+            setMenuItemState(fitPage, loaded, enabled);
+            setMenuItemChecked(fitPage, fitMode == 1);
+        }
+        if (fitWidth != null) {
+            setMenuItemState(fitWidth, loaded, enabled);
+            setMenuItemChecked(fitWidth, fitMode == 2);
+        }
+        if (fitFree != null) {
+            setMenuItemState(fitFree, loaded, enabled);
+            setMenuItemChecked(fitFree, fitMode == 0);
+        }
+
+        final MenuItem continuousScroll = menu.findItem(R.id.action_continuous_scroll);
+        if (continuousScroll != null) {
+            setMenuItemState(continuousScroll, loaded, enabled);
+            continuousScroll.setChecked(viewModel.getContinuousMode());
+        }
+
         if (BuildConfig.DEBUG) {
             setMenuItemState(menu.findItem(R.id.debug_action_toggle_text_layer_visibility),
                     loaded, enabled);
@@ -855,7 +941,6 @@ public class PdfViewer extends AppCompatActivity {
                     OutlineFragment.newInstance(viewModel.getPage(), getCurrentDocumentName());
             getSupportFragmentManager().beginTransaction()
                     .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
-                    // fullscreen fragment, since content root view == activity's root view
                     .add(android.R.id.content, outlineFragment)
                     .addToBackStack(null)
                     .commit();
@@ -874,6 +959,18 @@ public class PdfViewer extends AppCompatActivity {
             return true;
         } else if (itemId == R.id.action_save_as) {
             saveDocument();
+            return true;
+        } else if (itemId == R.id.action_fit_page) {
+            setPageFitMode(1);
+            return true;
+        } else if (itemId == R.id.action_fit_width) {
+            setPageFitMode(2);
+            return true;
+        } else if (itemId == R.id.action_fit_free) {
+            setPageFitMode(0);
+            return true;
+        } else if (itemId == R.id.action_continuous_scroll) {
+            setContinuousMode(!viewModel.getContinuousMode());
             return true;
         } else if (itemId == R.id.debug_action_toggle_text_layer_visibility) {
             binding.webview.evaluateJavascript("toggleTextLayerVisibility()", null);
@@ -910,6 +1007,7 @@ public class PdfViewer extends AppCompatActivity {
         viewModel.setZoomRatio(0f);
         viewModel.setDocumentOrientationDegrees(0);
         viewModel.setEncryptedDocumentPassword("");
+        viewModel.setPageFitMode(2); // Default to fit width
         viewModel.clearOutline();
         viewModel.clearDocumentProperties();
     }

@@ -18,6 +18,7 @@ import androidx.test.espresso.ViewAction
 import androidx.test.espresso.action.ViewActions.clearText
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.closeSoftKeyboard
+import androidx.test.espresso.action.ViewActions.swipeLeft
 import androidx.test.espresso.action.ViewActions.typeText
 import androidx.test.espresso.assertion.ViewAssertions.doesNotExist
 import androidx.test.espresso.assertion.ViewAssertions.matches
@@ -82,6 +83,7 @@ class PdfViewerRobot {
         First(R.id.action_first, R.string.action_first),
         Last(R.id.action_last, R.string.action_last),
         JumpToPage(R.id.action_jump_to_page, R.string.action_jump_to_page),
+        PageFit(R.id.action_page_fit_group, R.string.action_page_fit),
         RotateClockwise(
             R.id.action_rotate_clockwise, R.string.action_rotate_clockwise
         ),
@@ -95,7 +97,11 @@ class PdfViewerRobot {
         ViewDocumentProperties(
             R.id.action_view_document_properties,
             R.string.action_view_document_properties
-        )
+        ),
+        FitFree(R.id.action_fit_free, R.string.action_fit_free),
+        FitPage(R.id.action_fit_page, R.string.action_fit_page),
+        FitWidth(R.id.action_fit_width, R.string.action_fit_width),
+        ContinuousScroll(R.id.action_continuous_scroll, R.string.action_continuous_scroll)
     }
 
     enum class SnackbarMessage(@StringRes internal val stringRes: Int) {
@@ -217,9 +223,26 @@ class PdfViewerRobot {
     fun tapWebView() {
         onView(withId(R.id.webview)).perform(click())
     }
+    fun flingToNextPage() {
+        onView(withId(R.id.webview)).perform(swipeLeft())
+    }
 
     fun clickRotateClockwise() = click(AppMenuItem.RotateClockwise)
     fun clickRotateCounterclockwise() = click(AppMenuItem.RotateCounterclockwise)
+    fun clickFitFree() = clickInSubmenu(R.string.action_fit_free)
+    fun clickFitPage() = clickInSubmenu(R.string.action_fit_page)
+    fun clickFitWidth() = clickInSubmenu(R.string.action_fit_width)
+
+    fun clickContinuousScroll() = click(AppMenuItem.ContinuousScroll)
+
+    /** Fit items live inside the "Page fitting" submenu, so expand it first. */
+    private fun clickInSubmenu(@StringRes childTitleRes: Int) {
+        Espresso.openActionBarOverflowOrOptionsMenu(
+            ApplicationProvider.getApplicationContext()
+        )
+        onView(withText(R.string.action_page_fit)).perform(click())
+        onView(withText(childTitleRes)).perform(click())
+    }
 
     /**
      * The broad catch is intentional to catch: 1. The view doesn't exist;
@@ -371,8 +394,8 @@ class PdfViewerRobot {
 
     fun assertCanvasRendered(scenario: ActivityScenario<PdfViewer>) {
         val result = PdfViewerTestUtils.evaluateJs(scenario,
-            "parseInt(document.getElementById('content').style.width) > 0 " +
-                    "&& parseInt(document.getElementById('content').style.height) > 0"
+            "parseInt(globalThis.currentPageCanvas().style.width) > 0 " +
+                    "&& parseInt(globalThis.currentPageCanvas().style.height) > 0"
         )
         assertTrue("Canvas should have non-zero CSS dimensions after rendering", result == "true")
     }
@@ -388,28 +411,28 @@ class PdfViewerRobot {
 
     fun getCanvasWidth(scenario: ActivityScenario<PdfViewer>): Int {
         val result = PdfViewerTestUtils.evaluateJs(scenario,
-            "document.getElementById('content').width"
+            "globalThis.currentPageCanvas().width"
         )
         return result.toInt()
     }
 
     fun getCanvasHeight(scenario: ActivityScenario<PdfViewer>): Int {
         val result = PdfViewerTestUtils.evaluateJs(scenario,
-            "document.getElementById('content').height"
+            "globalThis.currentPageCanvas().height"
         )
         return result.toInt()
     }
 
     fun getCanvasCssWidth(scenario: ActivityScenario<PdfViewer>): Int {
         val result = PdfViewerTestUtils.evaluateJs(scenario,
-            "parseInt(document.getElementById('content').style.width) || 0"
+            "parseInt(globalThis.currentPageCanvas().style.width) || 0"
         )
         return result.toInt()
     }
 
     fun getCanvasCssHeight(scenario: ActivityScenario<PdfViewer>): Int {
         val result = PdfViewerTestUtils.evaluateJs(scenario,
-            "parseInt(document.getElementById('content').style.height) || 0"
+            "parseInt(globalThis.currentPageCanvas().style.height) || 0"
         )
         return result.toInt()
     }
@@ -615,14 +638,38 @@ class PdfViewerRobot {
         return result.toFloat()
     }
 
+    fun getPageFitMode(scenario: ActivityScenario<PdfViewer>): Int {
+        val result = PdfViewerTestUtils.evaluateJs(scenario, "globalThis.getPageFitMode()")
+        return result.toInt()
+    }
+
+    fun getNumberOfRenderedPages(scenario: ActivityScenario<PdfViewer>): Int {
+        val result = PdfViewerTestUtils.evaluateJs(scenario,
+            "document.querySelectorAll('.page-wrapper').length"
+        )
+        return result.toIntOrNull() ?: 0
+    }
+
+    fun scrollDown(scenario: ActivityScenario<PdfViewer>) {
+        PdfViewerTestUtils.evaluateJs(scenario,
+            "window.scrollBy(0, window.innerHeight * 0.8)"
+        )
+    }
+
+    fun scrollToPageJs(scenario: ActivityScenario<PdfViewer>, page: Int) {
+        PdfViewerTestUtils.evaluateJs(scenario,
+            "globalThis.scrollToPage($page)"
+        )
+    }
+
     // Text layer alignment
 
     fun assertTextLayerAligned(scenario: ActivityScenario<PdfViewer>) {
         val result = PdfViewerTestUtils.evaluateJs(scenario, """
             (function() {
-                var text = document.getElementById('text');
+                var text = globalThis.currentPageTextLayer();
                 var container = document.getElementById('container');
-                var canvas = document.getElementById('content');
+                var canvas = globalThis.currentPageCanvas();
                 if (!text || !container || !canvas) return 'missing_elements';
                 if (text.hidden) return 'text_hidden';
                 var scaleFactor = container.style.getPropertyValue('--scale-factor');

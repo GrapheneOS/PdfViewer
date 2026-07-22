@@ -34,6 +34,8 @@ class PdfViewModel(
         private const val STATE_PAGE: String = "page"
         private const val STATE_ZOOM_RATIO: String = "zoomRatio"
         private const val STATE_DOCUMENT_ORIENTATION_DEGREES: String = "documentOrientationDegrees"
+        private const val STATE_PAGE_FIT_MODE: String = "pageFitMode"
+        private const val STATE_CONTINUOUS_MODE: String = "continuousMode"
         private const val STATE_DOCUMENT_PROPERTIES = "documentProperties"
         private const val STATE_DOCUMENT_NAME = "documentName"
     }
@@ -60,6 +62,23 @@ class PdfViewModel(
         set(value) {
             field = value
             savedStateHandle[STATE_DOCUMENT_ORIENTATION_DEGREES] = value
+        }
+
+    // Page fit mode: 0 = free zoom, 1 = fit page, 2 = fit width
+    @Volatile
+    var pageFitMode: Int = savedStateHandle[STATE_PAGE_FIT_MODE] ?: 2
+        set(value) {
+            field = value
+            savedStateHandle[STATE_PAGE_FIT_MODE] = value
+        }
+
+    // Continuous scrolling: true = all pages stacked and vertically scrollable;
+    // false = single page at a time (the original behaviour).
+    @Volatile
+    var continuousMode: Boolean = savedStateHandle[STATE_CONTINUOUS_MODE] ?: true
+        set(value) {
+            field = value
+            savedStateHandle[STATE_CONTINUOUS_MODE] = value
         }
 
     @Volatile
