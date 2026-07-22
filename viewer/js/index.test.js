@@ -147,6 +147,7 @@ async function setupViewer({
         getElementById: (id) => id === "container" ? container : pages,
     };
     globalThis.window = globalThis;
+    globalThis.innerWidth = 100;
     globalThis.innerHeight = 100;
     globalThis.devicePixelRatio = 1;
     globalThis.scrollX = 0;
@@ -234,6 +235,16 @@ describe("continuous page layout", () => {
         expect(state.scrollCalls[1][0]).toBeCloseTo(2);
         expect(state.scrollCalls[1][1]).toBeCloseTo(4);
         expect(state.scrollCalls[2]).toEqual([0, 0]);
+    });
+
+    it("keeps menu zoom focused on the viewport center", async () => {
+        const { state } = await setupViewer({ continuous: false, currentPage: 1 });
+        state.fitMode = 0;
+        state.zoom = 1;
+
+        globalThis.onRenderPage(3);
+
+        expect(state.scrollCalls.at(-1)).toEqual([50, 50]);
     });
 
     it("keeps over-wide pages within the horizontally scrollable area", async () => {

@@ -198,7 +198,10 @@ class PdfViewModel(
         }
     }
 
-    @Volatile var zoomRatio: Float = 0f
+    private val _zoomRatio = MutableStateFlow(0f)
+    val zoomRatio: StateFlow<Float> = _zoomRatio.asStateFlow()
+    fun setZoomRatio(value: Float) { _zoomRatio.value = value }
+
     @Volatile var encryptedDocumentPassword: String = ""
     @Volatile var zoomFocusX = 0f
     @Volatile var zoomFocusY = 0f
@@ -292,7 +295,7 @@ class PdfViewModel(
     fun resetDocumentState() {
         setPage(1)
         _numPages.value = 0
-        zoomRatio = 0f
+        _zoomRatio.value = 0f
         setDocumentOrientationDegrees(0)
         setPageFitMode(1)
         setContinuousMode(true)
@@ -305,7 +308,7 @@ class PdfViewModel(
     fun prepareForLoad() {
         documentPropertiesLoaded.set(false)
         _documentLoaded.value = false
-        zoomRatio = 0f
+        _zoomRatio.value = 0f
     }
 
     fun handleLoadError() {

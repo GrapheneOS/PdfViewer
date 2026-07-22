@@ -10,6 +10,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.ComposeTestRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -557,6 +558,75 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
     fun getZoomRatio(scenario: ActivityScenario<PdfViewer>): Float {
         val result = PdfViewerTestUtils.evaluateJs(scenario, "channel.getZoomRatio()")
         return result.toFloat()
+    }
+
+    private fun ensureOverflowMenuOpen() {
+        val zoomInDesc = getTargetContext().getString(R.string.zoom_in)
+        val nodes = composeRule.onAllNodesWithContentDescription(zoomInDesc)
+            .fetchSemanticsNodes()
+        if (nodes.isEmpty()) {
+            composeRule.onNodeWithContentDescription(TestTags.OVERFLOW_MENU).performClick()
+            composeRule.waitForIdle()
+        }
+    }
+
+    fun clickMenuZoomIn() {
+        ensureOverflowMenuOpen()
+        val desc = getTargetContext().getString(R.string.zoom_in)
+        composeRule.onNodeWithContentDescription(desc).performClick()
+        composeRule.waitForIdle()
+    }
+
+    fun clickMenuZoomOut() {
+        ensureOverflowMenuOpen()
+        val desc = getTargetContext().getString(R.string.zoom_out)
+        composeRule.onNodeWithContentDescription(desc).performClick()
+        composeRule.waitForIdle()
+    }
+
+    fun clickZoomPercentage() {
+        ensureOverflowMenuOpen()
+        composeRule.onNodeWithTag(TestTags.ZOOM_PERCENTAGE).performClick()
+        composeRule.waitForIdle()
+    }
+
+    fun assertZoomInEnabled(enabled: Boolean) {
+        ensureOverflowMenuOpen()
+        val desc = getTargetContext().getString(R.string.zoom_in)
+        val node = composeRule.onNodeWithContentDescription(desc)
+        if (enabled) node.assertIsEnabled() else node.assertIsNotEnabled()
+    }
+
+    fun assertZoomOutEnabled(enabled: Boolean) {
+        ensureOverflowMenuOpen()
+        val desc = getTargetContext().getString(R.string.zoom_out)
+        val node = composeRule.onNodeWithContentDescription(desc)
+        if (enabled) node.assertIsEnabled() else node.assertIsNotEnabled()
+    }
+
+    fun assertZoomRowVisible() {
+        val desc = getTargetContext().getString(R.string.zoom_in)
+        composeRule.onNodeWithContentDescription(desc).assertIsDisplayed()
+    }
+
+    fun assertCustomZoomDialogText(currentPercent: Int) {
+        composeRule.onNodeWithTag(TestTags.CUSTOM_ZOOM_FIELD)
+            .assertTextContains(currentPercent.toString())
+    }
+
+    fun setCustomZoomValue(value: Int) {
+        composeRule.onNodeWithTag(TestTags.CUSTOM_ZOOM_FIELD).performTextClearance()
+        composeRule.onNodeWithTag(TestTags.CUSTOM_ZOOM_FIELD).performTextInput(value.toString())
+    }
+
+    fun typeCustomZoom(value: Int) {
+        composeRule.onNodeWithTag(TestTags.CUSTOM_ZOOM_FIELD).performTextInput(value.toString())
+    }
+
+    fun assertDialogOkEnabled(enabled: Boolean) {
+        val text = getTargetContext().getString(android.R.string.ok)
+        val node = composeRule.onNodeWithText(text)
+        if (enabled) node.assertIsEnabled() else node.assertIsNotEnabled()
     }
 
     // Text layer alignment

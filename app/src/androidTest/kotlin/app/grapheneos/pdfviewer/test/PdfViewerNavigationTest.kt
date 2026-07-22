@@ -3,6 +3,7 @@ package app.grapheneos.pdfviewer.test
 import android.app.Activity
 import android.app.Instrumentation
 import android.content.Intent
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.core.app.ActivityScenario
@@ -10,17 +11,20 @@ import androidx.test.espresso.intent.Intents
 import androidx.test.espresso.intent.Intents.intending
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.grapheneos.pdfviewer.PdfJsChannel.Companion.MAX_ZOOM_RATIO
+import app.grapheneos.pdfviewer.PdfJsChannel.Companion.MIN_ZOOM_RATIO
 import app.grapheneos.pdfviewer.PdfViewer
-import app.grapheneos.pdfviewer.testrules.RetryRules
 import app.grapheneos.pdfviewer.RetryableComposeRule
 import app.grapheneos.pdfviewer.TestTags
 import app.grapheneos.pdfviewer.currentPage
 import app.grapheneos.pdfviewer.documentName
 import app.grapheneos.pdfviewer.testrules.OrientationRules
+import app.grapheneos.pdfviewer.testrules.RetryRules
 import app.grapheneos.pdfviewer.totalPages
 import app.grapheneos.pdfviewer.util.PdfViewerLauncher
 import app.grapheneos.pdfviewer.util.PdfViewerRobot
 import app.grapheneos.pdfviewer.util.PdfViewerTestUtils
+import app.grapheneos.pdfviewer.zoomRatio
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -28,9 +32,11 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
- * Page navigation and JumpToPage dialog.
+ * Page navigation, JumpToPage dialog and CustomZoomDialog.
  */
 @RunWith(AndroidJUnit4::class)
 class PdfViewerNavigationTest {
@@ -318,6 +324,142 @@ class PdfViewerNavigationTest {
             PdfViewerTestUtils.waitForDocumentChanged(scenario, expectedPages = 4)
             PdfViewerTestUtils.waitForOutlineAvailable(scenario)
             robot.assertMenuItemVisible(PdfViewerRobot.AppMenuItem.Outline, expected = true)
+        }
+    }
+
+    @Test
+    fun zoomButtons_menuStaysOpenAfterClick() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            robot.clickMenuZoomIn()
+            robot.assertZoomRowVisible()
+        }
+    }
+
+    @Test
+    fun zoomInButton_disabledAtMaxZoom() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            scenario.onActivity {
+                it.zoomRatio = MAX_ZOOM_RATIO
+            }
+            composeRule.waitForIdle()
+
+            robot.assertZoomInEnabled(false)
+            robot.assertZoomOutEnabled(true)
+        }
+    }
+
+    @Test
+    fun zoomOutButton_disabledAtMinZoom() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            scenario.onActivity {
+                it.zoomRatio = MIN_ZOOM_RATIO
+            }
+            composeRule.waitForIdle()
+
+            robot.assertZoomOutEnabled(false)
+            robot.assertZoomInEnabled(true)
+        }
+    }
+
+    @Test
+    fun customZoomDialog_opensWithCurrentZoom() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            val currentZoom = robot.getZoomRatio(scenario)
+            val expectedPercent = (currentZoom * 100).roundToInt()
+
+            robot.clickZoomPercentage()
+            robot.assertCustomZoomDialogText(expectedPercent)
+        }
+    }
+
+    @Test
+    fun customZoomDialog_okAppliesZoom() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            robot.clickZoomPercentage()
+            robot.setCustomZoomValue(200)
+            robot.clickDialogOk()
+
+            PdfViewerTestUtils.pollUntil(
+                description = {
+                    "Zoom ratio should be 2.0 after custom zoom " +
+                            "(was ${robot.getZoomRatio(scenario)})"
+                }
+            ) {
+                abs(robot.getZoomRatio(scenario) - 2.0f) < 0.01f
+            }
+        }
+    }
+
+    @Test
+    fun customZoomDialog_cancelDoesNotChangeZoom() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            val initialZoom = robot.getZoomRatio(scenario)
+
+            robot.clickZoomPercentage()
+            robot.setCustomZoomValue(200)
+            robot.clickDialogCancel()
+            composeRule.waitForIdle()
+
+            val afterZoom = robot.getZoomRatio(scenario)
+            assertEquals(
+                "Zoom should not change after dialog cancel",
+                initialZoom, afterZoom, 0.001f
+            )
+        }
+    }
+
+    @Test
+    fun customZoomDialog_prefilledValueIsSelected_typingReplaces() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            robot.clickZoomPercentage()
+            robot.typeCustomZoom(200)
+
+            composeRule.onNodeWithTag(TestTags.CUSTOM_ZOOM_FIELD)
+                .assertTextContains("200")
+
+            robot.clickDialogOk()
+
+            PdfViewerTestUtils.pollUntil(
+                description = {
+                    "Zoom ratio should be 2.0 after typing replacement " +
+                            "(was ${robot.getZoomRatio(scenario)})"
+                }
+            ) {
+                abs(robot.getZoomRatio(scenario) - 2.0f) < 0.01f
+            }
+        }
+    }
+
+    @Test
+    fun customZoomDialog_rejectsInvalidInput() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            robot.clickZoomPercentage()
+            robot.setCustomZoomValue(0)
+            robot.assertDialogOkEnabled(false)
         }
     }
 }

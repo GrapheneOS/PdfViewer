@@ -61,5 +61,10 @@
     <string name="pdf_version">PDF version</string>
     <string name="pages">Pages</string>
 
+    <string name="zoom">Zoom</string>
+    <string name="zoom_in">Zoom in</string>
+    <string name="zoom_out">Zoom out</string>
+    <string name="zoom_range">Percentage (%1$d–%2$d%%)</string>
+
     <string name="unknown_file_size">Unknown</string>
 </resources>
