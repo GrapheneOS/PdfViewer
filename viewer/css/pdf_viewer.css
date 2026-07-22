@@ -37,7 +37,7 @@ body {
  */
 .page-wrapper {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     position: relative;
     padding: 0;
     margin: 14px 0;

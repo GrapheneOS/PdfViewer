@@ -143,17 +143,22 @@ function sizeWrapper(p, layout = null) {
     const vp = pageViewport(p.pdfPage, layout);
     p.viewport = vp;
     const a = availSize(layout);
+    const offsetX = Math.max(0, (a.width - vp.width) / 2);
     p.wrapper.style.width = a.width + "px";
     p.wrapper.style.height = vp.height + "px";
     p.canvas.style.width = vp.width + "px";
     p.canvas.style.height = vp.height + "px";
+    // Center pages which fit, but start over-wide pages at x=0. Flex centering
+    // puts half of an over-wide canvas at a negative (unscrollable) coordinate,
+    // making its left edge impossible to reach while panning.
+    p.canvas.style.marginLeft = offsetX + "px";
 }
 
 // Overlay the text layer exactly on the (horizontally-centered) canvas.
 function alignTextLayer(p, layout = null) {
     if (!p.viewport) return;
     const a = availSize(layout);
-    const offsetX = (a.width - p.viewport.width) / 2;
+    const offsetX = Math.max(0, (a.width - p.viewport.width) / 2);
     p.textLayer.style.translate = offsetX + "px 0px";
     p.textLayer.style.width = p.viewport.width + "px";
     p.textLayer.style.height = p.viewport.height + "px";

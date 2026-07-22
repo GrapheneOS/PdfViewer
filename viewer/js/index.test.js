@@ -21,6 +21,7 @@ function styleDeclaration() {
         display: "",
         height: "",
         width: "",
+        marginLeft: "",
         translate: "",
         setProperty(name, value) {
             properties.set(name, value);
@@ -233,6 +234,23 @@ describe("continuous page layout", () => {
         expect(state.scrollCalls[1][0]).toBeCloseTo(2);
         expect(state.scrollCalls[1][1]).toBeCloseTo(4);
         expect(state.scrollCalls[2]).toEqual([0, 0]);
+    });
+
+    it("keeps over-wide pages within the horizontally scrollable area", async () => {
+        const { state, pagesElement } = await setupViewer({
+            continuous: true,
+            currentPage: 4,
+            pageCount: 4,
+        });
+        state.fitMode = 0;
+        state.zoom = 2;
+
+        globalThis.onRenderPage(2);
+
+        const [canvas, textLayer] = pagesElement.children[3].children;
+        expect(canvas.style.width).toBe("200px");
+        expect(canvas.style.marginLeft).toBe("0px");
+        expect(textLayer.style.translate).toBe("0px 0px");
     });
 
     it("resizes far placeholders when free zoom changes", async () => {
