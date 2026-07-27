@@ -690,14 +690,9 @@ private fun createWebViewClient(context: Context, viewModel: PdfViewModel): WebV
                         context.contentResolver.openInputStream(pdfUri)
                             ?: throw FileNotFoundException()
                     } catch (e: Exception) {
-                        when (e) {
-                            is FileNotFoundException, is IllegalArgumentException,
-                            is IllegalStateException, is SecurityException -> {
-                                viewModel.postSnackbar(R.string.error_while_opening)
-                                return null
-                            }
-                            else -> throw e
-                        }
+                        Log.w(TAG, "Failed to open input stream", e)
+                        viewModel.postSnackbar(R.string.error_while_opening)
+                        return null
                     }
                     viewModel.inputStream = stream
                     return WebResourceResponse(PDF_MIME, null, stream)
