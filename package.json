@@ -9,7 +9,7 @@
     "@stylistic/eslint-plugin": "^5.10.0",
     "esbuild": "^0.28.1",
     "eslint": "^10.8.0",
-    "globals": "^17.7.0",
+    "globals": "^17.8.0",
     "pdfjs-dist": "^6.1.200",
     "vitest": "^4.1.10"
   }
