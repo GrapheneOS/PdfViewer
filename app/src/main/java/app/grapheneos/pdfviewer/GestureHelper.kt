@@ -60,6 +60,7 @@ object GestureHelper {
                     velocityY: Float
                 ): Boolean {
                     if (wasScaling) return false
+                    if (isMouseEvent(e1) || isMouseEvent(e2)) return false
                     return listener.onFling(e1, e2, velocityX, velocityY)
                 }
             })
@@ -106,6 +107,19 @@ object GestureHelper {
                 (event.source and InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE &&
                 event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE &&
                 event.getAxisValue(MotionEvent.AXIS_VSCROLL) != 0f
+    }
+
+    private fun isMouseEvent(event: MotionEvent?): Boolean {
+        if (event == null) return false
+        if ((event.source and InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE) {
+            return true
+        }
+        for (pointerIndex in 0 until event.pointerCount) {
+            if (event.getToolType(pointerIndex) == MotionEvent.TOOL_TYPE_MOUSE) {
+                return true
+            }
+        }
+        return false
     }
 
     fun getKeyboardPageNavigationDirection(event: KeyEvent): PageNavigationDirection? {
