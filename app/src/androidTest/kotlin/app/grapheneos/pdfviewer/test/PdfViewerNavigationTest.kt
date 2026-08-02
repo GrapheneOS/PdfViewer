@@ -142,7 +142,7 @@ class PdfViewerNavigationTest {
     }
 
     @Test
-    fun touchSwipeLeft_goesToNextPage() {
+    fun touchSwipeLeft_withSlowRelease_goesToNextPage() {
         PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
             PdfViewerTestUtils.waitForCanvasRendered(scenario)
@@ -152,6 +152,21 @@ class PdfViewerNavigationTest {
 
             scenario.onActivity {
                 assertEquals(3, it.currentPage)
+            }
+        }
+    }
+
+    @Test
+    fun touchSwipeRight_withSlowRelease_goesToPreviousPage() {
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+            setupNavigableState(scenario, page = 3)
+
+            robot.performTouchSwipe(scenario, left = false)
+
+            scenario.onActivity {
+                assertEquals(2, it.currentPage)
             }
         }
     }

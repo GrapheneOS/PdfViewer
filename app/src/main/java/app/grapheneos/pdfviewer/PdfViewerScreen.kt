@@ -7,6 +7,7 @@ import android.content.Intent
 import android.icu.text.DecimalFormatSymbols
 import android.icu.text.NumberFormat
 import android.util.Log
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.ViewConfiguration
 import android.view.ViewGroup
@@ -342,7 +343,6 @@ fun PdfViewerScreen(
 
     val viewConfiguration = remember { ViewConfiguration.get(context) }
     val swipeThreshold = remember { viewConfiguration.scaledTouchSlop * 6 }
-    val swipeVelocityThreshold = remember { viewConfiguration.scaledMinimumFlingVelocity }
 
     DisposableEffect(webView) {
         val wv = webView ?: return@DisposableEffect onDispose {}
@@ -363,6 +363,30 @@ fun PdfViewerScreen(
             return true
         }
 
+        fun pageSwipeDirection(
+            e1: MotionEvent?,
+            e2: MotionEvent
+        ): GestureHelper.PageNavigationDirection? {
+            if (e1 == null) return null
+
+            val deltaX = e2.x - e1.x
+            val deltaY = e2.y - e1.y
+            if (abs(deltaX) <= abs(deltaY) || abs(deltaX) <= swipeThreshold) return null
+
+            return when {
+                deltaX < 0 &&
+                        !wv.canScrollHorizontally(1) &&
+                        viewModel.page.value < viewModel.numPages.value ->
+                    GestureHelper.PageNavigationDirection.Next
+                deltaX > 0 &&
+                        !wv.canScrollHorizontally(-1) &&
+                        viewModel.page.value > 1 ->
+                    GestureHelper.PageNavigationDirection.Previous
+                else -> null
+            }
+        }
+
+        var eligiblePageSwipeDirection: GestureHelper.PageNavigationDirection? = null
         GestureHelper.attach(context, wv, object : GestureHelper.GestureListener {
             override fun onTapUp(): Boolean {
                 if (viewModel.uri.value == null) return false
@@ -374,28 +398,27 @@ fun PdfViewerScreen(
                 return true
             }
 
-            override fun onFling(
-                e1: MotionEvent?, e2: MotionEvent,
-                velocityX: Float, velocityY: Float
-            ): Boolean {
-                if (e1 == null) return false
+            override fun onSwipeStart() {
+                eligiblePageSwipeDirection = null
+            }
 
-                val deltaX = e2.x - e1.x
-                val deltaY = e2.y - e1.y
-
-                if (abs(deltaX) > abs(deltaY) &&
-                    abs(deltaX) > swipeThreshold &&
-                    abs(velocityX) > swipeVelocityThreshold
-                ) {
-                    if (deltaX < 0 && !wv.canScrollHorizontally(1)) {
-                        jumpToPage(viewModel, wv, viewModel.page.value + 1)
-                        return true
-                    } else if (deltaX > 0 && !wv.canScrollHorizontally(-1)) {
-                        jumpToPage(viewModel, wv, viewModel.page.value - 1)
-                        return true
-                    }
+            override fun onSwipeProgress(e1: MotionEvent?, e2: MotionEvent) {
+                val direction = pageSwipeDirection(e1, e2)
+                if (direction != null && direction != eligiblePageSwipeDirection) {
+                    wv.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 }
-                return false
+                eligiblePageSwipeDirection = direction
+            }
+
+            override fun onSwipeEnd() {
+                eligiblePageSwipeDirection?.let { direction ->
+                    jumpToPage(
+                        viewModel,
+                        wv,
+                        viewModel.page.value + direction.pageOffset
+                    )
+                }
+                eligiblePageSwipeDirection = null
             }
 
             override fun onZoom(scaleFactor: Float, focusX: Float, focusY: Float) {

@@ -22,7 +22,9 @@ object GestureHelper {
 
     interface GestureListener {
         fun onTapUp(): Boolean
-        fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean
+        fun onSwipeStart()
+        fun onSwipeProgress(e1: MotionEvent?, e2: MotionEvent)
+        fun onSwipeEnd()
         fun onZoom(scaleFactor: Float, focusX: Float, focusY: Float)
         fun onCtrlMouseWheelZoom(zoomIn: Boolean, focusX: Float, focusY: Float)
         fun onZoomEnd()
@@ -53,28 +55,36 @@ object GestureHelper {
                     return listener.onTapUp()
                 }
 
-                override fun onFling(
+                override fun onScroll(
                     e1: MotionEvent?,
                     e2: MotionEvent,
-                    velocityX: Float,
-                    velocityY: Float
+                    distanceX: Float,
+                    distanceY: Float
                 ): Boolean {
-                    if (wasScaling) return false
+                    if (wasScaling || e2.pointerCount != 1) return false
                     if (isMouseEvent(e1) || isMouseEvent(e2)) return false
-                    return listener.onFling(e1, e2, velocityX, velocityY)
+                    listener.onSwipeProgress(e1, e2)
+                    return false
                 }
             })
 
         gestureView.setOnTouchListener { _, event ->
             if (event.actionMasked == MotionEvent.ACTION_DOWN) {
                 wasScaling = false
+                listener.onSwipeStart()
             }
 
             detector.onTouchEvent(event)
             scaleDetector.onTouchEvent(event)
 
-            if (scaleDetector.isInProgress) {
+            if (event.pointerCount > 1 || scaleDetector.isInProgress) {
                 wasScaling = true
+            }
+            if (event.actionMasked == MotionEvent.ACTION_UP &&
+                !wasScaling &&
+                !isMouseEvent(event)
+            ) {
+                listener.onSwipeEnd()
             }
 
             false

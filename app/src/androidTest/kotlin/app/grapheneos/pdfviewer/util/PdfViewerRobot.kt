@@ -291,7 +291,8 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
 
             dispatch(MotionEvent.ACTION_DOWN, 0, startX)
             dispatch(MotionEvent.ACTION_MOVE, 10, (startX + endX) / 2f)
-            dispatch(MotionEvent.ACTION_UP, 20, endX)
+            dispatch(MotionEvent.ACTION_MOVE, 20, endX)
+            dispatch(MotionEvent.ACTION_UP, 1020, endX)
         }
         composeRule.waitForIdle()
     }
