@@ -9,7 +9,6 @@ import android.icu.text.NumberFormat
 import android.util.Log
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
-import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.RenderProcessGoneDetail
@@ -141,9 +140,22 @@ private val ZOOM_PRESETS = intArrayOf(25, 50, 75, 100, 125, 150, 200, 300, 500, 
 private const val MOUSE_WHEEL_ZOOM_IN_FACTOR = 1.25f
 private const val MOUSE_WHEEL_ZOOM_OUT_FACTOR = 0.8f
 private const val MOUSE_WHEEL_ZOOM_END_DELAY_MS = 120L
+// Chromium uses a 30-degree direction gate and a 32dp pull distance with 3x activation.
+private const val PAGE_SWIPE_DIRECTION_WEIGHT = 1.73f
+private val PAGE_SWIPE_THRESHOLD = 96.dp
 private const val RENDER_DEFAULT_SCRIPT = "renderDefault()"
 private const val RENDER_FINAL_ZOOM_SCRIPT = "renderFinalZoom()"
 private const val RENDER_TRANSIENT_ZOOM_SCRIPT = "renderTransientZoom()"
+
+// Expose protected scroll metrics needed to measure movement past the content bounds.
+private class PdfWebView(context: Context) : WebView(context) {
+    val horizontalScrollOffset: Int
+        get() = computeHorizontalScrollOffset()
+
+    val maximumHorizontalScrollOffset: Int
+        get() = (computeHorizontalScrollRange() - computeHorizontalScrollExtent())
+            .coerceAtLeast(0)
+}
 
 private fun nextZoomPreset(ratio: Float): Float? {
     val currentPercent = (ratio * 100).roundToInt()
@@ -265,7 +277,7 @@ fun PdfViewerScreen(
     var webViewRelease by remember { mutableIntStateOf(getWebViewRelease()) }
     val webViewOk = webViewRelease >= MIN_WEBVIEW_RELEASE
     var toolbarHeightPx by remember { mutableFloatStateOf(0f) }
-    var webView by remember { mutableStateOf<WebView?>(null) }
+    var webView by remember { mutableStateOf<PdfWebView?>(null) }
 
     LifecycleResumeEffect(Unit) {
         webViewRelease = getWebViewRelease()
@@ -341,8 +353,7 @@ fun PdfViewerScreen(
         }
     }
 
-    val viewConfiguration = remember { ViewConfiguration.get(context) }
-    val swipeThreshold = remember { viewConfiguration.scaledTouchSlop * 6 }
+    val swipeThreshold = with(density) { PAGE_SWIPE_THRESHOLD.toPx() }
 
     DisposableEffect(webView) {
         val wv = webView ?: return@DisposableEffect onDispose {}
@@ -363,23 +374,34 @@ fun PdfViewerScreen(
             return true
         }
 
+        var pageSwipeStartScrollOffset = 0
+        var pageSwipeMaximumScrollOffset = 0
+
         fun pageSwipeDirection(
             e1: MotionEvent?,
             e2: MotionEvent
         ): GestureHelper.PageNavigationDirection? {
             if (e1 == null) return null
 
-            val deltaX = e2.x - e1.x
-            val deltaY = e2.y - e1.y
-            if (abs(deltaX) <= abs(deltaY) || abs(deltaX) <= swipeThreshold) return null
+            val distanceX = e1.x - e2.x
+            val distanceY = e1.y - e2.y
+            if (abs(distanceX) <= abs(distanceY) * PAGE_SWIPE_DIRECTION_WEIGHT) return null
+
+            val distancePastBound = when {
+                distanceX > 0 ->
+                    (distanceX - (pageSwipeMaximumScrollOffset - pageSwipeStartScrollOffset))
+                        .coerceAtLeast(0f)
+                distanceX < 0 ->
+                    (distanceX + pageSwipeStartScrollOffset).coerceAtMost(0f)
+                else -> 0f
+            }
+            if (abs(distancePastBound) <= swipeThreshold) return null
 
             return when {
-                deltaX < 0 &&
-                        !wv.canScrollHorizontally(1) &&
+                distancePastBound > 0 &&
                         viewModel.page.value < viewModel.numPages.value ->
                     GestureHelper.PageNavigationDirection.Next
-                deltaX > 0 &&
-                        !wv.canScrollHorizontally(-1) &&
+                distancePastBound < 0 &&
                         viewModel.page.value > 1 ->
                     GestureHelper.PageNavigationDirection.Previous
                 else -> null
@@ -399,6 +421,11 @@ fun PdfViewerScreen(
             }
 
             override fun onSwipeStart() {
+                pageSwipeMaximumScrollOffset = wv.maximumHorizontalScrollOffset
+                pageSwipeStartScrollOffset = wv.horizontalScrollOffset.coerceIn(
+                    0,
+                    pageSwipeMaximumScrollOffset
+                )
                 eligiblePageSwipeDirection = null
             }
 
@@ -541,7 +568,7 @@ fun PdfViewerScreen(
             else -> {
                 AndroidView(
                     factory = { ctx ->
-                        WebView(ctx).apply {
+                        PdfWebView(ctx).apply {
                             layoutParams = ViewGroup.LayoutParams(
                                 ViewGroup.LayoutParams.MATCH_PARENT,
                                 ViewGroup.LayoutParams.MATCH_PARENT
