@@ -15,6 +15,11 @@ import kotlin.math.roundToInt
  */
 
 object GestureHelper {
+    enum class PageNavigationDirection(val pageOffset: Int) {
+        Previous(-1),
+        Next(1)
+    }
+
     interface GestureListener {
         fun onTapUp(): Boolean
         fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean
@@ -101,5 +106,20 @@ object GestureHelper {
                 (event.source and InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE &&
                 event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE &&
                 event.getAxisValue(MotionEvent.AXIS_VSCROLL) != 0f
+    }
+
+    fun getKeyboardPageNavigationDirection(event: KeyEvent): PageNavigationDirection? {
+        if (!isPlainKeyDown(event)) return null
+
+        return when (event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_LEFT -> PageNavigationDirection.Previous
+            KeyEvent.KEYCODE_DPAD_RIGHT -> PageNavigationDirection.Next
+            else -> null
+        }
+    }
+
+    private fun isPlainKeyDown(event: KeyEvent): Boolean {
+        return event.action == KeyEvent.ACTION_DOWN &&
+                event.hasNoModifiers()
     }
 }

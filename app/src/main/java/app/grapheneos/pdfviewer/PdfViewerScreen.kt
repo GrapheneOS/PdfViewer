@@ -82,6 +82,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -468,8 +469,31 @@ fun PdfViewerScreen(
     val hasPages = numPages > 0
     val enabled = documentLoaded && !webViewCrashed
     val displayName = documentName.ifEmpty { stringResource(R.string.app_name) }
+    val keyboardPageNavigationEnabled = enabled &&
+            !showMenu &&
+            !showOutline &&
+            !showJumpToPage &&
+            !showDocProperties &&
+            !showCustomZoom &&
+            !showPasswordDialog
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onPreviewKeyEvent { event ->
+                if (!keyboardPageNavigationEnabled) {
+                    return@onPreviewKeyEvent false
+                }
+                val direction =
+                    GestureHelper.getKeyboardPageNavigationDirection(event.nativeKeyEvent)
+                        ?: return@onPreviewKeyEvent false
+                jumpToPage(
+                    viewModel,
+                    webView,
+                    viewModel.page.value + direction.pageOffset
+                )
+            }
+    ) {
         when {
             webViewCrashed -> WebViewAlertScreen(
                 title = stringResource(R.string.webview_crash_title),
@@ -792,14 +816,16 @@ private fun loadPdfWithPassword(viewModel: PdfViewModel, webView: WebView?, pass
     webView.evaluateJavascript("loadDocument()", null)
 }
 
-internal fun jumpToPage(viewModel: PdfViewModel, webView: WebView?, selectedPage: Int) {
-    webView ?: return
+internal fun jumpToPage(viewModel: PdfViewModel, webView: WebView?, selectedPage: Int): Boolean {
+    webView ?: return false
     val num = viewModel.numPages.value
     if (selectedPage in 1..num && viewModel.page.value != selectedPage) {
         viewModel.setPage(selectedPage)
         webView.evaluateJavascript(RENDER_DEFAULT_SCRIPT, null)
         viewModel.showPageIndicator()
+        return true
     }
+    return false
 }
 
 private fun rotateDocument(viewModel: PdfViewModel, webView: WebView?, offset: Int) {

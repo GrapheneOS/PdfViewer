@@ -89,6 +89,11 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
         SaveError(R.string.error_while_saving)
     }
 
+    enum class KeyboardArrow(internal val keyCode: Int) {
+        Left(KeyEvent.KEYCODE_DPAD_LEFT),
+        Right(KeyEvent.KEYCODE_DPAD_RIGHT)
+    }
+
     // WebView
 
     fun assertWebViewVisible() {
@@ -222,6 +227,20 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
 
     fun clickNext() = click(AppMenuItem.Next)
     fun clickPrevious() = click(AppMenuItem.Previous)
+    fun pressKeyboardArrow(
+        scenario: ActivityScenario<PdfViewer>,
+        arrow: KeyboardArrow
+    ) {
+        scenario.onActivity { activity ->
+            val webView = activity.webView ?: throw AssertionError("WebView is null")
+            webView.requestFocus()
+        }
+        composeRule.waitForIdle()
+
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(arrow.keyCode)
+        composeRule.waitForIdle()
+    }
+
     fun clickReload() {
         composeRule.onNodeWithTag(TestTags.RELOAD_BUTTON).performClick()
     }
