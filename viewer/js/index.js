@@ -243,9 +243,6 @@ function renderPage(pageNumber, renderMode, prerender, prerenderTrigger = 0) {
         // use original viewport height for CSS zoom
         newCanvas.style.height = viewport.height + "px";
         newCanvas.style.width = viewport.width + "px";
-        const newContext = newCanvas.getContext("2d", { alpha: false });
-        newContext.scale(ratio, ratio);
-
         // Add padding to the canvas to allow the page to be scrolled bellow/above any
         // system/app ui that might be visible.
         canvas.style.paddingLeft = (channel.getInsetLeft() / ratio) + "px";
@@ -254,7 +251,9 @@ function renderPage(pageNumber, renderMode, prerender, prerenderTrigger = 0) {
         canvas.style.paddingBottom = (channel.getInsetBottom() / ratio) + "px";
 
         task = page.render({
-            canvasContext: newContext,
+            canvas: newCanvas,
+            // Scale both axes by the device pixel ratio, with no skew or translation.
+            transform: ratio === 1 ? null : [ratio, 0, 0, ratio, 0, 0],
             viewport: newViewport
         });
 
