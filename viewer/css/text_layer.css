@@ -107,6 +107,29 @@
     background: transparent;
 }
 
+/*
+ * Search highlights. The Custom Highlight API paints from live Ranges, so highlights follow the
+ * text layer's transforms through zoom and rotation with no coordinate maths, and it mutates no
+ * DOM, which matters because rendered text layers are cached and reused.
+ */
+::highlight(pdf-find) {
+    background-color: rgb(180 0 170 / 0.4);
+}
+
+::highlight(pdf-find-active) {
+    background-color: rgb(255 148 61 / 0.7);
+}
+
+@media screen and (forced-colors: active) {
+    ::highlight(pdf-find),
+    ::highlight(pdf-find-active) {
+        background-color: Highlight;
+        /* The text layer is transparent over the canvas; in high contrast mode the matched
+           glyphs have to become legible, which .textLayer's forced-color-adjust: none allows. */
+        color: HighlightText;
+    }
+}
+
 .textLayer .endOfContent {
     display: block;
     position: absolute;

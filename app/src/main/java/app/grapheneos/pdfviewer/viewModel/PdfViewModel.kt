@@ -13,12 +13,14 @@ import app.grapheneos.pdfviewer.outline.OutlineNode
 import app.grapheneos.pdfviewer.properties.DEFAULT_VALUE
 import app.grapheneos.pdfviewer.properties.DocumentPropertiesRetriever
 import app.grapheneos.pdfviewer.properties.DocumentProperty
+import app.grapheneos.pdfviewer.search.DocumentSearch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +29,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONException
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
@@ -43,6 +46,9 @@ class PdfViewModel(
         private const val STATE_DOCUMENT_ORIENTATION_DEGREES: String = "documentOrientationDegrees"
         private const val STATE_DOCUMENT_PROPERTIES = "documentProperties"
         private const val STATE_DOCUMENT_NAME = "documentName"
+        private const val STATE_SEARCH_ACTIVE = "searchActive"
+        private const val STATE_SEARCH_QUERY = "searchQuery"
+        private const val SEARCH_DEBOUNCE_MS = 200L
     }
 
     val uri: StateFlow<Uri?> = savedStateHandle.getStateFlow(STATE_URI, null)
@@ -73,7 +79,12 @@ class PdfViewModel(
 
     private val _webViewCrashed = MutableStateFlow(false)
     val webViewCrashed: StateFlow<Boolean> = _webViewCrashed.asStateFlow()
-    fun setWebViewCrashed(value: Boolean) { _webViewCrashed.value = value }
+    fun setWebViewCrashed(value: Boolean) {
+        _webViewCrashed.value = value
+        // Nothing can be highlighted or scrolled without a renderer, so do not leave an
+        // auto-focusing find bar with a keyboard on top of the crash screen.
+        if (value) closeSearch()
+    }
 
     private val _toolbarVisible = MutableStateFlow(true)
     val toolbarVisible: StateFlow<Boolean> = _toolbarVisible.asStateFlow()
@@ -189,6 +200,175 @@ class PdfViewModel(
         }
     }
 
+    /**
+     * Everything the find bar renders. [ordinal] is 1-based across the whole document and 0 when
+     * nothing is selected; [scanning] means the corpus is still being extracted, so [total] is a
+     * lower bound.
+     */
+    data class SearchResult(
+        val total: Int = 0,
+        val ordinal: Int = 0,
+        val activePage: Int = 0,
+        val activeIndex: Int = -1,
+        val scannedPages: Int = 0,
+        val scanning: Boolean = false,
+        val truncated: Boolean = false,
+        /** Changes with the query, so a repaint is triggered even when the active match does not. */
+        val version: Int = 0
+    )
+
+    private val search = DocumentSearch()
+    // The active match is read and written from the main thread (stepMatch), a background
+    // dispatcher (runSearch) and a WebView binder thread (setPageText), so every read-modify-write
+    // of the pair goes through this lock.
+    private val searchLock = Any()
+    private var activePage = 0
+    private var activeIndex = -1
+    private var searchJob: Job? = null
+
+    /** Bumped per document so a sweep started for a previous one cannot write into the corpus. */
+    @Volatile
+    private var searchGeneration = 0
+    val currentSearchGeneration: Int get() = searchGeneration
+
+    val searchActive: StateFlow<Boolean> =
+        savedStateHandle.getStateFlow(STATE_SEARCH_ACTIVE, false)
+
+    val searchQuery: StateFlow<String> = savedStateHandle.getStateFlow(STATE_SEARCH_QUERY, "")
+    fun setSearchQuery(value: String) { savedStateHandle[STATE_SEARCH_QUERY] = value }
+
+    private val _searchResult = MutableStateFlow(SearchResult())
+    val searchResult: StateFlow<SearchResult> = _searchResult.asStateFlow()
+
+    fun openSearch() {
+        setToolbarVisible(true)
+        savedStateHandle[STATE_SEARCH_ACTIVE] = true
+    }
+
+    fun closeSearch() {
+        savedStateHandle[STATE_SEARCH_ACTIVE] = false
+        savedStateHandle[STATE_SEARCH_QUERY] = ""
+        searchJob?.cancel()
+        search.setQuery("")
+        synchronized(searchLock) {
+            activePage = 0
+            activeIndex = -1
+        }
+        _searchResult.value = SearchResult()
+    }
+
+    /** True once every page has been extracted, or the index hit its cap. */
+    fun extractionComplete(): Boolean {
+        val stats = search.stats()
+        return _numPages.value > 0 && (stats.scannedPages >= _numPages.value || stats.truncated)
+    }
+
+    fun tuplesFor(page: Int): String = search.tuplesFor(page)
+
+    /**
+     * Called on a WebView binder thread. Returns false to stop extraction.
+     *
+     * [generation] identifies the document the sweep was started for. `loadUrl` does not tear the
+     * JS context down synchronously, so a sweep for the previous document can still land calls
+     * here after [resetDocumentState] has cleared the corpus; without the token those pages would
+     * be re-inserted and then never overwritten, and document A's text would be searched and
+     * highlighted as if it were document B's.
+     */
+    fun setPageText(page: Int, itemsJson: String, generation: Int): Boolean {
+        if (generation != searchGeneration) return false
+        // Bounds-checked because this is reachable from the renderer, where untrusted PDF content
+        // is parsed. Empty pages add no characters, so without this a loop over made-up page
+        // numbers would grow the map without ever tripping the character cap.
+        if (page < 1 || page > _numPages.value) return false
+        val more = try {
+            search.addPage(page, itemsJson)
+        } catch (_: JSONException) {
+            true
+        }
+        publishSearch()
+        return more
+    }
+
+    fun runSearch(query: String, fromPage: Int) {
+        // A configuration change re-runs the effect that calls this. Re-scanning would clear the
+        // index and show 0/0 for the length of a full sweep, for no gain.
+        if (search.isIndexed(query)) {
+            publishSearch()
+            return
+        }
+        searchJob?.cancel()
+        if (query.isEmpty()) {
+            search.setQuery("")
+            synchronized(searchLock) {
+                activePage = 0
+                activeIndex = -1
+            }
+            publishSearch()
+            return
+        }
+        searchJob = viewModelScope.launch(Dispatchers.Default) {
+            // The delay is the debounce: the next keystroke cancels this job before it elapses.
+            delay(SEARCH_DEBOUNCE_MS)
+            search.setQuery(query)
+            synchronized(searchLock) {
+                activePage = 0
+                activeIndex = -1
+            }
+            publishSearch()
+            // Driven by the pages actually held, not by the reported page count: pdf.js takes
+            // that from the PDF's own /Count, so a hostile document can claim a hundred million
+            // pages and turn this into an unbounded loop. Pages that arrive later are matched on
+            // arrival by addPage.
+            val numbers = search.pageNumbers()
+            val start = numbers.indexOfFirst { it >= fromPage }.coerceAtLeast(0)
+            for (i in numbers.indices) {
+                ensureActive()
+                search.matchPage(numbers[(start + i) % numbers.size])
+                publishSearch()
+            }
+        }
+    }
+
+    fun stepMatch(forward: Boolean) {
+        synchronized(searchLock) {
+            val next = search.step(activePage, activeIndex, forward) ?: return
+            activePage = next.first
+            activeIndex = next.second
+        }
+        publishSearch()
+    }
+
+    /**
+     * Publishes are serialised on [searchLock] as a whole, including the assignment. Without that,
+     * a thread that read an early snapshot can be descheduled and then overwrite a later, correct
+     * one, leaving the find bar showing a stale count with nothing to trigger another publish.
+     */
+    private fun publishSearch() = synchronized(searchLock) {
+        if (activeIndex < 0) {
+            search.firstPageFrom(page.value.coerceAtLeast(1))?.let {
+                activePage = it
+                activeIndex = 0
+            }
+        } else if (search.countOn(activePage) <= activeIndex) {
+            // The page the selection was on no longer matches, e.g. the query changed.
+            activePage = 0
+            activeIndex = -1
+        }
+        val stats = search.stats()
+        _searchResult.value = SearchResult(
+            total = stats.total,
+            ordinal = if (activeIndex < 0) 0 else {
+                search.ordinalBefore(activePage) + activeIndex + 1
+            },
+            activePage = activePage,
+            activeIndex = activeIndex,
+            scannedPages = stats.scannedPages,
+            scanning = searchQuery.value.isNotEmpty() && !extractionComplete(),
+            truncated = stats.truncated,
+            version = stats.version
+        )
+    }
+
     private val _zoomRatio = MutableStateFlow(0f)
     val zoomRatio: StateFlow<Float> = _zoomRatio.asStateFlow()
     fun setZoomRatio(value: Float) { _zoomRatio.value = value }
@@ -200,6 +380,9 @@ class PdfViewModel(
     @Volatile var insetTop = 0f
     @Volatile var insetRight = 0f
     @Volatile var insetBottom = 0f
+    /** Keyboard height. Under edge-to-edge the WebView is not resized, so scroll-to-match has to
+     * subtract this itself or the active match lands behind the IME. */
+    @Volatile var insetIme = 0f
 
     val streamLock = Any()
     @Volatile var inputStream: InputStream? = null
@@ -292,6 +475,9 @@ class PdfViewModel(
         clearOutline()
         clearDocumentProperties()
         dismissPasswordPrompt()
+        searchGeneration++
+        search.clear()
+        closeSearch()
     }
 
     fun prepareForLoad() {
