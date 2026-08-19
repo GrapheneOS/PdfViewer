@@ -59,7 +59,7 @@ class PdfViewModel(
         savedStateHandle[STATE_DOCUMENT_ORIENTATION_DEGREES] = value
     }
 
-    val pageFitMode: StateFlow<Int> = savedStateHandle.getStateFlow(STATE_PAGE_FIT_MODE, 1)
+    val pageFitMode: StateFlow<Int> = savedStateHandle.getStateFlow(STATE_PAGE_FIT_MODE, 2)
     fun setPageFitMode(value: Int) { savedStateHandle[STATE_PAGE_FIT_MODE] = value }
 
     val continuousMode: StateFlow<Boolean> =
@@ -297,7 +297,7 @@ class PdfViewModel(
         _numPages.value = 0
         _zoomRatio.value = 0f
         setDocumentOrientationDegrees(0)
-        setPageFitMode(1)
+        setPageFitMode(2)
         setContinuousMode(true)
         encryptedDocumentPassword = ""
         clearOutline()
