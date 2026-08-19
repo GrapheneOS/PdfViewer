@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.icu.text.DecimalFormatSymbols
+import android.icu.text.NumberFormat
 import android.util.Log
 import android.view.MotionEvent
 import android.view.ViewConfiguration
@@ -24,8 +26,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
@@ -58,12 +62,14 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -78,6 +84,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -85,6 +92,9 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.buildAnnotatedString
@@ -98,6 +108,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.os.ConfigurationCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -114,14 +125,28 @@ import app.grapheneos.pdfviewer.viewModel.PdfViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
+import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 private const val TAG = "PdfViewerScreen"
 private const val MIN_WEBVIEW_RELEASE = 133
+private val ZOOM_PRESETS = intArrayOf(25, 50, 75, 100, 125, 150, 200, 300, 500, 750, 1000)
+
+private fun nextZoomPreset(ratio: Float): Float? {
+    val currentPercent = (ratio * 100).roundToInt()
+    return ZOOM_PRESETS.firstOrNull { it > currentPercent }?.let { it / 100f }
+}
+
+private fun previousZoomPreset(ratio: Float): Float? {
+    val currentPercent = (ratio * 100).roundToInt()
+    return ZOOM_PRESETS.lastOrNull { it < currentPercent }?.let { it / 100f }
+}
 
 private const val CONTENT_SECURITY_POLICY =
     "default-src 'none'; " +
@@ -230,6 +255,7 @@ fun PdfViewerScreen(
     var showOutline by rememberSaveable { mutableStateOf(false) }
     var showJumpToPage by rememberSaveable { mutableStateOf(false) }
     var showDocProperties by rememberSaveable { mutableStateOf(false) }
+    var showCustomZoom by rememberSaveable { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var webViewRelease by remember { mutableIntStateOf(getWebViewRelease()) }
     val webViewOk = webViewRelease >= MIN_WEBVIEW_RELEASE
@@ -376,8 +402,10 @@ fun PdfViewerScreen(
 
             override fun onZoom(scaleFactor: Float, focusX: Float, focusY: Float) {
                 viewModel.setPageFitMode(0)
-                viewModel.zoomRatio = (viewModel.zoomRatio * scaleFactor)
-                    .coerceIn(MIN_ZOOM_RATIO, MAX_ZOOM_RATIO)
+                viewModel.setZoomRatio(
+                    (viewModel.zoomRatio.value * scaleFactor)
+                        .coerceIn(MIN_ZOOM_RATIO, MAX_ZOOM_RATIO)
+                )
                 viewModel.zoomFocusX = focusX
                 viewModel.zoomFocusY = focusY
                 requestZoomRender(end = false)
@@ -532,6 +560,18 @@ fun PdfViewerScreen(
                 },
                 onRotateClockwise = { rotateDocument(viewModel, webView, 90) },
                 onRotateCounterClockwise = { rotateDocument(viewModel, webView, -90) },
+                zoomRatioFlow = viewModel.zoomRatio,
+                onZoomIn = {
+                    nextZoomPreset(viewModel.zoomRatio.value)?.let { preset ->
+                        zoomDocument(viewModel, webView, preset)
+                    }
+                },
+                onZoomOut = {
+                    previousZoomPreset(viewModel.zoomRatio.value)?.let { preset ->
+                        zoomDocument(viewModel, webView, preset)
+                    }
+                },
+                onCustomZoom = { showCustomZoom = true },
                 onOutline = { showOutline = true },
                 onShare = { shareDocument(context, viewModel) },
                 onSaveAs = {
@@ -601,6 +641,18 @@ fun PdfViewerScreen(
                 }
             )
         }
+    }
+
+    if (showCustomZoom) {
+        val currentZoom = remember { viewModel.zoomRatio.value }
+        CustomZoomDialog(
+            currentZoomRatio = currentZoom,
+            onZoom = { newRatio ->
+                showCustomZoom = false
+                zoomDocument(viewModel, webView, newRatio)
+            },
+            onDismiss = { showCustomZoom = false }
+        )
     }
 
     if (showJumpToPage && hasPages) {
@@ -760,7 +812,7 @@ internal fun jumpToPage(viewModel: PdfViewModel, webView: WebView?, selectedPage
 private fun setPageFitMode(viewModel: PdfViewModel, webView: WebView?, mode: Int) {
     webView ?: return
     viewModel.setPageFitMode(mode)
-    viewModel.zoomRatio = 0f
+    viewModel.setZoomRatio(0f)
     webView.evaluateJavascript("onRenderPage(0)", null)
 }
 
@@ -776,6 +828,13 @@ private fun rotateDocument(viewModel: PdfViewModel, webView: WebView?, offset: I
     if (degrees < 0) degrees += 360
     viewModel.setDocumentOrientationDegrees(degrees)
     webView.evaluateJavascript("onRenderPage(0)", null)
+}
+
+private fun zoomDocument(viewModel: PdfViewModel, webView: WebView?, ratio: Float) {
+    webView ?: return
+    viewModel.setPageFitMode(0)
+    viewModel.setZoomRatio(ratio.coerceIn(MIN_ZOOM_RATIO, MAX_ZOOM_RATIO))
+    webView.evaluateJavascript("onRenderPage(3)", null)
 }
 
 private fun shareDocument(context: Context, viewModel: PdfViewModel) {
@@ -826,6 +885,10 @@ private fun PdfTopAppBar(
     onContinuousModeChange: () -> Unit,
     onRotateClockwise: () -> Unit,
     onRotateCounterClockwise: () -> Unit,
+    zoomRatioFlow: StateFlow<Float>,
+    onZoomIn: () -> Unit,
+    onZoomOut: () -> Unit,
+    onCustomZoom: () -> Unit,
     onOutline: () -> Unit,
     onShare: () -> Unit,
     onSaveAs: () -> Unit,
@@ -856,7 +919,7 @@ private fun PdfTopAppBar(
 
             IconButton(onClick = onOpen, enabled = !webViewCrashed && webViewOk) {
                 Icon(
-                    painterResource(R.drawable.ic_insert_drive_file_24dp),
+                    painterResource(R.drawable.ic_open_file_24dp),
                     contentDescription = stringResource(R.string.action_open)
                 )
             }
@@ -969,6 +1032,13 @@ private fun PdfTopAppBar(
                             )
                         }
                     )
+                    ZoomRow(
+                        zoomRatioFlow = zoomRatioFlow,
+                        onZoomIn = onZoomIn,
+                        onZoomOut = onZoomOut,
+                        onCustomZoom = { onMenuToggle(false); onCustomZoom() },
+                        enabled = enabled
+                    )
                     if (hasOutline) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_outline)) },
@@ -1040,39 +1110,184 @@ private fun WebViewAlertScreen(
     onReload: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(32.dp)
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_error_outline_24dp),
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-            if (showReload) {
-                Button(
-                    onClick = onReload,
-                    modifier = Modifier
-                        .padding(top = 8.dp)
-                        .testTag(TestTags.RELOAD_BUTTON)
-                ) {
-                    Text(stringResource(R.string.reload))
+    Surface(modifier = modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(32.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_error_24dp),
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+                if (showReload) {
+                    Button(
+                        onClick = onReload,
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .testTag(TestTags.RELOAD_BUTTON)
+                    ) {
+                        Text(stringResource(R.string.reload))
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun ZoomRow(
+    zoomRatioFlow: StateFlow<Float>,
+    onZoomIn: () -> Unit,
+    onZoomOut: () -> Unit,
+    onCustomZoom: () -> Unit,
+    enabled: Boolean
+) {
+    val zoomRatio by zoomRatioFlow.collectAsStateWithLifecycle()
+    if (zoomRatio <= 0f) return
+
+    val locale = currentLocale()
+    val zoomFormat = remember(locale) { NumberFormat.getPercentInstance(locale) }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        IconButton(
+            onClick = onZoomOut,
+            enabled = enabled && previousZoomPreset(zoomRatio) != null
+        ) {
+            Icon(
+                painterResource(R.drawable.ic_remove_24dp),
+                contentDescription = stringResource(R.string.zoom_out)
+            )
+        }
+
+        TextButton(
+            onClick = onCustomZoom,
+            enabled = enabled,
+            modifier = Modifier.testTag(TestTags.ZOOM_PERCENTAGE)
+            .semantics { liveRegion = LiveRegionMode.Polite }
+        ) {
+            Text(zoomFormat.format(zoomRatio))
+        }
+
+        IconButton(
+            onClick = onZoomIn,
+            enabled = enabled && nextZoomPreset(zoomRatio) != null
+        ) {
+            Icon(
+                painterResource(R.drawable.ic_add_24dp),
+                contentDescription = stringResource(R.string.zoom_in)
+            )
+        }
+    }
+}
+
+@Composable
+private fun CustomZoomDialog(
+    currentZoomRatio: Float,
+    onZoom: (Float) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val minPercent = (MIN_ZOOM_RATIO * 100).roundToInt()
+    val maxPercent = (MAX_ZOOM_RATIO * 100).roundToInt()
+    val maxLength = maxPercent.toString().length
+
+    val locale = currentLocale()
+    val percentSymbol = remember(locale) {
+        DecimalFormatSymbols.getInstance(locale).percent.toString()
+    }
+    val percentIsPrefix = remember(locale) {
+        val formatted = NumberFormat.getPercentInstance(locale).format(1)
+        val digitIndex = formatted.indexOfFirst { it.isDigit() }
+        val symbolIndex = formatted.indexOfFirst { !it.isDigit() && !it.isWhitespace() }
+        symbolIndex in 0 until digitIndex
+    }
+
+    var textFieldValue by rememberSaveable(stateSaver = TextFieldValue.Saver) {
+        val initial = (currentZoomRatio * 100).roundToInt().toString()
+        mutableStateOf(
+            TextFieldValue(
+                text = initial,
+                selection = TextRange(0, initial.length)
+            )
+        )
+    }
+    val parsed = textFieldValue.text.toIntOrNull()
+    val isValid = parsed != null && parsed in minPercent..maxPercent
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = { parsed?.let { onZoom(it / 100f) } },
+                enabled = isValid
+            ) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+        title = { Text(stringResource(R.string.zoom)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.zoom_range, minPercent, maxPercent))
+                OutlinedTextField(
+                    value = textFieldValue,
+                    onValueChange = { newValue ->
+                        val filtered = newValue.text.filter { it.isDigit() }.take(maxLength)
+                        textFieldValue = if (filtered == newValue.text) {
+                            newValue
+                        } else {
+                            newValue.copy(
+                                text = filtered,
+                                selection = TextRange(
+                                    minOf(newValue.selection.end, filtered.length)
+                                )
+                            )
+                        }
+                    },
+                    singleLine = true,
+                    isError = textFieldValue.text.isNotEmpty() && !isValid,
+                    prefix = if (percentIsPrefix) ({ Text(percentSymbol) }) else null,
+                    suffix = if (percentIsPrefix) null else ({ Text(percentSymbol) }),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { if (isValid) onZoom(parsed / 100f) }
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                        .focusRequester(focusRequester)
+                        .testTag(TestTags.CUSTOM_ZOOM_FIELD)
+                )
+            }
+        }
+    )
 }
 
 @Composable
@@ -1305,3 +1520,10 @@ private fun PasswordPromptDialog(
         }
     )
 }
+
+@Composable
+@ReadOnlyComposable
+@SuppressLint("NonObservableLocale")
+private fun currentLocale(): Locale =
+    ConfigurationCompat.getLocales(LocalConfiguration.current)[0]
+        ?: Locale.getDefault()

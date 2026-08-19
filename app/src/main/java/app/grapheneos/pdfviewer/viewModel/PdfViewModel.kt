@@ -59,6 +59,13 @@ class PdfViewModel(
         savedStateHandle[STATE_DOCUMENT_ORIENTATION_DEGREES] = value
     }
 
+    val pageFitMode: StateFlow<Int> = savedStateHandle.getStateFlow(STATE_PAGE_FIT_MODE, 1)
+    fun setPageFitMode(value: Int) { savedStateHandle[STATE_PAGE_FIT_MODE] = value }
+
+    val continuousMode: StateFlow<Boolean> =
+        savedStateHandle.getStateFlow(STATE_CONTINUOUS_MODE, true)
+    fun setContinuousMode(value: Boolean) { savedStateHandle[STATE_CONTINUOUS_MODE] = value }
+
     val documentProperties: StateFlow<Map<DocumentProperty, String>?> =
         savedStateHandle.getStateFlow(STATE_DOCUMENT_PROPERTIES, null)
 
@@ -198,7 +205,10 @@ class PdfViewModel(
         }
     }
 
-    @Volatile var zoomRatio: Float = 0f
+    private val _zoomRatio = MutableStateFlow(0f)
+    val zoomRatio: StateFlow<Float> = _zoomRatio.asStateFlow()
+    fun setZoomRatio(value: Float) { _zoomRatio.value = value }
+
     @Volatile var encryptedDocumentPassword: String = ""
     @Volatile var zoomFocusX = 0f
     @Volatile var zoomFocusY = 0f
@@ -292,9 +302,9 @@ class PdfViewModel(
     fun resetDocumentState() {
         setPage(1)
         _numPages.value = 0
-        zoomRatio = 0f
+        _zoomRatio.value = 0f
         setDocumentOrientationDegrees(0)
-        setPageFitMode(2)
+        setPageFitMode(1)
         setContinuousMode(true)
         encryptedDocumentPassword = ""
         clearOutline()
@@ -305,7 +315,7 @@ class PdfViewModel(
     fun prepareForLoad() {
         documentPropertiesLoaded.set(false)
         _documentLoaded.value = false
-        zoomRatio = 0f
+        _zoomRatio.value = 0f
     }
 
     fun handleLoadError() {

@@ -8,7 +8,6 @@
     <string name="action_first">First page</string>
     <string name="action_last">Last page</string>
     <string name="action_jump_to_page">Jump to page</string>
-    <string name="action_page_fit">Page fitting</string>
     <string name="action_fit_free">Free zoom</string>
     <string name="action_fit_page">Fit page</string>
     <string name="action_fit_width">Fit width</string>
@@ -61,6 +60,11 @@
     <string name="creator">Creator</string>
     <string name="pdf_version">PDF version</string>
     <string name="pages">Pages</string>
+
+    <string name="zoom">Zoom</string>
+    <string name="zoom_in">Zoom in</string>
+    <string name="zoom_out">Zoom out</string>
+    <string name="zoom_range">Percentage (%1$d–%2$d%%)</string>
 
     <string name="unknown_file_size">Unknown</string>
 </resources>

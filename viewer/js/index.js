@@ -143,17 +143,22 @@ function sizeWrapper(p, layout = null) {
     const vp = pageViewport(p.pdfPage, layout);
     p.viewport = vp;
     const a = availSize(layout);
+    const offsetX = Math.max(0, (a.width - vp.width) / 2);
     p.wrapper.style.width = a.width + "px";
     p.wrapper.style.height = vp.height + "px";
     p.canvas.style.width = vp.width + "px";
     p.canvas.style.height = vp.height + "px";
+    // Center pages which fit, but start over-wide pages at x=0. Flex centering
+    // puts half of an over-wide canvas at a negative (unscrollable) coordinate,
+    // making its left edge impossible to reach while panning.
+    p.canvas.style.marginLeft = offsetX + "px";
 }
 
 // Overlay the text layer exactly on the (horizontally-centered) canvas.
 function alignTextLayer(p, layout = null) {
     if (!p.viewport) return;
     const a = availSize(layout);
-    const offsetX = (a.width - p.viewport.width) / 2;
+    const offsetX = Math.max(0, (a.width - p.viewport.width) / 2);
     p.textLayer.style.translate = offsetX + "px 0px";
     p.textLayer.style.width = p.viewport.width + "px";
     p.textLayer.style.height = p.viewport.height + "px";
@@ -399,13 +404,13 @@ globalThis.scrollToPage = function (pageNumber) {
 };
 
 // Driven from the Java side (former single-page render entry point).
-//   zoom: 0 = full re-layout (fit/orientation/page jump), 1 = zoom end, 2 = zooming
+//   zoom: 0 = full re-layout, 1 = pinch end, 2 = pinching, 3 = menu zoom
 globalThis.onRenderPage = function (zoom) {
     orientationDegrees = channel.getDocumentOrientationDegrees();
 
-    if (zoom === 2 || zoom === 1) {
-        // pinch: adopt the new free-zoom ratio and re-render visible pages while
-        // keeping the focal point under the user's fingers (review P2 focal).
+    if (zoom === 1 || zoom === 2 || zoom === 3) {
+        // Adopt the new free-zoom ratio and re-render visible pages while
+        // preserving the relevant focus point.
         const dpr = globalThis.devicePixelRatio;
         const best = mostVisiblePage();
         // Rendering is asynchronous and is commonly cancelled by the next
@@ -415,9 +420,16 @@ globalThis.onRenderPage = function (zoom) {
         zoomRatio = newZoom;
         container.style.setProperty("--scale-factor", newZoom.toString());
 
-        // Focal point in document coordinates, captured before re-layout.
-        const focusX = channel.getZoomFocusX() / dpr + globalThis.scrollX;
-        const focusY = channel.getZoomFocusY() / dpr + globalThis.scrollY;
+        // Pinch zoom keeps the touch focus; menu zoom keeps the viewport center.
+        // Capture the focus in document coordinates before re-layout.
+        const viewportFocusX = zoom === 3
+            ? globalThis.innerWidth / 2
+            : channel.getZoomFocusX() / dpr;
+        const viewportFocusY = zoom === 3
+            ? globalThis.innerHeight / 2
+            : channel.getZoomFocusY() / dpr;
+        const focusX = viewportFocusX + globalThis.scrollX;
+        const focusY = viewportFocusY + globalThis.scrollY;
 
         // Placeholder geometry belongs to the requested zoom even when its
         // canvas is far enough away to remain unrendered.
@@ -530,7 +542,6 @@ globalThis.loadDocument = function () {
         // https://github.com/mozilla/pdf.js/pull/18465
         // https://bugzilla.mozilla.org/show_bug.cgi?id=1882613
         useSystemFonts: false,
-        disableFontFace: true,
         standardFontDataUrl: "https://localhost/viewer/standard_fonts/",
         wasmUrl: "https://localhost/viewer/wasm/"
     });

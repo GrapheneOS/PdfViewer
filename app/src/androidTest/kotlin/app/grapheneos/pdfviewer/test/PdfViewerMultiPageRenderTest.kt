@@ -120,6 +120,38 @@ class PdfViewerMultiPageRenderTest {
         }
     }
 
+    @Test
+    fun zoomedLastPage_canPanToBothHorizontalEdges() {
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+            scenario.onActivity { it.onJumpToPageInDocument(4) }
+            PdfViewerTestUtils.assertTextLayerContent(scenario, "Page Four Content")
+
+            val initialZoom = robot.getZoomRatio(scenario)
+            robot.performPinchZoomIn(scenario, percent = 0.5f, speed = 500)
+            PdfViewerTestUtils.pollUntil(description = { "Canvas did not become over-wide" }) {
+                robot.getZoomRatio(scenario) > initialZoom &&
+                        robot.getCanvasCssWidth(scenario) > robot.getViewportWidth(scenario)
+            }
+
+            val result = PdfViewerTestUtils.evaluateJs(scenario, """
+                (() => {
+                    const canvas = globalThis.currentPageCanvas();
+                    const verticalOffset = globalThis.scrollY;
+                    globalThis.scrollTo(0, verticalOffset);
+                    const leftEdge = canvas.getBoundingClientRect().left;
+                    globalThis.scrollTo(document.documentElement.scrollWidth, verticalOffset);
+                    const rightEdge = canvas.getBoundingClientRect().right;
+                    return leftEdge >= -1 &&
+                        rightEdge <= document.documentElement.clientWidth + 1;
+                })()
+            """.trimIndent())
+
+            assertEquals("Both horizontal page edges should be reachable", "true", result)
+        }
+    }
+
     // Outline
 
     @Test

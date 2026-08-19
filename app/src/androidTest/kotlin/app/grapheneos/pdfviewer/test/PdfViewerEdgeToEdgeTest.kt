@@ -173,8 +173,8 @@ class PdfViewerEdgeToEdgeTest {
             scenario,
             """
                 (function() {
-                    const el = document.getElementById('container');
-                    const value = parseFloat(getComputedStyle(el)['$propertyName']) || 0;
+                    const canvas = document.getElementById('container');
+                    const value = parseFloat(getComputedStyle(canvas)['$propertyName']) || 0;
                     return value * globalThis.devicePixelRatio;
                 })()
             """.trimIndent()
