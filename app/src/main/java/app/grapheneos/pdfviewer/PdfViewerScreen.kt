@@ -380,7 +380,7 @@ fun PdfViewerScreen(
                 e1: MotionEvent?, e2: MotionEvent,
                 velocityX: Float, velocityY: Float
             ): Boolean {
-                if (e1 == null) return false
+                if (e1 == null || viewModel.continuousMode.value) return false
 
                 val deltaX = e2.x - e1.x
                 val deltaY = e2.y - e1.y

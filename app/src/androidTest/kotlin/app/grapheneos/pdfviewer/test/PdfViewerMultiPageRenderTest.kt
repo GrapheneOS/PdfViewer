@@ -106,6 +106,24 @@ class PdfViewerMultiPageRenderTest {
     }
 
     @Test
+    fun horizontalFling_continuousModeDoesNotChangePage() {
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+            scenario.onActivity { it.onJumpToPageInDocument(2) }
+            PdfViewerTestUtils.assertTextLayerContent(scenario, "Page Two Content")
+
+            robot.performSwipeLeft(scenario)
+
+            PdfViewerTestUtils.assertStableCondition(
+                description = { "Horizontal fling changed page in continuous mode" }
+            ) {
+                PdfViewerTestUtils.evaluateJs(scenario, "channel.getPage()") == "2"
+            }
+        }
+    }
+
+    @Test
     fun navigationButtonStates_updateAfterRenderedNavigation() {
         PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
@@ -128,11 +146,11 @@ class PdfViewerMultiPageRenderTest {
             scenario.onActivity { it.onJumpToPageInDocument(4) }
             PdfViewerTestUtils.assertTextLayerContent(scenario, "Page Four Content")
 
-            val initialZoom = robot.getZoomRatio(scenario)
-            robot.performPinchZoomIn(scenario, percent = 0.5f, speed = 500)
+            robot.clickZoomPercentage()
+            robot.setCustomZoomValue(300)
+            robot.clickDialogOk()
             PdfViewerTestUtils.pollUntil(description = { "Canvas did not become over-wide" }) {
-                robot.getZoomRatio(scenario) > initialZoom &&
-                        robot.getCanvasCssWidth(scenario) > robot.getViewportWidth(scenario)
+                robot.getCanvasCssWidth(scenario) > robot.getViewportWidth(scenario) * 2
             }
 
             val result = PdfViewerTestUtils.evaluateJs(scenario, """
@@ -149,6 +167,11 @@ class PdfViewerMultiPageRenderTest {
             """.trimIndent())
 
             assertEquals("Both horizontal page edges should be reachable", "true", result)
+            PdfViewerTestUtils.assertStableCondition(
+                description = { "Canvas was cleared while its zoomed content was visible" }
+            ) {
+                robot.getCanvasWidth(scenario) > 0 && robot.getCanvasHeight(scenario) > 0
+            }
         }
     }
 

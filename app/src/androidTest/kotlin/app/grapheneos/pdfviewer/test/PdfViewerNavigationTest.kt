@@ -16,6 +16,7 @@ import app.grapheneos.pdfviewer.PdfJsChannel.Companion.MIN_ZOOM_RATIO
 import app.grapheneos.pdfviewer.PdfViewer
 import app.grapheneos.pdfviewer.RetryableComposeRule
 import app.grapheneos.pdfviewer.TestTags
+import app.grapheneos.pdfviewer.continuousMode
 import app.grapheneos.pdfviewer.currentPage
 import app.grapheneos.pdfviewer.documentName
 import app.grapheneos.pdfviewer.testrules.OrientationRules
@@ -101,6 +102,8 @@ class PdfViewerNavigationTest {
         PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
             PdfViewerTestUtils.waitForCanvasRendered(scenario)
+            // Fling navigation applies to single-page mode; continuous mode pans instead.
+            scenario.onActivity { it.continuousMode = false }
 
             robot.flingToNextPage()
 

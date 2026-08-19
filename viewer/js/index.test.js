@@ -258,7 +258,9 @@ describe("continuous page layout", () => {
 
         globalThis.onRenderPage(2);
 
-        const [canvas, textLayer] = pagesElement.children[3].children;
+        const wrapper = pagesElement.children[3];
+        const [canvas, textLayer] = wrapper.children;
+        expect(wrapper.style.width).toBe("200px");
         expect(canvas.style.width).toBe("200px");
         expect(canvas.style.marginLeft).toBe("0px");
         expect(textLayer.style.translate).toBe("0px 0px");

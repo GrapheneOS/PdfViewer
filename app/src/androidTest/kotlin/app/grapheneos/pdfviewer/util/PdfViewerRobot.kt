@@ -30,6 +30,7 @@ import androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
+import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
@@ -471,6 +472,12 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
         val webView = findWebViewObject()
         applyContentGestureMargins(webView, scenario)
         webView.pinchClose(percent, speed)
+    }
+
+    fun performSwipeLeft(scenario: ActivityScenario<PdfViewer>) {
+        val webView = findWebViewObject()
+        applyContentGestureMargins(webView, scenario)
+        webView.swipe(Direction.LEFT, 0.75f, 1_000)
     }
 
     private fun findWebViewObject(): UiObject2 {
