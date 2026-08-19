@@ -69,13 +69,6 @@ class PdfViewModel(
     val documentProperties: StateFlow<Map<DocumentProperty, String>?> =
         savedStateHandle.getStateFlow(STATE_DOCUMENT_PROPERTIES, null)
 
-    val pageFitMode: StateFlow<Int> = savedStateHandle.getStateFlow(STATE_PAGE_FIT_MODE, 2)
-    fun setPageFitMode(value: Int) { savedStateHandle[STATE_PAGE_FIT_MODE] = value }
-
-    val continuousMode: StateFlow<Boolean> =
-        savedStateHandle.getStateFlow(STATE_CONTINUOUS_MODE, true)
-    fun setContinuousMode(value: Boolean) { savedStateHandle[STATE_CONTINUOUS_MODE] = value }
-
     val documentName: StateFlow<String> =
         savedStateHandle.getStateFlow(STATE_DOCUMENT_NAME, "")
 
