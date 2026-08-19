@@ -602,6 +602,8 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
         PdfViewerTestUtils.evaluateJs(scenario,
             "globalThis.scrollToPage($page)"
         )
+    }
+
     private fun ensureOverflowMenuOpen() {
         val zoomInDesc = getTargetContext().getString(R.string.zoom_in)
         val nodes = composeRule.onAllNodesWithContentDescription(zoomInDesc)
