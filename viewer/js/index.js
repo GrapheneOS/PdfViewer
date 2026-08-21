@@ -177,6 +177,10 @@ function clearPage(p) {
     p.rendered = false;
     p.canvas.width = 0;     // free the backing store
     p.canvas.height = 0;
+    if (p.renderCanvas) {
+        p.renderCanvas.width = 0;    // free the offscreen render target too
+        p.renderCanvas.height = 0;
+    }
     p.textLayer.replaceChildren();
 }
 
@@ -217,15 +221,28 @@ function renderPageContent(p, layout = null) {
         });
     }
 
-    p.canvas.width = Math.floor(renderVp.width * ratio);
-    p.canvas.height = Math.floor(renderVp.height * ratio);
-    const ctx = p.canvas.getContext("2d", {alpha: false});
+    // Double-buffer: render into an offscreen canvas and swap the finished
+    // bitmap into the visible canvas in one step. Allocating or clearing the
+    // visible canvas first blanks the page for the whole (asynchronous) render
+    // — very noticeable on slower devices when a zoomed page re-renders while
+    // panning. Keeping the previous frame until the swap avoids that.
+    const off = p.renderCanvas || (p.renderCanvas = document.createElement("canvas"));
+    off.width = Math.floor(renderVp.width * ratio);
+    off.height = Math.floor(renderVp.height * ratio);
+    const ctx = off.getContext("2d", {alpha: false});
     ctx.scale(ratio, ratio);
+
+    p.textLayer.replaceChildren();
 
     const renderTask = p.pdfPage.render({canvasContext: ctx, viewport: renderVp});
     p.task = renderTask;
     renderTask.promise.then(() => {
         if (gen !== p.renderGen) return;
+        if (p.canvas.width !== off.width || p.canvas.height !== off.height) {
+            p.canvas.width = off.width;
+            p.canvas.height = off.height;
+        }
+        p.canvas.getContext("2d", {alpha: false}).drawImage(off, 0, 0);
         p.zoom = renderedZoom;
         // pdf.js TextLayer reads --scale-factor from its container; set it before
         // construction so each page's text layer uses its own zoom.
@@ -293,7 +310,10 @@ function rerenderVisible(layout = null) {
         const near = rect.bottom > -window.innerHeight * 1.5 &&
                      rect.top < window.innerHeight * 2.5;
         if (near) {
-            if (p.rendered) clearPage(p);
+            // Force a re-render at the new layout but keep the previous frame
+            // on screen: renderPageContent swaps in the new bitmap only after
+            // the render completes, so zoom changes never blank the page.
+            p.rendered = false;
             sizeWrapper(p, currentLayout);
             renderPageContent(p, currentLayout);
         } else {

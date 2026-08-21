@@ -56,7 +56,7 @@ class FakeElement {
     }
 
     getContext() {
-        return { scale() {} };
+        return { scale() {}, drawImage() {} };
     }
 
     getBoundingClientRect() {
@@ -274,6 +274,26 @@ describe("continuous page layout", () => {
         globalThis.onRenderPage(2);
 
         expect(pagesElement.children[4].style.height).toBe("200px");
+    });
+
+    it("keeps the previous frame on screen while a re-render is in flight", async () => {
+        const { state, pagesElement } = await setupViewer({ pageCount: 2 });
+        await flushPromises();
+        const [canvas] = pagesElement.children[0].children;
+        expect(canvas.width).toBeGreaterThan(0);
+
+        state.fitMode = 0;
+        state.zoom = 1;
+        globalThis.onRenderPage(2);
+
+        // The new render has only just started; clearing the visible canvas
+        // now would blank the page until the render completes (upstream
+        // review: "viewer would very often suddenly become a blank page").
+        expect(canvas.width).toBeGreaterThan(0);
+
+        await flushPromises();
+        expect(canvas.width).toBeGreaterThan(0);
+        expect(state.renderCalls.length).toBeGreaterThanOrEqual(2);
     });
 
     it("publishes the fit zoom computed for the new layout", async () => {
