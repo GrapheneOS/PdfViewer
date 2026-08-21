@@ -454,10 +454,17 @@ globalThis.onRenderPage = function (zoom) {
         // Placeholder geometry belongs to the requested zoom even when its
         // canvas is far enough away to remain unrendered.
         const layout = relayoutAll();
-        rerenderVisible(layout);
 
+        // Re-anchor the scroll BEFORE re-rendering: relayoutAll() has just
+        // resized every wrapper, so the content that was under the viewport is
+        // now at a different offset. Measuring "near" pages against the stale
+        // scroll position makes rerenderVisible clear the very page being
+        // zoomed (it looks far away) and render unrelated ones instead — the
+        // viewer blanks exactly when a zoomed page re-renders.
         const translationFactor = (newZoom / prevZoom) - 1;
         globalThis.scrollBy(focusX * translationFactor, focusY * translationFactor);
+
+        rerenderVisible(layout);
         return;
     }
 
