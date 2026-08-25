@@ -28,6 +28,7 @@ let outlineAbort = new AbortController();
 // pages[i] describes page (i+1):
 //   { wrapper, canvas, textLayer, pdfPage, viewport, rendered, rendering, task }
 const pages = [];
+const failedPages = new Set();
 
 let zoomRatio = 0;            // free-zoom ratio (0 = derive from fit mode)
 let orientationDegrees = 0;
@@ -35,6 +36,7 @@ let lastReportedPage = 0;     // last page pushed back to the ViewModel
 let renderObserver = null;
 let scrollTimer = null;
 let pageBuildGeneration = 0;
+let pageBuildComplete = false;
 let pendingScrollPage = 0;
 
 const container = document.getElementById("container");
@@ -340,6 +342,85 @@ function mostVisiblePage() {
     return best;
 }
 
+// Pick the displayed page containing the zoom focus, or the closest displayed
+// page when the focus falls in the fixed gap between two wrappers.
+function pageNearestViewportY(viewportY) {
+    let nearest = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    for (const p of pages) {
+        if (!p || p.wrapper.style.display === "none") continue;
+        const rect = p.wrapper.getBoundingClientRect();
+        if (viewportY >= rect.top && viewportY <= rect.bottom) return p;
+        const distance = viewportY < rect.top
+            ? rect.top - viewportY
+            : viewportY - rect.bottom;
+        if (distance < nearestDistance) {
+            nearest = p;
+            nearestDistance = distance;
+        }
+    }
+    return nearest;
+}
+
+function captureAxisAnchor(position, start, size) {
+    const end = start + size;
+    if (position < start) return {normalized: 0, offset: position - start};
+    if (position > end) return {normalized: 1, offset: position - end};
+    return {normalized: (position - start) / size, offset: 0};
+}
+
+function restoreAxisAnchor(anchor, start, size) {
+    return start + size * anchor.normalized + anchor.offset;
+}
+
+function captureZoomAnchor(p, viewportX, viewportY) {
+    if (!p) return null;
+    const rect = p.canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+    return {
+        page: p,
+        viewportX,
+        viewportY,
+        x: captureAxisAnchor(viewportX, rect.left, rect.width),
+        y: captureAxisAnchor(viewportY, rect.top, rect.height),
+    };
+}
+
+function restoreZoomAnchor(anchor) {
+    if (!anchor) return;
+    const rect = anchor.page.canvas.getBoundingClientRect();
+    const anchoredX = restoreAxisAnchor(anchor.x, rect.left, rect.width);
+    const anchoredY = restoreAxisAnchor(anchor.y, rect.top, rect.height);
+    globalThis.scrollBy(
+        anchoredX - anchor.viewportX,
+        anchoredY - anchor.viewportY
+    );
+}
+
+function nearestAvailablePageNumber(pageNumber) {
+    let nearest = 0;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    for (const p of pages) {
+        if (!p) continue;
+        const candidate = Number(p.wrapper.dataset.page);
+        const distance = Math.abs(candidate - pageNumber);
+        if (distance < nearestDistance) {
+            nearest = candidate;
+            nearestDistance = distance;
+        }
+    }
+    return nearest;
+}
+
+// A missing wrapper is normally just still being built. Once its page has
+// failed (or setup has completed), redirect navigation to the nearest readable
+// page instead of leaving scroll tracking locked on an impossible target.
+function resolveScrollablePage(pageNumber) {
+    if (pages[pageNumber - 1]) return pageNumber;
+    if (!failedPages.has(pageNumber) && !pageBuildComplete) return pageNumber;
+    return nearestAvailablePageNumber(pageNumber);
+}
+
 // Exposed for instrumentation tests: the canvas / text layer of the page
 // currently most in view (continuous scroll has one per page).
 globalThis.currentPageCanvas = function () {
@@ -359,8 +440,13 @@ function updateCurrentPage() {
     if (!best) return;
     const num = Number(best.wrapper.dataset.page);
     if (pendingScrollPage !== 0) {
-        if (!pages[pendingScrollPage - 1] || num !== pendingScrollPage) return;
-        pendingScrollPage = 0;
+        if (!pages[pendingScrollPage - 1]) {
+            if (!failedPages.has(pendingScrollPage) && !pageBuildComplete) return;
+            pendingScrollPage = 0;
+        } else {
+            if (num !== pendingScrollPage) return;
+            pendingScrollPage = 0;
+        }
     }
     const layout = readLayout();
     const m = layout.mode;
@@ -386,6 +472,12 @@ function updateCurrentPage() {
 globalThis.scrollToPage = function (pageNumber) {
     if (!Number.isInteger(pageNumber) || pageNumber < 1 ||
             (pdfDoc && pageNumber > pdfDoc.numPages)) return;
+
+    pageNumber = resolveScrollablePage(pageNumber);
+    if (pageNumber === 0) {
+        pendingScrollPage = 0;
+        return;
+    }
 
     // Publish the requested page immediately, even if progressive page setup
     // has not reached it yet. Scroll tracking must not replace that request
@@ -432,24 +524,22 @@ globalThis.onRenderPage = function (zoom) {
         // Adopt the new free-zoom ratio and re-render visible pages while
         // preserving the relevant focus point.
         const dpr = globalThis.devicePixelRatio;
-        const best = mostVisiblePage();
-        // Rendering is asynchronous and is commonly cancelled by the next
-        // pinch event, so p.zoom can lag behind the ratio already requested.
-        const prevZoom = zoomRatio || (best ? (best.zoom || pageZoom(best.pdfPage)) : 1);
-        const newZoom = channel.getZoomRatio();
-        zoomRatio = newZoom;
-        container.style.setProperty("--scale-factor", newZoom.toString());
-
         // Pinch zoom keeps the touch focus; menu zoom keeps the viewport center.
-        // Capture the focus in document coordinates before re-layout.
         const viewportFocusX = zoom === 3
             ? globalThis.innerWidth / 2
             : channel.getZoomFocusX() / dpr;
         const viewportFocusY = zoom === 3
             ? globalThis.innerHeight / 2
             : channel.getZoomFocusY() / dpr;
-        const focusX = viewportFocusX + globalThis.scrollX;
-        const focusY = viewportFocusY + globalThis.scrollY;
+        // Preserve a point on the actual focused canvas. Measuring it before
+        // and after layout accounts for fixed page gaps, horizontal centering,
+        // and preceding pages whose fit ratios differ from this page's ratio.
+        const anchorPage = pageNearestViewportY(viewportFocusY);
+        const anchor = captureZoomAnchor(anchorPage, viewportFocusX, viewportFocusY);
+
+        const newZoom = channel.getZoomRatio();
+        zoomRatio = newZoom;
+        container.style.setProperty("--scale-factor", newZoom.toString());
 
         // Placeholder geometry belongs to the requested zoom even when its
         // canvas is far enough away to remain unrendered.
@@ -461,8 +551,7 @@ globalThis.onRenderPage = function (zoom) {
         // scroll position makes rerenderVisible clear the very page being
         // zoomed (it looks far away) and render unrelated ones instead — the
         // viewer blanks exactly when a zoomed page re-renders.
-        const translationFactor = (newZoom / prevZoom) - 1;
-        globalThis.scrollBy(focusX * translationFactor, focusY * translationFactor);
+        restoreZoomAnchor(anchor);
 
         rerenderVisible(layout);
         return;
@@ -476,14 +565,15 @@ globalThis.onRenderPage = function (zoom) {
     }
     // Read the Java-side target before geometry changes can make the scroll
     // handler report and overwrite a different most-visible page.
-    const target = channel.getPage();
+    const requestedTarget = channel.getPage();
+    const target = resolveScrollablePage(requestedTarget);
     const targetPage = pages[target - 1];
     const anchorTop = targetPage && targetPage.wrapper.style.display !== "none"
         ? targetPage.wrapper.getBoundingClientRect().top
         : null;
-    const isPageNavigation = target !== lastReportedPage;
+    const isPageNavigation = target !== lastReportedPage || target !== requestedTarget;
 
-    if (!targetPage && isPageNavigation) {
+    if (target !== 0 && !targetPage && isPageNavigation) {
         pendingScrollPage = target;
         lastReportedPage = target;
     }
@@ -611,8 +701,10 @@ globalThis.loadDocument = function () {
         }
         pages.length = 0;
         pagesEl.replaceChildren();
+        failedPages.clear();
         zoomRatio = 0;
         lastReportedPage = 0;
+        pageBuildComplete = false;
         pendingScrollPage = 0;
         const buildGeneration = ++pageBuildGeneration;
         const startPage = channel.getPage() || 1;
@@ -661,6 +753,12 @@ async function buildPages(startPage, generation) {
         } catch (error) {
             if (generation !== pageBuildGeneration || documentToBuild !== pdfDoc) return;
             console.error(`getPage(${i}) error: ${error}`);
+            failedPages.add(i);
+            const requestedPage = channel.getPage() || startPage;
+            if (requestedPage === i) {
+                const fallback = nearestAvailablePageNumber(i);
+                if (fallback !== 0) globalThis.scrollToPage(fallback);
+            }
             continue;
         }
         if (generation !== pageBuildGeneration || documentToBuild !== pdfDoc) return;
@@ -691,11 +789,12 @@ async function buildPages(startPage, generation) {
         }
     }
 
+    pageBuildComplete = true;
     const requestedPage = channel.getPage() || startPage;
     if (viewerReady && !pages[requestedPage - 1]) {
-        const fallback = pages.find((page) => page);
-        if (fallback) {
-            globalThis.scrollToPage(Number(fallback.wrapper.dataset.page));
+        const fallback = nearestAvailablePageNumber(requestedPage);
+        if (fallback !== 0) {
+            globalThis.scrollToPage(fallback);
             updateCurrentPage();
             rerenderVisible();
         }

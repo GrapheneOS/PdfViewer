@@ -32,6 +32,10 @@ function styleDeclaration() {
     };
 }
 
+function px(value) {
+    return Number.parseFloat(value) || 0;
+}
+
 class FakeElement {
     constructor(tagName, environment) {
         this.tagName = tagName;
@@ -59,21 +63,41 @@ class FakeElement {
         return { scale() {}, drawImage() {} };
     }
 
-    getBoundingClientRect() {
-        if (this.style.display === "none") {
-            return { top: 0, bottom: 0, width: 0, height: 0 };
-        }
-        const siblings = this.parentElement ? this.parentElement.children : [];
-        let documentTop = 0;
-        for (const sibling of siblings) {
+    documentTop() {
+        if (!this.parentElement) return 0;
+        const parentTop = this.parentElement.documentTop();
+        if (this.parentElement.className === "page-wrapper") return parentTop;
+
+        let top = parentTop;
+        for (const sibling of this.parentElement.children) {
             if (sibling === this) break;
             if (sibling.style.display !== "none") {
-                documentTop += Number.parseFloat(sibling.style.height) || 0;
+                top += px(sibling.style.height);
+                if (sibling.className === "page-wrapper") {
+                    top += this.environment.pageGap;
+                }
             }
         }
-        const height = Number.parseFloat(this.style.height) || 0;
-        const top = documentTop - globalThis.scrollY;
-        return { top, bottom: top + height, height, width: Number.parseFloat(this.style.width) || 0 };
+        return top;
+    }
+
+    documentLeft() {
+        if (!this.parentElement) return 0;
+        const parentLeft = this.parentElement.documentLeft();
+        return this.parentElement.className === "page-wrapper"
+            ? parentLeft + px(this.style.marginLeft)
+            : parentLeft;
+    }
+
+    getBoundingClientRect() {
+        if (this.style.display === "none") {
+            return { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 };
+        }
+        const height = px(this.style.height);
+        const width = px(this.style.width);
+        const top = this.documentTop() - globalThis.scrollY;
+        const left = this.documentLeft() - globalThis.scrollX;
+        return { top, bottom: top + height, left, right: left + width, height, width };
     }
 
     scrollIntoView() {
@@ -116,6 +140,9 @@ async function setupViewer({
     continuous = true,
     currentPage = 1,
     fitMode = 1,
+    focusX = 50,
+    focusY = 20,
+    pageGap = 0,
     pageCount = 3,
     getPage,
 } = {}) {
@@ -124,6 +151,8 @@ async function setupViewer({
         continuous,
         currentPage,
         fitMode,
+        focusX,
+        focusY,
         zoom: 0.5,
         orientation: 0,
         renderCalls: [],
@@ -131,7 +160,7 @@ async function setupViewer({
         scrolledPages: [],
         zoomReports: [],
     };
-    const environment = { scrolledPages: state.scrolledPages };
+    const environment = { pageGap, scrolledPages: state.scrolledPages };
     const container = new FakeElement("div", environment);
     const pages = new FakeElement("div", environment);
     container.appendChild(pages);
@@ -175,8 +204,8 @@ async function setupViewer({
         getDocumentOrientationDegrees: () => state.orientation,
         getMaxRenderPixels: () => 10_000_000,
         getZoomRatio: () => state.zoom,
-        getZoomFocusX: () => 10,
-        getZoomFocusY: () => 20,
+        getZoomFocusX: () => state.focusX,
+        getZoomFocusY: () => state.focusY,
         setZoomRatio: (zoom) => {
             state.zoom = zoom;
             state.zoomReports.push(zoom);
@@ -219,32 +248,116 @@ describe("continuous page layout", () => {
         expect(state.renderCalls).toEqual([2]);
     });
 
-    it("compensates each pinch event from the previously requested zoom", async () => {
-        const { state } = await setupViewer({ continuous: false, currentPage: 1 });
+    it("keeps the focused canvas point fixed across pinch events", async () => {
+        const { state, pagesElement } = await setupViewer({
+            continuous: false,
+            currentPage: 1,
+        });
+        const canvas = pagesElement.children[0].children[0];
+        const before = canvas.getBoundingClientRect();
+        const normalizedX = (state.focusX - before.left) / before.width;
+        const normalizedY = (state.focusY - before.top) / before.height;
         state.fitMode = 0;
 
         state.zoom = 0.6;
         globalThis.onRenderPage(2);
+        let after = canvas.getBoundingClientRect();
+        expect(after.left + after.width * normalizedX).toBeCloseTo(state.focusX);
+        expect(after.top + after.height * normalizedY).toBeCloseTo(state.focusY);
+
         state.zoom = 0.7;
         globalThis.onRenderPage(2);
-        globalThis.onRenderPage(1);
+        after = canvas.getBoundingClientRect();
+        expect(after.left + after.width * normalizedX).toBeCloseTo(state.focusX);
+        expect(after.top + after.height * normalizedY).toBeCloseTo(state.focusY);
 
-        expect(state.scrollCalls).toHaveLength(3);
-        expect(state.scrollCalls[0][0]).toBeCloseTo(2);
-        expect(state.scrollCalls[0][1]).toBeCloseTo(4);
-        expect(state.scrollCalls[1][0]).toBeCloseTo(2);
-        expect(state.scrollCalls[1][1]).toBeCloseTo(4);
-        expect(state.scrollCalls[2]).toEqual([0, 0]);
+        globalThis.onRenderPage(1);
+        after = canvas.getBoundingClientRect();
+        expect(after.left + after.width * normalizedX).toBeCloseTo(state.focusX);
+        expect(after.top + after.height * normalizedY).toBeCloseTo(state.focusY);
     });
 
     it("keeps menu zoom focused on the viewport center", async () => {
-        const { state } = await setupViewer({ continuous: false, currentPage: 1 });
+        const { state, pagesElement } = await setupViewer({
+            continuous: false,
+            currentPage: 1,
+        });
+        const canvas = pagesElement.children[0].children[0];
+        const before = canvas.getBoundingClientRect();
+        const normalizedX = (globalThis.innerWidth / 2 - before.left) / before.width;
+        const normalizedY = (globalThis.innerHeight / 2 - before.top) / before.height;
         state.fitMode = 0;
         state.zoom = 1;
 
         globalThis.onRenderPage(3);
 
-        expect(state.scrollCalls.at(-1)).toEqual([50, 50]);
+        const after = canvas.getBoundingClientRect();
+        expect(after.left + after.width * normalizedX).toBeCloseTo(globalThis.innerWidth / 2);
+        expect(after.top + after.height * normalizedY).toBeCloseTo(globalThis.innerHeight / 2);
+    });
+
+    it("keeps a deep mixed-size page point fixed across zoom", async () => {
+        const pagePatterns = [
+            {width: 100, height: 100},
+            {width: 200, height: 100},
+            {width: 50, height: 200},
+            {width: 100, height: 200},
+        ];
+        const dimensions = Array.from(
+            {length: 12},
+            (_, index) => pagePatterns[index % pagePatterns.length]
+        );
+        const { state, pagesElement } = await setupViewer({
+            continuous: true,
+            currentPage: dimensions.length,
+            fitMode: 2,
+            pageCount: dimensions.length,
+            pageGap: 14,
+            getPage: (pageNumber, viewerState) => Promise.resolve(
+                fakePage(pageNumber, viewerState, dimensions[pageNumber - 1])
+            ),
+        });
+        const canvas = pagesElement.children.at(-1).children[0];
+        const before = canvas.getBoundingClientRect();
+        const normalizedX = (state.focusX - before.left) / before.width;
+        const normalizedY = (state.focusY - before.top) / before.height;
+        state.fitMode = 0;
+        state.zoom = 2;
+
+        globalThis.onRenderPage(2);
+
+        const after = canvas.getBoundingClientRect();
+        expect(after.left + after.width * normalizedX).toBeCloseTo(state.focusX);
+        expect(after.top + after.height * normalizedY).toBeCloseTo(state.focusY);
+    });
+
+    it("keeps a focus in a fixed page gap at the same edge distance", async () => {
+        const { state, pagesElement } = await setupViewer({
+            continuous: true,
+            currentPage: 2,
+            fitMode: 2,
+            focusY: 18,
+            pageCount: 2,
+            pageGap: 14,
+            getPage: (pageNumber, viewerState) => Promise.resolve(
+                fakePage(pageNumber, viewerState, {width: 100, height: 50})
+            ),
+        });
+        const firstCanvas = pagesElement.children[0].children[0];
+        const secondCanvas = pagesElement.children[1].children[0];
+        const firstBefore = firstCanvas.getBoundingClientRect();
+        const secondBefore = secondCanvas.getBoundingClientRect();
+        const distanceFromFirst = state.focusY - firstBefore.bottom;
+        const distanceFromSecond = secondBefore.top - state.focusY;
+        state.fitMode = 0;
+        state.zoom = 2;
+
+        globalThis.onRenderPage(2);
+
+        const firstAfter = firstCanvas.getBoundingClientRect();
+        const secondAfter = secondCanvas.getBoundingClientRect();
+        expect(state.focusY - firstAfter.bottom).toBeCloseTo(distanceFromFirst);
+        expect(secondAfter.top - state.focusY).toBeCloseTo(distanceFromSecond);
     });
 
     it("keeps over-wide pages within the horizontally scrollable area", async () => {
@@ -359,6 +472,31 @@ describe("continuous page layout", () => {
         await flushPromises();
 
         expect(pagesElement.children.map((page) => page.dataset.page)).toEqual(["1", "3"]);
+    });
+
+    it("redirects a failed page request and keeps scroll tracking live", async () => {
+        const { state } = await setupViewer({
+            pageCount: 3,
+            getPage: (pageNumber, viewerState) => pageNumber === 2
+                ? Promise.reject(new Error("damaged page"))
+                : Promise.resolve(fakePage(pageNumber, viewerState)),
+        });
+
+        globalThis.scrollToPage(3);
+        expect(state.currentPage).toBe(3);
+
+        // Android publishes the requested page before invoking onRenderPage.
+        // The failed target must redirect by page proximity, not merely keep
+        // whichever readable page happens to be visible.
+        state.currentPage = 2;
+        globalThis.onRenderPage(0);
+        expect(state.currentPage).toBe(1);
+
+        globalThis.scrollBy(0, 100);
+        globalThis.onscroll();
+        await delay(200);
+
+        expect(state.currentPage).toBe(3);
     });
 
     it("keeps a late-page request sticky until progressive setup reaches it", async () => {
