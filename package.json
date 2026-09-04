@@ -10,7 +10,7 @@
     "esbuild": "^0.28.2",
     "eslint": "^10.9.1",
     "globals": "^17.12.0",
-    "pdfjs-dist": "^6.2.108",
+    "pdfjs-dist": "^6.3.289",
     "vitest": "^4.1.11"
   }
 }
