@@ -17,6 +17,7 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -34,10 +35,12 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,7 +48,12 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.Info
@@ -56,6 +64,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarDuration
@@ -64,6 +73,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -86,6 +96,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
@@ -103,6 +114,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -119,13 +131,16 @@ import app.grapheneos.pdfviewer.PdfJsChannel.Companion.MIN_ZOOM_RATIO
 import app.grapheneos.pdfviewer.PdfViewer.Companion.PDF_MIME
 import app.grapheneos.pdfviewer.outline.OutlineScreen
 import app.grapheneos.pdfviewer.properties.DocumentProperty
+import app.grapheneos.pdfviewer.ui.darkSearchFieldColors
 import app.grapheneos.pdfviewer.ui.darkTopAppBarColors
 import app.grapheneos.pdfviewer.viewModel.PdfViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
@@ -249,6 +264,9 @@ fun PdfViewerScreen(
     var showPageIndicator by remember { mutableStateOf(false) }
 
     val isToolbarVisible by viewModel.toolbarVisible.collectAsStateWithLifecycle()
+    val searchActive by viewModel.searchActive.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val searchResult by viewModel.searchResult.collectAsStateWithLifecycle()
     var showOutline by rememberSaveable { mutableStateOf(false) }
     var showJumpToPage by rememberSaveable { mutableStateOf(false) }
     var showDocProperties by rememberSaveable { mutableStateOf(false) }
@@ -309,10 +327,12 @@ fun PdfViewerScreen(
     val insetLeftPx = systemInsets.getLeft(density, layoutDirection).toFloat()
     val insetRightPx = systemInsets.getRight(density, layoutDirection).toFloat()
     val insetBottomPx = systemInsets.getBottom(density).toFloat()
+    val insetImePx = WindowInsets.ime.getBottom(density).toFloat()
     SideEffect {
         viewModel.insetLeft = insetLeftPx
         viewModel.insetRight = insetRightPx
         viewModel.insetBottom = insetBottomPx
+        viewModel.insetIme = insetImePx
         if (isToolbarVisible) {
             viewModel.insetTop = toolbarHeightPx
         }
@@ -323,6 +343,47 @@ fun PdfViewerScreen(
             viewModel.setLoadingOutline()
             webView?.evaluateJavascript("getDocumentOutline()", null)
         }
+    }
+
+    // Extraction runs once per document. webView is a key so a crash and Activity recreate
+    // re-issues it; the corpus lives in the ViewModel, so a finished sweep is never repeated.
+    LaunchedEffect(searchActive, documentLoaded, webView, numPages) {
+        if (!searchActive || !documentLoaded || numPages == 0) return@LaunchedEffect
+        if (viewModel.extractionComplete()) return@LaunchedEffect
+        webView?.evaluateJavascript(
+            "extractText(${page.coerceIn(1, numPages)},${viewModel.currentSearchGeneration})", null
+        )
+    }
+
+    LaunchedEffect(searchQuery, numPages) {
+        if (numPages > 0) viewModel.runSearch(searchQuery, page.coerceIn(1, numPages))
+    }
+
+    // Keyed on the index too: stepping between two matches on the same page must still bring the
+    // viewer back to that page if the user has since swiped away from it.
+    LaunchedEffect(searchResult.activePage, searchResult.activeIndex) {
+        if (searchResult.activePage > 0) jumpToPage(viewModel, webView, searchResult.activePage)
+    }
+
+    // Deliberately not keyed on the whole searchResult: that would fire one evaluateJavascript
+    // per page during a scan. The active match plus the displayed page covers every visible
+    // transition, and the scan starts at the current page so its highlights land immediately.
+    // searchResult.version is in the key list because two different queries can select the same
+    // (page, index); without it the highlights would keep the previous query's offsets.
+    LaunchedEffect(
+        page, searchResult.activePage, searchResult.activeIndex, searchResult.version,
+        searchActive, webView
+    ) {
+        val wv = webView ?: return@LaunchedEffect
+        if (!searchActive || searchResult.total == 0) {
+            wv.evaluateJavascript("setSearchHighlights(0,[],-1)", null)
+            return@LaunchedEffect
+        }
+        val active = if (searchResult.activePage == page) searchResult.activeIndex else -1
+        // Off the main thread: tuplesFor takes the index lock, which a binder thread can be
+        // holding for the length of one page's match pass.
+        val tuples = withContext(Dispatchers.Default) { viewModel.tuplesFor(page) }
+        wv.evaluateJavascript("setSearchHighlights($page,$tuples,$active)", null)
     }
 
     LaunchedEffect(pageIndicator) {
@@ -342,6 +403,9 @@ fun PdfViewerScreen(
         GestureHelper.attach(context, wv, object : GestureHelper.GestureListener {
             override fun onTapUp(): Boolean {
                 if (viewModel.uri.value == null) return false
+                // Hiding the toolbar while searching would take the find bar with it, and also
+                // hide the status bar and freeze insetTop, so guard the whole gesture.
+                if (viewModel.searchActive.value) return false
                 wv.evaluateJavascript("isTextSelected()") { selection ->
                     if (!selection.toBoolean()) {
                         viewModel.setToolbarVisible(!viewModel.toolbarVisible.value)
@@ -496,7 +560,21 @@ fun PdfViewerScreen(
             }
         }
 
-        if (isToolbarVisible) {
+        if (isToolbarVisible && searchActive && !webViewCrashed && webViewOk) {
+            SearchAppBar(
+                query = searchQuery,
+                result = searchResult,
+                numPages = numPages,
+                onQueryChange = viewModel::setSearchQuery,
+                onStep = viewModel::stepMatch,
+                onClose = viewModel::closeSearch,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onGloballyPositioned { coordinates ->
+                        toolbarHeightPx = coordinates.size.height.toFloat()
+                    }
+            )
+        } else if (isToolbarVisible) {
             PdfTopAppBar(
                 title = displayName,
                 documentLoaded = documentLoaded,
@@ -547,6 +625,7 @@ fun PdfViewerScreen(
                     }
                     saveAsLauncher.launch(intent)
                 },
+                onSearch = { viewModel.openSearch() },
                 onDocumentProperties = { showDocProperties = true },
                 onToggleTextLayer = {
                     webView?.evaluateJavascript("toggleTextLayerVisibility()", null)
@@ -830,6 +909,7 @@ private fun PdfTopAppBar(
     onZoomOut: () -> Unit,
     onCustomZoom: () -> Unit,
     onOutline: () -> Unit,
+    onSearch: () -> Unit,
     onShare: () -> Unit,
     onSaveAs: () -> Unit,
     onDocumentProperties: () -> Unit,
@@ -853,6 +933,12 @@ private fun PdfTopAppBar(
                     Icon(
                         painterResource(R.drawable.ic_navigate_next_24dp),
                         contentDescription = stringResource(R.string.action_next)
+                    )
+                }
+                IconButton(onClick = onSearch, enabled = enabled) {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = stringResource(R.string.action_search)
                     )
                 }
             }
@@ -1000,6 +1086,144 @@ private fun PdfTopAppBar(
             }
         }
     )
+}
+
+/**
+ * Find-in-document bar. Replaces the top app bar while a search is active, the way Chrome,
+ * Firefox and Acrobat all present find on Android.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SearchAppBar(
+    query: String,
+    result: PdfViewModel.SearchResult,
+    numPages: Int,
+    onQueryChange: (String) -> Unit,
+    onStep: (Boolean) -> Unit,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
+    // Held as TextFieldValue, and saved, so the caret does not jump to the start on a
+    // configuration change — the same pattern the JumpToPage and CustomZoom dialogs use.
+    var field by rememberSaveable(stateSaver = TextFieldValue.Saver) {
+        mutableStateOf(TextFieldValue(query, TextRange(query.length)))
+    }
+    // Re-synced from an effect rather than during composition: typing updates `field` first and
+    // `query` only after the ViewModel round trip, so a composition-time write could put the
+    // pre-keystroke text back.
+    LaunchedEffect(query) {
+        if (field.text != query) {
+            field = TextFieldValue(query, TextRange(query.length))
+        }
+    }
+    var focusedOnce by rememberSaveable { mutableStateOf(false) }
+
+    BackHandler(onBack = onClose)
+    LaunchedEffect(Unit) {
+        if (!focusedOnce) {
+            focusedOnce = true
+            focusRequester.requestFocus()
+        }
+    }
+
+    val hasMatches = result.total > 0
+    val countText = when {
+        query.isEmpty() -> ""
+        result.scanning && result.total == 0 -> ""
+        // While the document is still being indexed the total is a lower bound, so it is shown
+        // with a "+". Without that, "1/3" two seconds in reads as final when it will become
+        // "1/247" once the scan finishes.
+        result.truncated || result.scanning -> stringResource(
+            R.string.search_match_count_partial, result.ordinal, result.total
+        )
+        else -> stringResource(R.string.search_match_count, result.ordinal, result.total)
+    }
+
+    Column {
+        TopAppBar(
+            // The modifier carries onGloballyPositioned, so it must sit on the bar itself and
+            // not the Column: insetTop has to stay put when the progress bar comes and goes.
+            modifier = modifier,
+            colors = darkTopAppBarColors(),
+            navigationIcon = {
+                IconButton(onClick = onClose) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.action_close)
+                    )
+                }
+            },
+            title = {
+                TextField(
+                    value = field,
+                    onValueChange = {
+                        field = it
+                        onQueryChange(it.text)
+                    },
+                    singleLine = true,
+                    placeholder = { Text(stringResource(R.string.action_search)) },
+                    trailingIcon = if (query.isEmpty()) null else ({
+                        IconButton(onClick = { onQueryChange("") }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = stringResource(R.string.search_clear)
+                            )
+                        }
+                    }),
+                    colors = darkSearchFieldColors(),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(
+                        onSearch = {
+                            // Dismissing the IME is the only way to stop a match being scrolled
+                            // behind the keyboard: edge to edge means the WebView is not resized.
+                            focusManager.clearFocus()
+                            if (hasMatches) onStep(true)
+                        }
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester)
+                        .testTag(TestTags.SEARCH_FIELD)
+                )
+            },
+            actions = {
+                Text(
+                    text = countText,
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        // Bounded so the text field keeps a usable width at large font scales and
+                        // in narrow split-screen windows, where "128/1024+" would otherwise eat
+                        // most of the bar.
+                        .widthIn(max = 88.dp)
+                        .testTag(TestTags.SEARCH_COUNT)
+                        .semantics { liveRegion = LiveRegionMode.Polite }
+                )
+                IconButton(onClick = { onStep(false) }, enabled = hasMatches) {
+                    Icon(
+                        Icons.Default.KeyboardArrowUp,
+                        contentDescription = stringResource(R.string.search_previous)
+                    )
+                }
+                IconButton(onClick = { onStep(true) }, enabled = hasMatches) {
+                    Icon(
+                        Icons.Default.KeyboardArrowDown,
+                        contentDescription = stringResource(R.string.search_next)
+                    )
+                }
+            }
+        )
+        if (result.scanning && numPages > 0) {
+            LinearProgressIndicator(
+                progress = { result.scannedPages / numPages.toFloat() },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
 }
 
 @Composable
