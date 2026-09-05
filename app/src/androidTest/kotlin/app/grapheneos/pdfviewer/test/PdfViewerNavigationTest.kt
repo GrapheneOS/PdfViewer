@@ -97,6 +97,81 @@ class PdfViewerNavigationTest {
     }
 
     @Test
+    fun keyboardRightArrow_goesToNextPage() {
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+            setupNavigableState(scenario, page = 2)
+
+            robot.pressKeyboardArrow(scenario, PdfViewerRobot.KeyboardArrow.Right)
+
+            scenario.onActivity {
+                assertEquals(3, it.currentPage)
+            }
+        }
+    }
+
+    @Test
+    fun keyboardLeftArrow_goesToPreviousPage() {
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+            setupNavigableState(scenario, page = 3)
+
+            robot.pressKeyboardArrow(scenario, PdfViewerRobot.KeyboardArrow.Left)
+
+            scenario.onActivity {
+                assertEquals(2, it.currentPage)
+            }
+        }
+    }
+
+    @Test
+    fun mouseSwipeLeft_doesNotGoToNextPage() {
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+            setupNavigableState(scenario, page = 2)
+
+            robot.performMouseSwipe(scenario, left = true)
+
+            scenario.onActivity {
+                assertEquals(2, it.currentPage)
+            }
+        }
+    }
+
+    @Test
+    fun touchSwipeLeft_withSlowRelease_goesToNextPage() {
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+            setupNavigableState(scenario, page = 2)
+
+            robot.performTouchSwipe(scenario, left = true)
+
+            scenario.onActivity {
+                assertEquals(3, it.currentPage)
+            }
+        }
+    }
+
+    @Test
+    fun touchSwipeRight_withSlowRelease_goesToPreviousPage() {
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+            setupNavigableState(scenario, page = 3)
+
+            robot.performTouchSwipe(scenario, left = false)
+
+            scenario.onActivity {
+                assertEquals(2, it.currentPage)
+            }
+        }
+    }
+
+    @Test
     fun tapNext_updatesMenuState() {
         PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
