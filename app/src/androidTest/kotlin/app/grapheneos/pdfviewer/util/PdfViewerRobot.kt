@@ -30,6 +30,7 @@ import androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
+import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
@@ -75,7 +76,11 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
         Share(R.string.action_share),
         SaveAs(R.string.action_save_as),
         Outline(R.string.action_outline),
-        ViewDocumentProperties(R.string.action_view_document_properties)
+        ViewDocumentProperties(R.string.action_view_document_properties),
+        FitFree(R.string.action_fit_free),
+        FitPage(R.string.action_fit_page),
+        FitWidth(R.string.action_fit_width),
+        ContinuousScroll(R.string.action_continuous_scroll)
     }
 
     enum class SnackbarMessage(@StringRes internal val stringRes: Int) {
@@ -224,9 +229,25 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
     fun tapWebView() {
         onView(isAssignableFrom(WebView::class.java)).perform(click())
     }
+    fun flingToNextPage() {
+        val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+        val bounds = findWebViewObject().visibleBounds
+        val horizontalMargin = maxOf(1, bounds.width() / 10)
+        device.swipe(
+            bounds.right - horizontalMargin,
+            bounds.centerY(),
+            bounds.left + horizontalMargin,
+            bounds.centerY(),
+            5
+        )
+    }
 
     fun clickRotateClockwise() = click(AppMenuItem.RotateClockwise)
     fun clickRotateCounterclockwise() = click(AppMenuItem.RotateCounterclockwise)
+    fun clickFitFree() = click(AppMenuItem.FitFree)
+    fun clickFitPage() = click(AppMenuItem.FitPage)
+    fun clickFitWidth() = click(AppMenuItem.FitWidth)
+    fun clickContinuousScroll() = click(AppMenuItem.ContinuousScroll)
 
     // JumpToPage
 
@@ -322,8 +343,8 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
 
     fun assertCanvasRendered(scenario: ActivityScenario<PdfViewer>) {
         val result = PdfViewerTestUtils.evaluateJs(scenario,
-            "parseInt(document.getElementById('content').style.width) > 0 " +
-                    "&& parseInt(document.getElementById('content').style.height) > 0"
+            "parseInt(globalThis.currentPageCanvas().style.width) > 0 " +
+                    "&& parseInt(globalThis.currentPageCanvas().style.height) > 0"
         )
         assertTrue("Canvas should have non-zero CSS dimensions after rendering", result == "true")
     }
@@ -339,28 +360,28 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
 
     fun getCanvasWidth(scenario: ActivityScenario<PdfViewer>): Int {
         val result = PdfViewerTestUtils.evaluateJs(scenario,
-            "document.getElementById('content').width"
+            "globalThis.currentPageCanvas().width"
         )
         return result.toInt()
     }
 
     fun getCanvasHeight(scenario: ActivityScenario<PdfViewer>): Int {
         val result = PdfViewerTestUtils.evaluateJs(scenario,
-            "document.getElementById('content').height"
+            "globalThis.currentPageCanvas().height"
         )
         return result.toInt()
     }
 
     fun getCanvasCssWidth(scenario: ActivityScenario<PdfViewer>): Int {
         val result = PdfViewerTestUtils.evaluateJs(scenario,
-            "parseInt(document.getElementById('content').style.width) || 0"
+            "parseInt(globalThis.currentPageCanvas().style.width) || 0"
         )
         return result.toInt()
     }
 
     fun getCanvasCssHeight(scenario: ActivityScenario<PdfViewer>): Int {
         val result = PdfViewerTestUtils.evaluateJs(scenario,
-            "parseInt(document.getElementById('content').style.height) || 0"
+            "parseInt(globalThis.currentPageCanvas().style.height) || 0"
         )
         return result.toInt()
     }
@@ -451,6 +472,12 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
         val webView = findWebViewObject()
         applyContentGestureMargins(webView, scenario)
         webView.pinchClose(percent, speed)
+    }
+
+    fun performSwipeLeft(scenario: ActivityScenario<PdfViewer>) {
+        val webView = findWebViewObject()
+        applyContentGestureMargins(webView, scenario)
+        webView.swipe(Direction.LEFT, 0.75f, 1_000)
     }
 
     private fun findWebViewObject(): UiObject2 {
@@ -560,6 +587,30 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
         return result.toFloat()
     }
 
+    fun getPageFitMode(scenario: ActivityScenario<PdfViewer>): Int {
+        val result = PdfViewerTestUtils.evaluateJs(scenario, "globalThis.getPageFitMode()")
+        return result.toInt()
+    }
+
+    fun getNumberOfRenderedPages(scenario: ActivityScenario<PdfViewer>): Int {
+        val result = PdfViewerTestUtils.evaluateJs(scenario,
+            "document.querySelectorAll('.page-wrapper').length"
+        )
+        return result.toIntOrNull() ?: 0
+    }
+
+    fun scrollDown(scenario: ActivityScenario<PdfViewer>) {
+        PdfViewerTestUtils.evaluateJs(scenario,
+            "window.scrollBy(0, window.innerHeight * 0.8)"
+        )
+    }
+
+    fun scrollToPageJs(scenario: ActivityScenario<PdfViewer>, page: Int) {
+        PdfViewerTestUtils.evaluateJs(scenario,
+            "globalThis.scrollToPage($page)"
+        )
+    }
+
     private fun ensureOverflowMenuOpen() {
         val zoomInDesc = getTargetContext().getString(R.string.zoom_in)
         val nodes = composeRule.onAllNodesWithContentDescription(zoomInDesc)
@@ -634,9 +685,9 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
     fun assertTextLayerAligned(scenario: ActivityScenario<PdfViewer>) {
         val result = PdfViewerTestUtils.evaluateJs(scenario, """
             (function() {
-                var text = document.getElementById('text');
+                var text = globalThis.currentPageTextLayer();
                 var container = document.getElementById('container');
-                var canvas = document.getElementById('content');
+                var canvas = globalThis.currentPageCanvas();
                 if (!text || !container || !canvas) return 'missing_elements';
                 if (text.hidden) return 'text_hidden';
                 var scaleFactor = container.style.getPropertyValue('--scale-factor');
