@@ -371,6 +371,33 @@ class PdfViewerNavigationTest {
     }
 
     @Test
+    fun zoomOutButton_reachesMinZoom() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            scenario.onActivity {
+                it.zoomRatio = 0.25f
+            }
+            composeRule.waitForIdle()
+
+            robot.assertZoomOutEnabled(true)
+            robot.clickMenuZoomOut()
+
+            PdfViewerTestUtils.pollUntil(
+                description = {
+                    "Zoom out should reach the minimum zoom " +
+                            "(was ${robot.getZoomRatio(scenario)})"
+                }
+            ) {
+                abs(robot.getZoomRatio(scenario) - MIN_ZOOM_RATIO) < 0.001f
+            }
+
+            robot.assertZoomOutEnabled(false)
+        }
+    }
+
+    @Test
     fun customZoomDialog_opensWithCurrentZoom() {
         PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
