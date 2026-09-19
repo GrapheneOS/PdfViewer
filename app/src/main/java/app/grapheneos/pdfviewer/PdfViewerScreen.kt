@@ -135,7 +135,9 @@ import kotlin.math.roundToInt
 
 private const val TAG = "PdfViewerScreen"
 private const val MIN_WEBVIEW_RELEASE = 133
-private val ZOOM_PRESETS = intArrayOf(25, 50, 75, 100, 125, 150, 200, 300, 500, 750, 1000)
+private val ZOOM_PRESETS = intArrayOf(
+    (MIN_ZOOM_RATIO * 100).roundToInt(), 50, 75, 100, 125, 150, 200, 300, 500, 750, 1000
+)
 
 private fun nextZoomPreset(ratio: Float): Float? {
     val currentPercent = (ratio * 100).roundToInt()
