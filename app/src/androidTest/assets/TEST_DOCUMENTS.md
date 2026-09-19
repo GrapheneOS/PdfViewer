@@ -59,3 +59,19 @@ The LaTeX files are used to generate test PDFs.
 ```bash
 qpdf --encrypt testpass testpass 256 -- test-encrypted.pdf test-encrypted.pdf
 ```
+
+---
+
+## 4. `test-large.pdf`
+
+This 73-page document is generated entirely from `test-simple.pdf`. It avoids
+depending on or redistributing a third-party document while providing enough
+pages to exercise progressive layout, late-page navigation, and lazy rendering.
+
+```bash
+inputs=()
+for _ in {1..73}; do
+    inputs+=(test-simple.pdf)
+done
+pdfunite "${inputs[@]}" test-large.pdf
+```

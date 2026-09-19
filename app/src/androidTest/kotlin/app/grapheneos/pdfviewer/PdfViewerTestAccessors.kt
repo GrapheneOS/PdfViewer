@@ -39,6 +39,18 @@ var PdfViewer.documentName: String
         viewModel.setDocumentNameForTest(value)
     }
 
+var PdfViewer.pageFitMode: Int
+    get() = viewModel.pageFitMode.value
+    set(value) {
+        viewModel.setPageFitMode(value)
+    }
+
+var PdfViewer.continuousMode: Boolean
+    get() = viewModel.continuousMode.value
+    set(value) {
+        viewModel.setContinuousMode(value)
+    }
+
 var PdfViewer.outlineStatus: PdfViewModel.OutlineStatus
     get() = viewModel.outline.value
     set(value) {
