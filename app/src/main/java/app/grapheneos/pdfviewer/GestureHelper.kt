@@ -2,26 +2,38 @@ package app.grapheneos.pdfviewer
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.view.InputDevice
 import android.view.GestureDetector
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
+import kotlin.math.roundToInt
 
 /*
  * The GestureHelper present a simple gesture api for the PdfViewer
  */
 
 object GestureHelper {
+    enum class PageNavigationDirection(val pageOffset: Int) {
+        Previous(-1),
+        Next(1)
+    }
+
     interface GestureListener {
         fun onTapUp(): Boolean
-        fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean
+        fun onSwipeStart()
+        fun onSwipeProgress(e1: MotionEvent?, e2: MotionEvent)
+        fun onSwipeEnd()
         fun onZoom(scaleFactor: Float, focusX: Float, focusY: Float)
+        fun onCtrlMouseWheelZoom(zoomIn: Boolean, focusX: Float, focusY: Float)
         fun onZoomEnd()
     }
 
     @SuppressLint("ClickableViewAccessibility")
     fun attach(context: Context, gestureView: View, listener: GestureListener) {
         var wasScaling = false
+        var wheelTickRemainder = 0f
 
         val scaleDetector = ScaleGestureDetector(
             context,
@@ -43,30 +55,95 @@ object GestureHelper {
                     return listener.onTapUp()
                 }
 
-                override fun onFling(
+                override fun onScroll(
                     e1: MotionEvent?,
                     e2: MotionEvent,
-                    velocityX: Float,
-                    velocityY: Float
+                    distanceX: Float,
+                    distanceY: Float
                 ): Boolean {
-                    if (wasScaling) return false
-                    return listener.onFling(e1, e2, velocityX, velocityY)
+                    if (wasScaling || e2.pointerCount != 1) return false
+                    if (isMouseEvent(e1) || isMouseEvent(e2)) return false
+                    listener.onSwipeProgress(e1, e2)
+                    return false
                 }
             })
 
         gestureView.setOnTouchListener { _, event ->
             if (event.actionMasked == MotionEvent.ACTION_DOWN) {
                 wasScaling = false
+                listener.onSwipeStart()
             }
 
             detector.onTouchEvent(event)
             scaleDetector.onTouchEvent(event)
 
-            if (scaleDetector.isInProgress) {
+            if (event.pointerCount > 1 || scaleDetector.isInProgress) {
                 wasScaling = true
+            }
+            if (event.actionMasked == MotionEvent.ACTION_UP &&
+                !wasScaling &&
+                !isMouseEvent(event)
+            ) {
+                listener.onSwipeEnd()
             }
 
             false
         }
+
+        gestureView.setOnGenericMotionListener { _, event ->
+            if (!isCtrlPhysicalMouseWheelEvent(event)) {
+                return@setOnGenericMotionListener false
+            }
+
+            wheelTickRemainder += event.getAxisValue(MotionEvent.AXIS_VSCROLL)
+            val wholeTickDelta = wheelTickRemainder.roundToInt()
+            wheelTickRemainder -= wholeTickDelta
+            if (wholeTickDelta != 0) {
+                listener.onCtrlMouseWheelZoom(
+                    zoomIn = wholeTickDelta > 0,
+                    focusX = event.x,
+                    focusY = event.y
+                )
+            }
+
+            true
+        }
+    }
+
+    private fun isCtrlPhysicalMouseWheelEvent(event: MotionEvent): Boolean {
+        return event.actionMasked == MotionEvent.ACTION_SCROLL &&
+                event.pointerCount > 0 &&
+                (event.metaState and KeyEvent.META_CTRL_ON) != 0 &&
+                (event.source and InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE &&
+                event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE &&
+                event.getAxisValue(MotionEvent.AXIS_VSCROLL) != 0f
+    }
+
+    private fun isMouseEvent(event: MotionEvent?): Boolean {
+        if (event == null) return false
+        if ((event.source and InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE) {
+            return true
+        }
+        for (pointerIndex in 0 until event.pointerCount) {
+            if (event.getToolType(pointerIndex) == MotionEvent.TOOL_TYPE_MOUSE) {
+                return true
+            }
+        }
+        return false
+    }
+
+    fun getKeyboardPageNavigationDirection(event: KeyEvent): PageNavigationDirection? {
+        if (!isPlainKeyDown(event)) return null
+
+        return when (event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_LEFT -> PageNavigationDirection.Previous
+            KeyEvent.KEYCODE_DPAD_RIGHT -> PageNavigationDirection.Next
+            else -> null
+        }
+    }
+
+    private fun isPlainKeyDown(event: KeyEvent): Boolean {
+        return event.action == KeyEvent.ACTION_DOWN &&
+                event.hasNoModifiers()
     }
 }

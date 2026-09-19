@@ -7,8 +7,8 @@ import android.content.Intent
 import android.icu.text.DecimalFormatSymbols
 import android.icu.text.NumberFormat
 import android.util.Log
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
-import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.RenderProcessGoneDetail
@@ -82,6 +82,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -136,6 +137,25 @@ import kotlin.math.roundToInt
 private const val TAG = "PdfViewerScreen"
 private const val MIN_WEBVIEW_RELEASE = 133
 private val ZOOM_PRESETS = intArrayOf(25, 50, 75, 100, 125, 150, 200, 300, 500, 750, 1000)
+private const val MOUSE_WHEEL_ZOOM_IN_FACTOR = 1.25f
+private const val MOUSE_WHEEL_ZOOM_OUT_FACTOR = 0.8f
+private const val MOUSE_WHEEL_ZOOM_END_DELAY_MS = 120L
+// Chromium uses a 30-degree direction gate and a 32dp pull distance with 3x activation.
+private const val PAGE_SWIPE_DIRECTION_WEIGHT = 1.73f
+private val PAGE_SWIPE_THRESHOLD = 96.dp
+private const val RENDER_DEFAULT_SCRIPT = "renderDefault()"
+private const val RENDER_FINAL_ZOOM_SCRIPT = "renderFinalZoom()"
+private const val RENDER_TRANSIENT_ZOOM_SCRIPT = "renderTransientZoom()"
+
+// Expose protected scroll metrics needed to measure movement past the content bounds.
+private class PdfWebView(context: Context) : WebView(context) {
+    val horizontalScrollOffset: Int
+        get() = computeHorizontalScrollOffset()
+
+    val maximumHorizontalScrollOffset: Int
+        get() = (computeHorizontalScrollRange() - computeHorizontalScrollExtent())
+            .coerceAtLeast(0)
+}
 
 private fun nextZoomPreset(ratio: Float): Float? {
     val currentPercent = (ratio * 100).roundToInt()
@@ -257,7 +277,7 @@ fun PdfViewerScreen(
     var webViewRelease by remember { mutableIntStateOf(getWebViewRelease()) }
     val webViewOk = webViewRelease >= MIN_WEBVIEW_RELEASE
     var toolbarHeightPx by remember { mutableFloatStateOf(0f) }
-    var webView by remember { mutableStateOf<WebView?>(null) }
+    var webView by remember { mutableStateOf<PdfWebView?>(null) }
 
     LifecycleResumeEffect(Unit) {
         webViewRelease = getWebViewRelease()
@@ -333,12 +353,62 @@ fun PdfViewerScreen(
         }
     }
 
-    val viewConfiguration = remember { ViewConfiguration.get(context) }
-    val swipeThreshold = remember { viewConfiguration.scaledTouchSlop * 6 }
-    val swipeVelocityThreshold = remember { viewConfiguration.scaledMinimumFlingVelocity }
+    val swipeThreshold = with(density) { PAGE_SWIPE_THRESHOLD.toPx() }
 
     DisposableEffect(webView) {
         val wv = webView ?: return@DisposableEffect onDispose {}
+        val renderMouseWheelZoomEnd = Runnable {
+            wv.evaluateJavascript(RENDER_FINAL_ZOOM_SCRIPT, null)
+        }
+
+        fun renderTransientZoom(scaleFactor: Float, focusX: Float, focusY: Float): Boolean {
+            val currentZoomRatio = viewModel.zoomRatio.value
+            if (currentZoomRatio == 0f) return false
+
+            viewModel.setZoomRatio(
+                (currentZoomRatio * scaleFactor).coerceIn(MIN_ZOOM_RATIO, MAX_ZOOM_RATIO)
+            )
+            viewModel.zoomFocusX = focusX
+            viewModel.zoomFocusY = focusY
+            wv.evaluateJavascript(RENDER_TRANSIENT_ZOOM_SCRIPT, null)
+            return true
+        }
+
+        var pageSwipeStartScrollOffset = 0
+        var pageSwipeMaximumScrollOffset = 0
+
+        fun pageSwipeDirection(
+            e1: MotionEvent?,
+            e2: MotionEvent
+        ): GestureHelper.PageNavigationDirection? {
+            if (e1 == null) return null
+
+            val distanceX = e1.x - e2.x
+            val distanceY = e1.y - e2.y
+            if (abs(distanceX) <= abs(distanceY) * PAGE_SWIPE_DIRECTION_WEIGHT) return null
+
+            val distancePastBound = when {
+                distanceX > 0 ->
+                    (distanceX - (pageSwipeMaximumScrollOffset - pageSwipeStartScrollOffset))
+                        .coerceAtLeast(0f)
+                distanceX < 0 ->
+                    (distanceX + pageSwipeStartScrollOffset).coerceAtMost(0f)
+                else -> 0f
+            }
+            if (abs(distancePastBound) <= swipeThreshold) return null
+
+            return when {
+                distancePastBound > 0 &&
+                        viewModel.page.value < viewModel.numPages.value ->
+                    GestureHelper.PageNavigationDirection.Next
+                distancePastBound < 0 &&
+                        viewModel.page.value > 1 ->
+                    GestureHelper.PageNavigationDirection.Previous
+                else -> null
+            }
+        }
+
+        var eligiblePageSwipeDirection: GestureHelper.PageNavigationDirection? = null
         GestureHelper.attach(context, wv, object : GestureHelper.GestureListener {
             override fun onTapUp(): Boolean {
                 if (viewModel.uri.value == null) return false
@@ -350,46 +420,60 @@ fun PdfViewerScreen(
                 return true
             }
 
-            override fun onFling(
-                e1: MotionEvent?, e2: MotionEvent,
-                velocityX: Float, velocityY: Float
-            ): Boolean {
-                if (e1 == null) return false
+            override fun onSwipeStart() {
+                pageSwipeMaximumScrollOffset = wv.maximumHorizontalScrollOffset
+                pageSwipeStartScrollOffset = wv.horizontalScrollOffset.coerceIn(
+                    0,
+                    pageSwipeMaximumScrollOffset
+                )
+                eligiblePageSwipeDirection = null
+            }
 
-                val deltaX = e2.x - e1.x
-                val deltaY = e2.y - e1.y
-
-                if (abs(deltaX) > abs(deltaY) &&
-                    abs(deltaX) > swipeThreshold &&
-                    abs(velocityX) > swipeVelocityThreshold
-                ) {
-                    if (deltaX < 0 && !wv.canScrollHorizontally(1)) {
-                        jumpToPage(viewModel, wv, viewModel.page.value + 1)
-                        return true
-                    } else if (deltaX > 0 && !wv.canScrollHorizontally(-1)) {
-                        jumpToPage(viewModel, wv, viewModel.page.value - 1)
-                        return true
-                    }
+            override fun onSwipeProgress(e1: MotionEvent?, e2: MotionEvent) {
+                val direction = pageSwipeDirection(e1, e2)
+                if (direction != null && direction != eligiblePageSwipeDirection) {
+                    wv.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 }
-                return false
+                eligiblePageSwipeDirection = direction
+            }
+
+            override fun onSwipeEnd() {
+                eligiblePageSwipeDirection?.let { direction ->
+                    jumpToPage(
+                        viewModel,
+                        wv,
+                        viewModel.page.value + direction.pageOffset
+                    )
+                }
+                eligiblePageSwipeDirection = null
             }
 
             override fun onZoom(scaleFactor: Float, focusX: Float, focusY: Float) {
-                viewModel.setZoomRatio(
-                    (viewModel.zoomRatio.value * scaleFactor)
-                        .coerceIn(MIN_ZOOM_RATIO, MAX_ZOOM_RATIO)
-                )
-                viewModel.zoomFocusX = focusX
-                viewModel.zoomFocusY = focusY
-                wv.evaluateJavascript("onRenderPage(2)", null)
+                wv.removeCallbacks(renderMouseWheelZoomEnd)
+                renderTransientZoom(scaleFactor, focusX, focusY)
+            }
+
+            override fun onCtrlMouseWheelZoom(zoomIn: Boolean, focusX: Float, focusY: Float) {
+                val scaleFactor = if (zoomIn) {
+                    MOUSE_WHEEL_ZOOM_IN_FACTOR
+                } else {
+                    MOUSE_WHEEL_ZOOM_OUT_FACTOR
+                }
+
+                if (!renderTransientZoom(scaleFactor, focusX, focusY)) return
+
+                wv.removeCallbacks(renderMouseWheelZoomEnd)
+                wv.postDelayed(renderMouseWheelZoomEnd, MOUSE_WHEEL_ZOOM_END_DELAY_MS)
             }
 
             override fun onZoomEnd() {
-                wv.evaluateJavascript("onRenderPage(1)", null)
+                wv.evaluateJavascript(RENDER_FINAL_ZOOM_SCRIPT, null)
             }
         })
         onDispose {
+            wv.removeCallbacks(renderMouseWheelZoomEnd)
             wv.setOnTouchListener(null)
+            wv.setOnGenericMotionListener(null)
         }
     }
 
@@ -435,8 +519,31 @@ fun PdfViewerScreen(
     val hasPages = numPages > 0
     val enabled = documentLoaded && !webViewCrashed
     val displayName = documentName.ifEmpty { stringResource(R.string.app_name) }
+    val keyboardPageNavigationEnabled = enabled &&
+            !showMenu &&
+            !showOutline &&
+            !showJumpToPage &&
+            !showDocProperties &&
+            !showCustomZoom &&
+            !showPasswordDialog
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onPreviewKeyEvent { event ->
+                if (!keyboardPageNavigationEnabled) {
+                    return@onPreviewKeyEvent false
+                }
+                val direction =
+                    GestureHelper.getKeyboardPageNavigationDirection(event.nativeKeyEvent)
+                        ?: return@onPreviewKeyEvent false
+                jumpToPage(
+                    viewModel,
+                    webView,
+                    viewModel.page.value + direction.pageOffset
+                )
+            }
+    ) {
         when {
             webViewCrashed -> WebViewAlertScreen(
                 title = stringResource(R.string.webview_crash_title),
@@ -461,7 +568,7 @@ fun PdfViewerScreen(
             else -> {
                 AndroidView(
                     factory = { ctx ->
-                        WebView(ctx).apply {
+                        PdfWebView(ctx).apply {
                             layoutParams = ViewGroup.LayoutParams(
                                 ViewGroup.LayoutParams.MATCH_PARENT,
                                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -759,14 +866,16 @@ private fun loadPdfWithPassword(viewModel: PdfViewModel, webView: WebView?, pass
     webView.evaluateJavascript("loadDocument()", null)
 }
 
-internal fun jumpToPage(viewModel: PdfViewModel, webView: WebView?, selectedPage: Int) {
-    webView ?: return
+internal fun jumpToPage(viewModel: PdfViewModel, webView: WebView?, selectedPage: Int): Boolean {
+    webView ?: return false
     val num = viewModel.numPages.value
     if (selectedPage in 1..num && viewModel.page.value != selectedPage) {
         viewModel.setPage(selectedPage)
-        webView.evaluateJavascript("onRenderPage(0)", null)
+        webView.evaluateJavascript(RENDER_DEFAULT_SCRIPT, null)
         viewModel.showPageIndicator()
+        return true
     }
+    return false
 }
 
 private fun rotateDocument(viewModel: PdfViewModel, webView: WebView?, offset: Int) {
@@ -774,13 +883,13 @@ private fun rotateDocument(viewModel: PdfViewModel, webView: WebView?, offset: I
     var degrees = (viewModel.documentOrientationDegrees.value + offset) % 360
     if (degrees < 0) degrees += 360
     viewModel.setDocumentOrientationDegrees(degrees)
-    webView.evaluateJavascript("onRenderPage(0)", null)
+    webView.evaluateJavascript(RENDER_DEFAULT_SCRIPT, null)
 }
 
 private fun zoomDocument(viewModel: PdfViewModel, webView: WebView?, ratio: Float) {
     webView ?: return
     viewModel.setZoomRatio(ratio.coerceIn(MIN_ZOOM_RATIO, MAX_ZOOM_RATIO))
-    webView.evaluateJavascript("onRenderPage(1)", null)
+    webView.evaluateJavascript(RENDER_FINAL_ZOOM_SCRIPT, null)
 }
 
 private fun shareDocument(context: Context, viewModel: PdfViewModel) {
