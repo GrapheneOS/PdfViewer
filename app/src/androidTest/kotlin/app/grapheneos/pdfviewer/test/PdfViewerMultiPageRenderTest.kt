@@ -106,6 +106,24 @@ class PdfViewerMultiPageRenderTest {
     }
 
     @Test
+    fun horizontalFling_continuousModeDoesNotChangePage() {
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+            scenario.onActivity { it.onJumpToPageInDocument(2) }
+            PdfViewerTestUtils.assertTextLayerContent(scenario, "Page Two Content")
+
+            robot.performSwipeLeft(scenario)
+
+            PdfViewerTestUtils.assertStableCondition(
+                description = { "Horizontal fling changed page in continuous mode" }
+            ) {
+                PdfViewerTestUtils.evaluateJs(scenario, "channel.getPage()") == "2"
+            }
+        }
+    }
+
+    @Test
     fun navigationButtonStates_updateAfterRenderedNavigation() {
         PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
@@ -117,6 +135,43 @@ class PdfViewerMultiPageRenderTest {
             PdfViewerTestUtils.assertTextLayerContent(scenario, "Page Four Content")
 
             robot.assertNavigationState(previousEnabled = true, nextEnabled = false)
+        }
+    }
+
+    @Test
+    fun zoomedLastPage_canPanToBothHorizontalEdges() {
+        PdfViewerLauncher.launchWithTestAsset("test-multipage.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+            scenario.onActivity { it.onJumpToPageInDocument(4) }
+            PdfViewerTestUtils.assertTextLayerContent(scenario, "Page Four Content")
+
+            robot.clickZoomPercentage()
+            robot.setCustomZoomValue(300)
+            robot.clickDialogOk()
+            PdfViewerTestUtils.pollUntil(description = { "Canvas did not become over-wide" }) {
+                robot.getCanvasCssWidth(scenario) > robot.getViewportWidth(scenario) * 2
+            }
+
+            val result = PdfViewerTestUtils.evaluateJs(scenario, """
+                (() => {
+                    const canvas = globalThis.currentPageCanvas();
+                    const verticalOffset = globalThis.scrollY;
+                    globalThis.scrollTo(0, verticalOffset);
+                    const leftEdge = canvas.getBoundingClientRect().left;
+                    globalThis.scrollTo(document.documentElement.scrollWidth, verticalOffset);
+                    const rightEdge = canvas.getBoundingClientRect().right;
+                    return leftEdge >= -1 &&
+                        rightEdge <= document.documentElement.clientWidth + 1;
+                })()
+            """.trimIndent())
+
+            assertEquals("Both horizontal page edges should be reachable", "true", result)
+            PdfViewerTestUtils.assertStableCondition(
+                description = { "Canvas was cleared while its zoomed content was visible" }
+            ) {
+                robot.getCanvasWidth(scenario) > 0 && robot.getCanvasHeight(scenario) > 0
+            }
         }
     }
 
