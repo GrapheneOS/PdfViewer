@@ -390,7 +390,9 @@ globalThis.loadDocument = function () {
 };
 
 globalThis.onresize = () => {
-    setLayerTransform(canvas.clientWidth, canvas.clientHeight, textLayerDiv);
+    // clientWidth and clientHeight include the canvas padding.
+    const canvasStyle = globalThis.getComputedStyle(canvas);
+    setLayerTransform(parseFloat(canvasStyle.width), parseFloat(canvasStyle.height), textLayerDiv);
     if (pdfDoc !== null && !userZoomed) {
         const pageNumber = channel.getPage();
         pdfDoc.getPage(pageNumber).then(function(page) {
