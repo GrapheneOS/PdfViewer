@@ -144,7 +144,14 @@ private fun nextZoomPreset(ratio: Float): Float? {
 
 private fun previousZoomPreset(ratio: Float): Float? {
     val currentPercent = (ratio * 100).roundToInt()
-    return ZOOM_PRESETS.lastOrNull { it < currentPercent }?.let { it / 100f }
+    val preset = ZOOM_PRESETS.lastOrNull { it < currentPercent }?.let { it / 100f }
+    if (preset != null) {
+        return preset
+    }
+    // No preset below the current zoom: fall back to the true minimum, since pinch-to-zoom
+    // can reach lower than the smallest preset.
+    val minPercent = (MIN_ZOOM_RATIO * 100).roundToInt()
+    return if (currentPercent > minPercent) MIN_ZOOM_RATIO else null
 }
 
 private const val CONTENT_SECURITY_POLICY =

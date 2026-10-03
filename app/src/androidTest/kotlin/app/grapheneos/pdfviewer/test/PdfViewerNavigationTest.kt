@@ -371,6 +371,68 @@ class PdfViewerNavigationTest {
     }
 
     @Test
+    fun zoomOutButton_fromLowestPreset_reachesTrueMinimum() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            // Start at the lowest zoom preset (25%). Pinch-to-zoom can reach the true
+            // minimum (MIN_ZOOM_RATIO, 20%), so the zoom-out button must still step
+            // there instead of stopping at the lowest preset.
+            val lowestPreset = 0.25f
+            scenario.onActivity {
+                it.zoomRatio = lowestPreset
+            }
+            composeRule.waitForIdle()
+
+            robot.assertZoomOutEnabled(true)
+
+            robot.clickMenuZoomOut()
+
+            PdfViewerTestUtils.pollUntil(
+                description = {
+                    var z = 0f
+                    scenario.onActivity { z = it.zoomRatio }
+                    "Zoom-out from the lowest preset should reach MIN_ZOOM_RATIO (was $z)"
+                }
+            ) {
+                var z = 0f
+                scenario.onActivity { z = it.zoomRatio }
+                abs(z - MIN_ZOOM_RATIO) < 0.001f
+            }
+
+            robot.assertZoomOutEnabled(false)
+            robot.assertZoomInEnabled(true)
+        }
+    }
+
+    @Test
+    fun zoomOutButton_stopsAtLowestPreset() {
+        PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
+            PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
+            PdfViewerTestUtils.waitForCanvasRendered(scenario)
+
+            scenario.onActivity {
+                it.zoomRatio = 0.5f
+            }
+            composeRule.waitForIdle()
+
+            robot.clickMenuZoomOut()
+
+            PdfViewerTestUtils.pollUntil(
+                description = {
+                    "Zoom out from 50% should land on the 25% preset " +
+                            "(was ${robot.getZoomRatio(scenario)})"
+                }
+            ) {
+                abs(robot.getZoomRatio(scenario) - 0.25f) < 0.001f
+            }
+
+            robot.assertZoomOutEnabled(true)
+        }
+    }
+
+    @Test
     fun customZoomDialog_opensWithCurrentZoom() {
         PdfViewerLauncher.launchWithTestAsset("test-simple.pdf").use { scenario ->
             PdfViewerTestUtils.waitForDocumentFullyLoaded(scenario)
