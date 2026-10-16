@@ -20,22 +20,38 @@ body {
     --scale-round-x: 1px;
     --scale-round-y: 1px;
 
+    min-height: 100%;
     width: 100%;
-    height: 100%;
-    display: grid;
-    place-items: center;
+    box-sizing: border-box;
 }
 
-#container canvas,
-#container .textLayer {
-    /* overlay child elements on top of each other */
-    grid-row-start: 1;
-    grid-column-start: 1;
+#pages {
+    display: block;
 }
 
-canvas {
-    display: inline-block;
+/*
+ * Continuous vertical paging: each page is a centered wrapper holding its
+ * canvas and text layer. The wrapper's height is set from JS to the page's
+ * viewport height so the document is as tall as the sum of its pages and
+ * scrolls naturally.
+ */
+.page-wrapper {
+    display: flex;
+    justify-content: flex-start;
     position: relative;
+    padding: 0;
+    margin: 14px 0;
+}
+
+.page-wrapper canvas {
+    display: block;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.page-wrapper .textLayer {
+    position: absolute;
+    top: 0;
+    left: 0;
 }
 
 [data-main-rotation="90"] {
