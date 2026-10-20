@@ -25,6 +25,12 @@ class PdfJsChannel(private val viewModel: PdfViewModel) {
     fun getPage(): Int = viewModel.page.value
 
     @JavascriptInterface
+    fun setCurrentPage(page: Int) {
+        viewModel.setPage(page)
+        viewModel.showPageIndicator()
+    }
+
+    @JavascriptInterface
     fun getZoomRatio(): Float = viewModel.zoomRatio.value
 
     @JavascriptInterface
@@ -61,6 +67,12 @@ class PdfJsChannel(private val viewModel: PdfViewModel) {
 
     @JavascriptInterface
     fun getDocumentOrientationDegrees(): Int = viewModel.documentOrientationDegrees.value
+
+    @JavascriptInterface
+    fun getPageFitMode(): Int = viewModel.pageFitMode.value
+
+    @JavascriptInterface
+    fun getContinuousMode(): Boolean = viewModel.continuousMode.value
 
     @JavascriptInterface
     fun setNumPages(numPages: Int) {
