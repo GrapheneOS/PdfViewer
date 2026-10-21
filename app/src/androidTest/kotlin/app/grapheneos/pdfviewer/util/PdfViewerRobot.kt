@@ -1,6 +1,10 @@
 package app.grapheneos.pdfviewer.util
 
 import android.graphics.Rect
+import android.os.SystemClock
+import android.view.InputDevice
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.webkit.WebView
 import androidx.annotation.StringRes
@@ -83,6 +87,11 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
         LegacyFileUri(R.string.legacy_file_uri),
         FileOpenError(R.string.error_while_opening),
         SaveError(R.string.error_while_saving)
+    }
+
+    enum class KeyboardArrow(internal val keyCode: Int) {
+        Left(KeyEvent.KEYCODE_DPAD_LEFT),
+        Right(KeyEvent.KEYCODE_DPAD_RIGHT)
     }
 
     // WebView
@@ -218,6 +227,76 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
 
     fun clickNext() = click(AppMenuItem.Next)
     fun clickPrevious() = click(AppMenuItem.Previous)
+    fun pressKeyboardArrow(
+        scenario: ActivityScenario<PdfViewer>,
+        arrow: KeyboardArrow
+    ) {
+        scenario.onActivity { activity ->
+            val webView = activity.webView ?: throw AssertionError("WebView is null")
+            webView.requestFocus()
+        }
+        composeRule.waitForIdle()
+
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(arrow.keyCode)
+        composeRule.waitForIdle()
+    }
+
+    fun performMouseSwipe(
+        scenario: ActivityScenario<PdfViewer>,
+        left: Boolean
+    ) = performPointerSwipe(
+        scenario,
+        left,
+        InputDevice.SOURCE_MOUSE
+    )
+
+    fun performTouchSwipe(
+        scenario: ActivityScenario<PdfViewer>,
+        left: Boolean
+    ) = performPointerSwipe(
+        scenario,
+        left,
+        InputDevice.SOURCE_TOUCHSCREEN
+    )
+
+    private fun performPointerSwipe(
+        scenario: ActivityScenario<PdfViewer>,
+        left: Boolean,
+        source: Int
+    ) {
+        scenario.onActivity { activity ->
+            val webView = activity.webView ?: throw AssertionError("WebView is null")
+            val startPercent = if (left) 0.8f else 0.2f
+            val endPercent = if (left) 0.2f else 0.8f
+            val startX = webView.width * startPercent
+            val endX = webView.width * endPercent
+            val y = webView.height / 2f
+            val downTime = SystemClock.uptimeMillis()
+
+            fun dispatch(action: Int, elapsedTime: Long, x: Float) {
+                val event = obtainPointerEvent(
+                    downTime,
+                    downTime + elapsedTime,
+                    action,
+                    x,
+                    y,
+                    source
+                )
+                try {
+                    webView.dispatchTouchEvent(event)
+                } finally {
+                    event.recycle()
+                }
+            }
+
+            dispatch(MotionEvent.ACTION_DOWN, 0, startX)
+            dispatch(MotionEvent.ACTION_MOVE, 10, (startX + endX) / 2f)
+            dispatch(MotionEvent.ACTION_MOVE, 20, endX)
+            dispatch(MotionEvent.ACTION_UP, 1020, endX)
+        }
+        composeRule.waitForIdle()
+    }
+
     fun clickReload() {
         composeRule.onNodeWithTag(TestTags.RELOAD_BUTTON).performClick()
     }
@@ -451,6 +530,90 @@ class PdfViewerRobot(private val composeRule: ComposeTestRule) {
         val webView = findWebViewObject()
         applyContentGestureMargins(webView, scenario)
         webView.pinchClose(percent, speed)
+    }
+
+    fun performCtrlMouseWheelZoom(
+        scenario: ActivityScenario<PdfViewer>,
+        zoomIn: Boolean
+    ) {
+        scenario.onActivity { activity ->
+            val webView = activity.webView ?: throw AssertionError("WebView is null")
+            val eventTime = SystemClock.uptimeMillis()
+            val event = obtainPointerEvent(
+                eventTime,
+                eventTime,
+                MotionEvent.ACTION_SCROLL,
+                webView.width / 2f,
+                webView.height / 2f,
+                InputDevice.SOURCE_MOUSE,
+                verticalScroll = if (zoomIn) 1f else -1f,
+                ctrlPressed = true
+            )
+
+            try {
+                webView.dispatchGenericMotionEvent(event)
+            } finally {
+                event.recycle()
+            }
+        }
+    }
+
+    private fun obtainPointerEvent(
+        downTime: Long,
+        eventTime: Long,
+        action: Int,
+        x: Float,
+        y: Float,
+        source: Int,
+        verticalScroll: Float = 0f,
+        ctrlPressed: Boolean = false
+    ): MotionEvent {
+        val isScroll = action == MotionEvent.ACTION_SCROLL
+        val isMouse = source == InputDevice.SOURCE_MOUSE
+        val coords = MotionEvent.PointerCoords().apply {
+            this.x = x
+            this.y = y
+            if (isScroll) {
+                setAxisValue(MotionEvent.AXIS_VSCROLL, verticalScroll)
+            } else {
+                pressure = 1f
+                size = 1f
+            }
+        }
+        val properties = MotionEvent.PointerProperties().apply {
+            id = 0
+            toolType = if (isMouse) {
+                MotionEvent.TOOL_TYPE_MOUSE
+            } else {
+                MotionEvent.TOOL_TYPE_FINGER
+            }
+        }
+        val buttonState = if (
+            isMouse &&
+            !isScroll &&
+            action != MotionEvent.ACTION_UP
+        ) {
+            MotionEvent.BUTTON_PRIMARY
+        } else {
+            0
+        }
+        val precision = if (isScroll) 0f else 1f
+        return MotionEvent.obtain(
+            downTime,
+            eventTime,
+            action,
+            1,
+            arrayOf(properties),
+            arrayOf(coords),
+            if (ctrlPressed) KeyEvent.META_CTRL_ON else 0,
+            buttonState,
+            precision,
+            precision,
+            0,
+            0,
+            source,
+            0
+        )
     }
 
     private fun findWebViewObject(): UiObject2 {
