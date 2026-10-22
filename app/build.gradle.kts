@@ -113,7 +113,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.19.0")
     implementation("androidx.navigation:navigation-compose:2.9.8")
     implementation("com.google.android.material:material:1.14.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
 
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test:rules:1.7.0")
