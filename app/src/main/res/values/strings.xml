@@ -15,6 +15,12 @@
     <string name="action_outline">Outline</string>
     <string name="action_view_document_properties">Properties</string>
     <string name="action_close">Close</string>
+    <string name="action_search">Find in document</string>
+    <string name="search_previous">Previous match</string>
+    <string name="search_next">Next match</string>
+    <string name="search_clear">Clear search</string>
+    <string name="search_match_count" tools:ignore="PluralsCandidate">%1$d/%2$d</string>
+    <string name="search_match_count_partial" tools:ignore="PluralsCandidate">%1$d/%2$d+</string>
 
     <string name="outline_child_button_description">View nested outline entries</string>
     <string name="outline_not_available">No outline available</string>

@@ -6,6 +6,7 @@ import {
     getDocument,
 } from "pdfjs-dist";
 import { getSimplifiedOutline } from "./outline.js";
+import { pageTextItems } from "./search.js";
 
 GlobalWorkerOptions.workerSrc = "/viewer/js/worker.js";
 
@@ -30,6 +31,93 @@ const maxCached = 6;
 
 let isTextLayerVisible = false;
 let userZoomed = false;
+
+// The page whose text layer is actually in the DOM, and its text item divs. Not the same as
+// channel.getPage(), which is the page that has been *requested*: jumpToPage updates the model
+// before asking for a render, so painting against it would put one page's offsets on another
+// page's divs.
+let displayedPage = 0;
+let displayedDivs = [];
+// { page, groups, active } as handed over by setSearchHighlights, or null.
+let searchState = null;
+let pendingScroll = false;
+let extractEpoch = 0;
+// An extraction asked for before the document finished loading, replayed once it has. A
+// configuration change or a WebView crash recreates the WebView while the native side still
+// believes the document is loaded, so the request arrives before pdfDoc exists.
+let pendingExtract = null;
+
+const findHighlight = new Highlight();
+const activeHighlight = new Highlight();
+activeHighlight.priority = 1;
+CSS.highlights.set("pdf-find", findHighlight);
+CSS.highlights.set("pdf-find-active", activeHighlight);
+
+function scrollToRange(range) {
+    const rect = range.getBoundingClientRect();
+    // A collapsed range sits at the page origin and is not worth scrolling to.
+    if (rect.width === 0 && rect.height === 0) {
+        return;
+    }
+    const ratio = globalThis.devicePixelRatio;
+    const top = channel.getInsetTop() / ratio;
+    const width = globalThis.innerWidth;
+    // Edge to edge means the WebView keeps its full height when the keyboard opens, so the
+    // usable band has to be narrowed by hand or matches scroll behind the IME.
+    const height = globalThis.innerHeight - channel.getInsetIme() / ratio;
+    // Already fully visible in that band: leave the viewport alone, otherwise stepping between
+    // two matches on the same line re-centres the page on every tap.
+    if (rect.top >= top && rect.bottom <= height && rect.left >= 0 && rect.right <= width) {
+        return;
+    }
+    scrollBy({
+        left: rect.left - width / 2,
+        top: rect.top - (top + height) / 2,
+        behavior: "instant"
+    });
+}
+
+// The only place highlights are painted. Called whenever either half of the pair
+// (search results, displayed page) changes.
+function applyHighlights() {
+    findHighlight.clear();
+    activeHighlight.clear();
+    // Always clear before bailing out: the page cache re-attaches the *same* nodes, so ranges
+    // left in a Highlight would light up again when a cached text layer is swapped back in.
+    if (searchState === null || searchState.page !== displayedPage) {
+        return;
+    }
+    let activeRange = null;
+    for (let match = 0; match < searchState.groups.length; match++) {
+        for (const piece of searchState.groups[match]) {
+            // Items with an empty string get a div that is never appended, so it has no text
+            // node; likewise anything past pdf.js's MAX_TEXT_DIVS_TO_RENDER cutoff.
+            const node = displayedDivs[piece[0]]?.firstChild;
+            if (!node) {
+                continue;
+            }
+            const start = Math.min(piece[1], node.length);
+            const end = Math.min(piece[1] + piece[2], node.length);
+            // A match that begins on a synthetic end-of-line separator clamps to an empty range,
+            // which paints nothing and whose rect is at the page origin.
+            if (start >= end) {
+                continue;
+            }
+            const range = document.createRange();
+            range.setStart(node, start);
+            range.setEnd(node, end);
+            findHighlight.add(range);
+            if (match === searchState.active) {
+                activeHighlight.add(range);
+                activeRange ??= range;
+            }
+        }
+    }
+    if (activeRange !== null && pendingScroll) {
+        pendingScroll = false;
+        scrollToRange(activeRange);
+    }
+}
 
 function maybeRenderNextPage() {
     if (renderPending) {
@@ -128,6 +216,10 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
                 setLayerTransform(cached.pageWidth, cached.pageHeight, textLayerDiv);
                 container.style.setProperty("--scale-factor", newZoomRatio.toString());
                 textLayerDiv.hidden = false;
+
+                displayedPage = pageNumber;
+                displayedDivs = cached.textDivs;
+                applyHighlights();
             }
 
             pageRendering = false;
@@ -256,6 +348,10 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
                     textLayerDiv = newTextLayerDiv;
                     container.style.setProperty("--scale-factor", newZoomRatio.toString());
                     textLayerDiv.hidden = false;
+
+                    displayedPage = pageNumber;
+                    displayedDivs = textLayer.textDivs;
+                    applyHighlights();
                 }
 
                 if (cache.length === maxCached) {
@@ -267,6 +363,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
                     orientationDegrees: orientationDegrees,
                     canvas: newCanvas,
                     textLayerDiv: newTextLayerDiv,
+                    textDivs: textLayer.textDivs,
                     pageWidth: viewport.width,
                     pageHeight: viewport.height
                 });
@@ -335,7 +432,55 @@ globalThis.toggleTextLayerVisibility = function () {
     isTextLayerVisible = !isTextLayerVisible;
 };
 
+// page 0 clears. May arrive before, during or after the target page's render: if the page is
+// not displayed yet applyHighlights() clears and returns, and the render that follows repaints
+// and performs the deferred scroll.
+globalThis.setSearchHighlights = function (page, groups, active) {
+    searchState = page === 0 ? null : { page: page, groups: groups, active: active };
+    pendingScroll = active >= 0;
+    applyHighlights();
+};
+
+// Streams every page's text to the native side, starting at the page being viewed so the first
+// results arrive immediately, then wrapping. Runs once per document; the native side caches.
+globalThis.extractText = async function (startPage, generation) {
+    if (pdfDoc === null) {
+        pendingExtract = { startPage: startPage, generation: generation };
+        return;
+    }
+    const epoch = ++extractEpoch;
+    const total = pdfDoc.numPages;
+    for (let i = 0; i < total; i++) {
+        const pageNumber = ((startPage - 1 + i) % total) + 1;
+        // Page turns beat the scan: the pdf.js worker is single threaded. Bounded so a stuck
+        // flag cannot wedge extraction.
+        for (let wait = 0; pageRendering && wait < 64; wait++) {
+            await new Promise((resolve) => setTimeout(resolve, 16));
+        }
+        if (epoch !== extractEpoch) {
+            return;
+        }
+        let items = [];
+        try {
+            const page = await pdfDoc.getPage(pageNumber);
+            ({ items } = await page.getTextContent());
+            if (pageNumber !== displayedPage) {
+                page.cleanup();
+            }
+        } catch (error) {
+            console.log("getTextContent error: " + error);
+        }
+        // A false return means the native index is full and there is nothing left to send.
+        if (epoch !== extractEpoch ||
+                !channel.setPageText(
+                    pageNumber, JSON.stringify(pageTextItems(items)), generation)) {
+            return;
+        }
+    }
+};
+
 globalThis.loadDocument = function () {
+    extractEpoch++;
     userZoomed = false;
     const pdfPassword = channel.getPassword();
     const loadingTask = getDocument({
@@ -372,6 +517,12 @@ globalThis.loadDocument = function () {
         channel.onLoaded();
         pdfDoc = newDoc;
         channel.setNumPages(pdfDoc.numPages);
+        if (pendingExtract !== null) {
+            const resume = pendingExtract;
+            pendingExtract = null;
+            // A stale generation is rejected by the first setPageText, which ends the loop.
+            globalThis.extractText(resume.startPage, resume.generation);
+        }
         pdfDoc.getMetadata().then(function (data) {
             channel.setDocumentProperties(JSON.stringify(data.info));
         }).catch(function (error) {
