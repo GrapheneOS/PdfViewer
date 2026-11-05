@@ -47,17 +47,15 @@ class PdfViewerLandscapeTest {
             val cssWidth = robot.getCanvasCssWidth(scenario)
             val cssHeight = robot.getCanvasCssHeight(scenario)
             val viewportWidth = robot.getViewportWidth(scenario)
-            val viewportHeight = robot.getViewportHeight(scenario)
 
             assertTrue("Canvas CSS width ($cssWidth) should be > 0", cssWidth > 0)
             assertTrue("Canvas CSS height ($cssHeight) should be > 0", cssHeight > 0)
+            // Default fit mode is fit-width: the canvas fills the available width and must
+            // not overflow horizontally. Height is unconstrained (a portrait page in
+            // landscape overflows vertically), so only width is bounded here.
             assertTrue(
-                "Canvas CSS width ($cssWidth) should fit viewport ($viewportWidth)",
+                "Canvas CSS width ($cssWidth) should not overflow viewport ($viewportWidth)",
                 cssWidth <= viewportWidth + 2
-            )
-            assertTrue(
-                "Canvas CSS height ($cssHeight) should fit viewport ($viewportHeight)",
-                cssHeight <= viewportHeight + 2
             )
         }
     }
