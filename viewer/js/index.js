@@ -275,7 +275,7 @@ function renderPage(pageNumber, zoom, prerender, prerenderTrigger = 0) {
                 doPrerender(pageNumber, prerenderTrigger);
             }).catch(handleRenderingError);
         }).catch(handleRenderingError);
-    });
+    }).catch(handleRenderingError);
 }
 
 globalThis.onRenderPage = function (zoom) {
